@@ -1,0 +1,317 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Говорить с ИИ{% endblock %}
+
+{% block content %}
+<div style="position:sticky;top:0;z-index:5;display:inline-block;background:#eef;color:#223;padding:4px 8px;border-radius:8px;margin:6px 0;font-size:12px">Talk AI template v2-global</div>
+<div class="talkai-container">
+  <div class="avatar-card">
+    <div class="avatar-toolbar">
+      <span>Модель:</span>
+      <button class="btn btn-secondary btn-sm avatar-btn" data-src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb">Человек 1</button>
+      <button class="btn btn-secondary btn-sm avatar-btn" data-src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Soldier/glTF-Binary/Soldier.glb">Человек 2</button>
+      <button class="btn btn-secondary btn-sm avatar-btn" data-src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/RiggedFigure/glTF-Binary/RiggedFigure.glb">Человек 3</button>
+    </div>
+    <model-viewer id="avatar3d" src="https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/CesiumMan/glTF-Binary/CesiumMan.glb" camera-controls autoplay shadow-intensity="1.0" exposure="1.1" environment-image="neutral" shadow-softness="0.9" ar ar-modes="webxr scene-viewer quick-look" camera-orbit="0deg 85deg 2.5m" style="width:100%;height:420px;background:radial-gradient(1200px 600px at 50% 100%,#1a1446,#0b0b12);border-radius:16px"></model-viewer>
+    <div class="avatar-status" id="avatarStatus">Готов к разговору</div>
+  </div>
+  <div class="chat-card">
+    <div class="chat-log" id="chatLog"></div>
+    <div class="chat-controls">
+      <select id="ttsProvider" class="btn btn-secondary" title="Провайдер озвучки">
+        <option value="elevenlabs" selected>ElevenLabs</option>
+        <option value="auto">Авто</option>
+        <option value="azure">Azure</option>
+        <option value="edge">Edge</option>
+        <option value="gtts">gTTS</option>
+      </select>
+      <input id="ttsVoice" type="text" placeholder="Голос (необязательно)" style="max-width:200px">
+      <input id="chatInput" type="text" placeholder="Задайте вопрос...">
+      <button id="micBtn" class="btn btn-secondary" title="Говорить"><i class="bi bi-mic"></i></button>
+      <button id="sendBtn" class="btn btn-primary">Отправить</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.talkai-container{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px}
+.avatar-card,.chat-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:16px}
+#avatarCanvas{width:100%;height:420px;background:#0b0b12;border-radius:10px}
+.avatar-status{margin-top:8px;color:#6b7280}
+.avatar-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.btn-sm{padding:6px 10px;border-radius:8px}
+.chat-log{height:420px;overflow:auto;border:1px solid #eee;border-radius:10px;padding:12px;background:#fafafa}
+.msg{margin-bottom:10px}
+.msg.me{color:#111}
+.msg.ai{color:#4b5563}
+.chat-controls{display:flex;gap:8px;margin-top:12px}
+.chat-controls input{flex:1;border:1px solid #ddd;border-radius:10px;padding:10px}
+.btn{padding:10px 16px;border:none;border-radius:10px;cursor:pointer}
+.btn-primary{background:#7c4dff;color:#fff}
+.btn-primary:hover{background:#6a3edb}
+.btn-secondary{background:#e6e6e6;color:#333}
+.btn-secondary:hover{background:#d9d9d9}
+/* Анимация аватара при речи */
+.speaking-glow{box-shadow:0 0 20px rgba(124,77,255,.6) inset}
+/* Голосовые сообщения */
+.voice-bubble{display:flex;align-items:center;gap:10px}
+.voice-bar{height:8px;background:linear-gradient(90deg,#8e9bff,#b388ff);border-radius:6px;min-width:80px;max-width:220px;width:140px;position:relative;overflow:hidden}
+.voice-dot{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;background:#7c4dff;animation:move 1.6s linear infinite}
+@keyframes move{0%{left:-8px}100%{left:calc(100% - 8px)}}
+.voice-ctl{border:none;background:#7c4dff;color:#fff;border-radius:12px;padding:6px 10px;cursor:pointer}
+.send-ctl{border:none;background:#2e7d32;color:#fff;border-radius:12px;padding:6px 10px;cursor:pointer}
+/* Микрофон во время записи */
+.mic-recording{animation:micpulse 1.2s infinite; box-shadow:0 0 0 0 rgba(124,77,255,.6)}
+@keyframes micpulse{0%{box-shadow:0 0 0 0 rgba(124,77,255,.6);}70%{box-shadow:0 0 0 14px rgba(124,77,255,0);}100%{box-shadow:0 0 0 0 rgba(124,77,255,0);}}
+@media(max-width:992px){.talkai-container{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<script>
+  const mv = document.getElementById('avatar3d');
+  document.querySelectorAll('.avatar-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const src = btn.getAttribute('data-src');
+      if(src){ mv.setAttribute('src', src); }
+    });
+  });
+  const input = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const micBtn = document.getElementById('micBtn');
+  const log = document.getElementById('chatLog');
+  const statusNode = document.getElementById('avatarStatus');
+  let mediaRecorder = null, chunks = [];
+  let isRecording = false;
+  let recTimeout = null; let recStartedAt = 0; let rafId = null;
+
+  async function sendMessage(){
+    const text = (input.value||'').trim();
+    if(!text) return;
+    append('me', text);
+    input.value='';
+    statusNode.textContent='ИИ думает...';
+    try{
+      const res = await fetch('{% url "cards:api_chat_ai" %}',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({message:text})
+      });
+      if (!res.ok){ throw new Error('HTTP '+res.status); }
+      const data = await res.json();
+      const reply = data.reply || 'Ошибка ответа';
+      append('ai', reply);
+      await ttsPlay(reply);
+    }catch(e){
+      console.error('sendMessage error:', e);
+      append('ai','Ошибка связи с ИИ');
+    }finally{
+      statusNode.textContent='Готов к разговору';
+    }
+  }
+
+  function append(who, text){
+    const div = document.createElement('div');
+    div.className = 'msg '+who;
+    div.textContent = (who==='me'?'Вы: ':'ИИ: ')+text;
+    log.appendChild(div);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  async function onVoiceReady(){
+    const blob = new Blob(chunks, {type:'audio/webm'});
+    const url = URL.createObjectURL(blob);
+    appendVoice('me', url);
+  }
+
+  function appendVoice(who, url){
+    const wrap = document.createElement('div');
+    wrap.className = 'msg '+who;
+    const row = document.createElement('div');
+    row.className = 'voice-bubble';
+    const play = document.createElement('button');
+    play.className = 'voice-ctl';
+    play.textContent = '▶️';
+    const bar = document.createElement('div');
+    bar.className = 'voice-bar';
+    const dot = document.createElement('div');
+    dot.className = 'voice-dot';
+    bar.appendChild(dot);
+    const sendBtn = document.createElement('button');
+    sendBtn.className = 'send-ctl';
+    sendBtn.textContent = 'Отправить';
+    const audio = new Audio(url);
+    let playing=false;
+    play.onclick = ()=>{
+      if(!playing){ audio.play(); playing=true; play.textContent='⏸'; }
+      else { audio.pause(); playing=false; play.textContent='▶️'; }
+    };
+    audio.onended = ()=>{ playing=false; play.textContent='▶️'; };
+    sendBtn.onclick = async ()=>{
+      sendBtn.style.display = 'none';
+      try{
+        const blob = await fetch(url).then(r=>r.blob());
+        const fd = new FormData();
+        fd.append('audio', blob, 'voice.webm');
+        const res = await fetch('{% url "cards:api_asr" %}', {method:'POST', body: fd});
+        if(!res.ok){ append('ai','ASR недоступен'); return; }
+        const data = await res.json();
+        const text = (data && data.text)||'';
+        if(text){
+          append('me', text);
+          await (async()=>{
+            const resp = await fetch('{% url "cards:api_chat_ai" %}', {
+              method:'POST',
+              headers:{'Content-Type':'application/json','X-CSRFToken': getCookie('csrftoken')},
+              body: JSON.stringify({message: text})
+            });
+            const j = await resp.json();
+            const reply = j.reply || 'Ошибка ответа';
+            append('ai', reply);
+            await ttsPlay(reply);
+          })();
+          // удаляем бабл после успешной отправки
+          wrap.remove();
+        }else{
+          append('ai','Не удалось распознать речь');
+        }
+      }catch(e){ append('ai','Ошибка при отправке голосового'); }
+    };
+    row.appendChild(play);
+    row.appendChild(bar);
+    row.appendChild(sendBtn);
+    wrap.appendChild(row);
+    log.appendChild(wrap);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function getCookie(name){
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  sendBtn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter') sendMessage();
+  });
+
+  // Микрофон: Web Speech API (если поддерживается)
+  let recognition=null;
+  if('webkitSpeechRecognition' in window || 'SpeechRecognition' in window){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.lang = 'ru-RU';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (e)=>{
+      const phrase = e.results[0][0].transcript;
+      input.value = phrase;
+      sendMessage();
+    };
+    recognition.onerror = ()=>{ statusNode.textContent='Ошибка микрофона'; };
+    recognition.onend = ()=>{ micBtn.disabled = false; statusNode.textContent='Готов к разговору'; };
+  }
+  micBtn.addEventListener('click', async ()=>{
+    if(!isRecording){
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        chunks = [];
+        mediaRecorder = new MediaRecorder(stream, {mimeType:'audio/webm'});
+        mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size>0) chunks.push(e.data); };
+        mediaRecorder.onstop = ()=>{ onVoiceReady(); };
+        mediaRecorder.start();
+        if(recognition){ try{ recognition.start(); }catch(_){ } }
+        statusNode.textContent='Слушаю...';
+        isRecording = true;
+        micBtn.classList.add('mic-recording');
+        recStartedAt = performance.now();
+        recTimeout = setTimeout(()=>{ stopRecording(); }, 60000);
+        startProgress();
+      }catch(err){
+        alert('Не удалось получить доступ к микрофону.');
+      }
+    }else{
+      stopRecording();
+    }
+  });
+
+  function stopRecording(){
+    try{ mediaRecorder && mediaRecorder.stop(); }catch(_){ }
+    if(recognition){ try{ recognition.stop(); }catch(_){ } }
+    statusNode.textContent='Готов к разговору';
+    isRecording = false;
+    micBtn.classList.remove('mic-recording');
+    if(recTimeout){ clearTimeout(recTimeout); recTimeout=null; }
+    if(rafId){ cancelAnimationFrame(rafId); rafId=null; }
+    micBtn.style.background = '';
+  }
+
+  function startProgress(){
+    const total = 60000;
+    const animate = ()=>{
+      const elapsed = performance.now() - recStartedAt;
+      const p = Math.min(elapsed/total, 1);
+      // рисуем прогресс градиентом по кругу
+      const deg = Math.floor(p*360);
+      micBtn.style.background = `conic-gradient(#7c4dff ${deg}deg, #e6e6e6 ${deg}deg)`;
+      if(p<1 && isRecording){ rafId = requestAnimationFrame(animate); }
+    };
+    animate();
+  }
+
+  // Озвучка: сначала пробуем серверный TTS (возвращает URL), затем fallback Web Speech
+  async function ttsPlay(text){
+    try{
+      const provider = (document.getElementById('ttsProvider')?.value)||'auto';
+      const voice = (document.getElementById('ttsVoice')?.value)||'';
+      const r = await fetch('{% url "cards:api_tts" %}', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+        body: JSON.stringify({text, provider, voice})
+      });
+      const data = await r.json();
+      if (data && data.url){
+        const audio = new Audio(data.url);
+        speaking = true;
+        audio.onended = ()=>{ speaking = false; };
+        await audio.play();
+        return;
+      }
+    }catch(e){ /* ignore and fallback */ }
+    webSpeech(text);
+  }
+  function webSpeech(text){
+    if(!('speechSynthesis' in window)) return;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'ru-RU';
+    utter.rate = 0.95;
+    utter.pitch = 1.05;
+    utter.onstart = ()=>{ speaking = true; };
+    utter.onend = ()=>{ speaking = false; };
+    const voices = speechSynthesis.getVoices();
+    const ru = voices.find(v=>/ru|russian/i.test(v.lang));
+    if(ru) utter.voice = ru;
+    speechSynthesis.speak(utter);
+  }
+});
+</script>
+{% endblock %}
+
+

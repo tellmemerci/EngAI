@@ -1,0 +1,1663 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}{{ module.name }}{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="module-container">
+    <div class="module-header">
+        <button class="back-btn" onclick="window.location.href='/cards/'">
+            <i class="bi bi-arrow-left"></i>
+            <span>Назад</span>
+        </button>
+        <h1>{{ module.name }}</h1>
+        <div class="module-actions">
+            {% if is_owner %}
+            <button class="action-btn" onclick="showEditModuleModal()">
+                <i class="bi bi-gear"></i>
+                <span class="btn-text">Настройки</span>
+            </button>
+            <button class="action-btn" onclick="showCreateCardModal()">
+                <i class="bi bi-plus-lg"></i>
+                <span class="btn-text">Добавить карточку</span>
+            </button>
+            <div class="export-dropdown">
+                <button class="action-btn export-btn">
+                    <i class="bi bi-download"></i>
+                    <span class="btn-text">Экспорт</span>
+                </button>
+                <div class="export-dropdown-content">
+                    <a href="#" onclick="exportModule('word')">
+                        <i class="bi bi-file-word"></i>
+                        <span>Word</span>
+                    </a>
+                </div>
+            </div>
+            <button class="action-btn delete-module-btn" onclick="showDeleteModuleModal()" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="bi bi-trash"></i>
+                <span class="btn-text">Удалить модуль</span>
+            </button>
+            {% else %}
+            {% if not module.is_saved %}
+            <button class="action-btn save-module-btn" onclick="saveModule()">
+                <i class="bi bi-bookmark"></i>
+                <span class="btn-text">Сохранить модуль</span>
+            </button>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="study-modes">
+        <button class="study-mode-btn learn" onclick="window.location.href='{% url 'cards:learn_module' module.id %}'">
+            <i class="bi bi-book"></i>
+            <span>Заучивание</span>
+        </button>
+        <button class="study-mode-btn test" onclick="window.location.href='{% url 'cards:module_test' module.id %}'">
+            <i class="bi bi-pencil-square"></i>
+            <span>Тест</span>
+        </button>
+        <button class="study-mode-btn game" onclick="window.location.href='{% url 'cards:bubble_game' module.id %}'">
+            <i class="bi bi-controller"></i>
+            <span>Пузыри</span>
+        </button>
+        <button class="study-mode-btn balloon" onclick="window.location.href='{% url 'cards:balloon_game' module.id %}'">
+            <i class="bi bi-balloon"></i>
+            <span>Шары</span>
+        </button>
+        <button class="study-mode-btn match" onclick="window.location.href='{% url 'cards:module_match' module.id %}'">
+            <i class="bi bi-grid-3x3"></i>
+            <span>Подбор</span>
+        </button>
+        <button class="study-mode-btn ai" onclick="window.location.href='{% url 'cards:ai_training' module.id %}'">
+            <i class="bi bi-robot"></i>
+            <span>Тренировка с AI</span>
+        </button>
+    </div>
+
+    <div class="cards-container">
+        <div class="cards-navigation">
+            <button class="nav-btn" onclick="previousCard()">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <div class="current-card" id="currentCard">
+                <!-- Карточка будет добавлена динамически -->
+            </div>
+            <button class="nav-btn" onclick="nextCard()">
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+        <div class="cards-progress">
+            <div class="progress-bar">
+                <div class="progress" id="progressBar"></div>
+            </div>
+            <div class="progress-text" id="progressText">0 из 0</div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно создания карточки -->
+<div class="modal" id="createCardModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Создать карточку</h2>
+            <button class="close-btn" onclick="closeModal('createCardModal')">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <form id="createCardForm">
+            <div class="form-group">
+                <label for="cardTerm">Термин</label>
+                <input type="text" id="cardTerm" name="term" required>
+            </div>
+            <div class="form-group">
+                <label for="cardTranslation">Перевод</label>
+                <input type="text" id="cardTranslation" name="translation" required>
+            </div>
+            <div class="form-group">
+                <label for="cardImage">Изображение</label>
+                <input type="file" id="cardImage" name="image" accept="image/*" style="display: none;">
+                <button type="button" class="image-upload-btn" onclick="document.getElementById('cardImage').click()">
+                    <i class="bi bi-image"></i>
+                    <span>Выбрать изображение</span>
+                </button>
+                <div id="imagePreview" class="image-preview"></div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="cancel-btn" onclick="closeModal('createCardModal')">Отмена</button>
+                <button type="submit" class="submit-btn">Создать</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования карточки -->
+<div class="modal" id="editCardModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Редактировать карточку</h2>
+            <button class="close-btn" onclick="closeModal('editCardModal')">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <form id="editCardForm">
+            <input type="hidden" id="editCardId" name="cardId">
+            <div class="form-group">
+                <label for="editCardTerm">Термин</label>
+                <input type="text" id="editCardTerm" name="term" required>
+            </div>
+            <div class="form-group">
+                <label for="editCardTranslation">Перевод</label>
+                <input type="text" id="editCardTranslation" name="translation" required>
+            </div>
+            <div class="form-group">
+                <label for="editCardImage">Изображение</label>
+                <input type="file" id="editCardImage" name="image" accept="image/*" style="display: none;">
+                <button type="button" class="image-upload-btn" onclick="document.getElementById('editCardImage').click()">
+                    <i class="bi bi-image"></i>
+                    <span>Выбрать изображение</span>
+                </button>
+                <div id="editImagePreview" class="image-preview"></div>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="cancel-btn" onclick="closeModal('editCardModal')">Отмена</button>
+                <button type="submit" class="submit-btn">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div class="modal" id="deleteConfirmModal">
+    <div class="modal-content delete-confirm">
+        <div class="modal-header">
+            <h2>Подтверждение удаления</h2>
+            <button class="close-btn" onclick="closeModal('deleteConfirmModal')">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="delete-icon">
+                <i class="bi bi-trash"></i>
+            </div>
+            <p>Вы уверены, что хотите удалить эту карточку?</p>
+            <p class="delete-warning">Это действие нельзя будет отменить.</p>
+        </div>
+        <div class="modal-buttons">
+            <button type="button" class="cancel-btn" onclick="closeModal('deleteConfirmModal')">Отмена</button>
+            <button type="button" class="delete-btn" onclick="confirmDelete()">
+                <i class="bi bi-trash"></i>
+                <span>Удалить</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно редактирования модуля -->
+<div class="modal" id="editModuleModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Настройки модуля</h2>
+            <button class="close-btn" onclick="closeModal('editModuleModal')">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <form id="editModuleForm">
+            <div class="form-group">
+                <label for="moduleName">Название модуля</label>
+                <input type="text" id="moduleName" name="name" value="{{ module.name }}" required>
+            </div>
+            <div class="form-group">
+                <label for="moduleType">Тип доступа</label>
+                <select id="moduleType" name="type" required>
+                    <option value="private" {% if module.module_type == 'private' %}selected{% endif %}>Частный</option>
+                    <option value="public" {% if module.module_type == 'public' %}selected{% endif %}>Публичный</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="cancel-btn" onclick="closeModal('editModuleModal')">Отмена</button>
+                <button type="submit" class="submit-btn">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления модуля -->
+<div class="modal" id="deleteModuleModal">
+    <div class="modal-content delete-confirm">
+        <div class="modal-header">
+            <h2>Удалить модуль</h2>
+            <button class="close-btn" onclick="closeModal('deleteModuleModal')">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="delete-icon">
+                <i class="bi bi-trash"></i>
+            </div>
+            <p>Вы уверены, что хотите удалить этот модуль?</p>
+            <p class="delete-warning">Это действие нельзя будет отменить.</p>
+        </div>
+        <div class="modal-buttons">
+            <button type="button" class="cancel-btn" onclick="closeModal('deleteModuleModal')">Отмена</button>
+            <button type="button" class="delete-btn" onclick="confirmDeleteModule()">
+                <i class="bi bi-trash"></i>
+                <span>Удалить</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+.module-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #f8f5ff;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.module-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.module-header h1 {
+    margin: 0;
+    color: #333;
+    font-size: 1.8rem;
+    flex: 1;
+}
+
+.module-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.action-btn {
+    background: white;
+    border: 2px solid #7c4dff;
+    color: #7c4dff;
+    padding: 10px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.action-btn:hover {
+    background: #7c4dff;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.study-modes {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.study-mode-btn {
+    background: white;
+    border: 2px solid #7c4dff;
+    color: #7c4dff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    flex: 1;
+    justify-content: center;
+    min-width: 200px;
+}
+
+.study-mode-btn:hover {
+    background: #7c4dff;
+    color: white;
+}
+
+.study-mode-btn i {
+    font-size: 1.2rem;
+}
+
+.cards-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.cards-navigation {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.nav-btn {
+    background: white;
+    border: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-size: 1.5rem;
+    color: #666;
+}
+
+.nav-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    color: #7c4dff;
+}
+
+.current-card {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    min-height: 400px;
+}
+
+.card-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 600px;
+}
+
+.flip-card {
+    perspective: 1000px;
+    width: 100%;
+    height: 400px;
+    cursor: pointer;
+}
+
+.flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+}
+
+.flip-card.flipped .flip-card-inner {
+    transform: rotateY(180deg);
+}
+
+.flip-card-front,
+.flip-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.flip-card-back {
+    transform: rotateY(180deg);
+}
+
+.card-image {
+    width: 100%;
+    max-height: 200px;
+    border-radius: 16px;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+.card-image-placeholder {
+    width: 100%;
+    height: 200px;
+    border-radius: 16px;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 1.2rem;
+}
+
+.card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+
+.card-term {
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+    word-break: break-word;
+}
+
+.card-translation {
+    font-size: 2rem;
+    color: #666;
+    text-align: center;
+    word-break: break-word;
+}
+
+.card-translation.large {
+    font-size: 3rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.card-actions {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+    gap: 8px;
+    z-index: 10;
+}
+
+.card-actions .action-btn {
+    background: white;
+    border: 2px solid #7c4dff;
+    color: #7c4dff;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    width: 36px;
+    height: 36px;
+}
+
+.card-actions .action-btn:hover {
+    background: #7c4dff;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.card-actions .action-btn i {
+    font-size: 1.1rem;
+}
+
+.card-actions .action-btn.speak {
+    border-color: #4CAF50;
+    color: #4CAF50;
+}
+
+.card-actions .action-btn.speak:hover {
+    background: #4CAF50;
+    color: white;
+}
+
+.card-actions .action-btn.speak.playing {
+    background: #4CAF50;
+    color: white;
+    animation: pulse 1.5s infinite;
+}
+
+.card-actions .action-btn.edit {
+    border-color: #2196F3;
+    color: #2196F3;
+}
+
+.card-actions .action-btn.edit:hover {
+    background: #2196F3;
+    color: white;
+}
+
+.card-actions .action-btn.delete {
+    border-color: #f44336;
+    color: #f44336;
+}
+
+.card-actions .action-btn.delete:hover {
+    background: #f44336;
+    color: white;
+}
+
+.cards-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress {
+    height: 100%;
+    background: #7c4dff;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 0;
+    width: 90%;
+    max-width: 500px;
+    margin: 100px auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.form-group {
+    padding: 20px 24px;
+    border-bottom: 1px solid #eee;
+}
+
+.form-group:last-of-type {
+    border-bottom: none;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #7c4dff;
+    box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.1);
+    outline: none;
+}
+
+.modal-buttons {
+    padding: 20px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.cancel-btn,
+.submit-btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.cancel-btn {
+    background: #f0f0f0;
+    border: none;
+    color: #666;
+}
+
+.submit-btn {
+    background: #7c4dff;
+    border: none;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background: #e0e0e0;
+}
+
+.submit-btn:hover {
+    background: #651fff;
+}
+
+.image-upload-btn {
+    background: #f0f0f0;
+    border: 2px dashed #7c4dff;
+    color: #7c4dff;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    width: 100%;
+    justify-content: center;
+}
+
+.image-upload-btn:hover {
+    background: #e8e0ff;
+}
+
+.image-preview {
+    margin-top: 12px;
+    max-width: 100%;
+    height: 200px;
+    border-radius: 12px;
+    overflow: hidden;
+    display: none;
+}
+
+.image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.delete-confirm {
+    max-width: 400px;
+}
+
+.delete-confirm .modal-body {
+    padding: 24px;
+    text-align: center;
+}
+
+.delete-icon {
+    font-size: 3rem;
+    color: #ff4d4d;
+    margin-bottom: 16px;
+}
+
+.delete-warning {
+    color: #666;
+    font-size: 0.9rem;
+    margin-top: 8px;
+}
+
+.delete-btn {
+    background: #ff4d4d;
+    border: none;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.delete-btn:hover {
+    background: #ff3333;
+    transform: translateY(-2px);
+}
+
+.delete-btn i {
+    font-size: 1.1rem;
+}
+
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background-color: white;
+    cursor: pointer;
+}
+
+.form-group select:focus {
+    border-color: #7c4dff;
+    box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.1);
+    outline: none;
+}
+
+.form-group select option {
+    padding: 8px;
+}
+
+/* Адаптивные стили */
+@media (max-width: 1024px) {
+    .module-container {
+        padding: 15px;
+    }
+
+    .card-term {
+        font-size: 2rem;
+    }
+
+    .card-translation {
+        font-size: 1.8rem;
+    }
+
+    .card-translation.large {
+        font-size: 2.5rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .module-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .module-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .study-modes {
+        gap: 10px;
+    }
+
+    .study-mode-btn {
+        min-width: calc(50% - 5px);
+        padding: 10px 15px;
+    }
+
+    .cards-container {
+        padding: 20px;
+    }
+
+    .flip-card {
+        height: 350px;
+    }
+
+    .card-term {
+        font-size: 1.8rem;
+    }
+
+    .card-translation {
+        font-size: 1.5rem;
+    }
+
+    .card-translation.large {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .module-container {
+        padding: 10px;
+    }
+
+    .module-header {
+        padding: 15px;
+    }
+
+    .module-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .action-btn {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
+
+    .btn-text {
+        display: none;
+    }
+
+    .action-btn i {
+        font-size: 1.2rem;
+        margin: 0;
+    }
+
+    .study-mode-btn {
+        min-width: 100%;
+    }
+
+    .cards-container {
+        padding: 15px;
+    }
+
+    .cards-navigation {
+        gap: 15px;
+    }
+
+    .nav-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 1.2rem;
+    }
+
+    .flip-card {
+        height: 300px;
+    }
+
+    .card-term {
+        font-size: 1.5rem;
+    }
+
+    .card-translation {
+        font-size: 1.3rem;
+    }
+
+    .card-translation.large {
+        font-size: 1.8rem;
+    }
+
+    .card-actions {
+        top: 10px;
+        right: 10px;
+    }
+
+    .card-actions .action-btn {
+        width: 32px;
+        height: 32px;
+        padding: 6px;
+    }
+}
+
+/* Стили для выпадающего меню экспорта */
+.export-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.export-dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    min-width: 180px;
+    background-color: white;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+    border-radius: 12px;
+    padding: 10px 0;
+    z-index: 100;
+    margin-top: 8px;
+    border: 1px solid rgba(124, 77, 255, 0.2);
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.export-dropdown-content a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    color: #444;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.export-dropdown-content a i {
+    font-size: 1.2rem;
+}
+
+.export-dropdown-content a:hover {
+    background-color: rgba(124, 77, 255, 0.1);
+    color: #7c4dff;
+}
+
+.export-dropdown:hover .export-dropdown-content {
+    display: block;
+}
+
+.export-btn:hover + .export-dropdown-content {
+    display: block;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentCards = [];
+let currentCardIndex = 0;
+let currentCardId = null;
+let cardToDelete = null;
+
+// Функции для работы с модальными окнами
+function showModal(modalId) {
+    document.getElementById(modalId).style.display = 'block';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function showCreateCardModal() {
+    showModal('createCardModal');
+}
+
+// Функции для работы с модулем
+function showEditModuleModal() {
+    showModal('editModuleModal');
+}
+
+// Функции для работы с карточками
+async function loadCards() {
+    try {
+        const response = await fetch(`/cards/api/modules/{{ module.id }}/cards/`);
+        const data = await response.json();
+        currentCards = data.cards;
+        currentCardIndex = 0;
+        updateCardDisplay();
+    } catch (error) {
+        console.error('Error loading cards:', error);
+        alert('Ошибка загрузки карточек');
+    }
+}
+
+async function speakWord(word, btn) {
+    try {
+        if (btn) btn.classList.add('playing');
+        
+        // Получаем CSRF-токен из cookie
+        const csrftoken = getCookie('csrftoken');
+        
+        const response = await fetch(`/dictionary/api/text-to-speech/?word=${encodeURIComponent(word)}`, {
+            headers: {
+                'X-CSRFToken': csrftoken
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to get audio');
+        }
+        
+        const blob = await response.blob();
+        const audio = new Audio(URL.createObjectURL(blob));
+        
+        audio.onended = () => {
+            if (btn) btn.classList.remove('playing');
+            URL.revokeObjectURL(audio.src); // Освобождаем память
+        };
+        
+        audio.onerror = () => {
+            if (btn) btn.classList.remove('playing');
+            URL.revokeObjectURL(audio.src);
+            throw new Error('Error playing audio');
+        };
+        
+        await audio.play();
+    } catch (error) {
+        console.error('Error playing audio:', error);
+        if (btn) btn.classList.remove('playing');
+        
+        // Показываем уведомление об ошибке
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="bi bi-exclamation-circle"></i>
+                <span>Ошибка при воспроизведении аудио: ${error.message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+        
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 400);
+        }, 3000);
+    }
+}
+
+// Вспомогательная функция для получения CSRF-токена из cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function updateCardDisplay() {
+    const cardContainer = document.getElementById('currentCard');
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    if (currentCards.length === 0) {
+        cardContainer.innerHTML = `
+            <div class="card-item">
+                <div class="card-image-placeholder">
+                    <i class="bi bi-card-list"></i>
+                    <span>Нет карточек</span>
+                </div>
+                <div class="card-content">
+                    <div class="card-term">Нет карточек в этом модуле</div>
+                    <div class="card-translation">Добавьте карточки, чтобы начать обучение</div>
+                </div>
+            </div>
+        `;
+        progressBar.style.width = '0%';
+        progressText.textContent = '0 из 0';
+        return;
+    }
+    
+    const card = currentCards[currentCardIndex];
+    cardContainer.innerHTML = `
+        <div class="card-wrapper">
+            <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front">
+                        <div class="card-term">${card.term}</div>
+                    </div>
+                    <div class="flip-card-back">
+                        ${card.image ? `
+                            <img src="${card.image}" alt="${card.term}" class="card-image">
+                            <div class="card-translation">${card.translation}</div>
+                        ` : `
+                            <div class="card-translation large">${card.translation}</div>
+                        `}
+                    </div>
+                </div>
+            </div>
+            {% if is_owner %}
+            <div class="card-actions">
+                <button class="action-btn" onclick="event.stopPropagation(); speakWord('${card.term}', this)">
+                    <i class="bi bi-volume-up"></i>
+                </button>
+                <button class="action-btn" onclick="event.stopPropagation(); showEditCardModal(${card.id}, '${card.term}', '${card.translation}', '${card.image || ''}')">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
+                <button class="action-btn" onclick="event.stopPropagation(); deleteCard(${card.id})">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </div>
+            {% else %}
+            <div class="card-actions">
+                <button class="action-btn" onclick="event.stopPropagation(); speakWord('${card.term}', this)">
+                    <i class="bi bi-volume-up"></i>
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    `;
+    
+    progressBar.style.width = `${((currentCardIndex + 1) / currentCards.length) * 100}%`;
+    progressText.textContent = `${currentCardIndex + 1} из ${currentCards.length}`;
+}
+
+function previousCard() {
+    if (currentCards.length === 0) return;
+    currentCardIndex = (currentCardIndex - 1 + currentCards.length) % currentCards.length;
+    updateCardDisplay();
+}
+
+function nextCard() {
+    if (currentCards.length === 0) return;
+    currentCardIndex = (currentCardIndex + 1) % currentCards.length;
+    updateCardDisplay();
+}
+
+// Обработчик выбора изображения
+document.getElementById('cardImage').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('imagePreview');
+            preview.style.display = 'block';
+            preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+document.getElementById('editCardImage').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('editImagePreview');
+            preview.style.display = 'block';
+            preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+// Функция показа модального окна редактирования
+function showEditCardModal(cardId, term, translation, image) {
+    document.getElementById('editCardId').value = cardId;
+    document.getElementById('editCardTerm').value = term;
+    document.getElementById('editCardTranslation').value = translation;
+    
+    const preview = document.getElementById('editImagePreview');
+    if (image) {
+        preview.style.display = 'block';
+        preview.innerHTML = `<img src="${image}" alt="Preview">`;
+    } else {
+        preview.style.display = 'none';
+        preview.innerHTML = '';
+    }
+    
+    showModal('editCardModal');
+}
+
+// Обработчик формы редактирования
+document.getElementById('editCardForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const cardId = formData.get('cardId');
+    
+    try {
+        const response = await fetch(`/cards/api/cards/${cardId}/update/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: formData
+        });
+        
+        if (response.ok) {
+            closeModal('editCardModal');
+            loadCards();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Ошибка при обновлении карточки');
+        }
+    } catch (error) {
+        console.error('Error updating card:', error);
+        alert('Ошибка при обновлении карточки');
+    }
+});
+
+// Обработчик формы создания
+document.getElementById('createCardForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    try {
+        const response = await fetch(`/cards/api/modules/{{ module.id }}/cards/create/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: formData
+        });
+        
+        if (response.ok) {
+            closeModal('createCardModal');
+            loadCards();
+            e.target.reset();
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('imagePreview').innerHTML = '';
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Ошибка при создании карточки');
+        }
+    } catch (error) {
+        console.error('Error creating card:', error);
+        alert('Ошибка при создании карточки');
+    }
+});
+
+// Функция удаления карточки
+async function deleteCard(cardId) {
+    cardToDelete = cardId;
+    showModal('deleteConfirmModal');
+}
+
+async function confirmDelete() {
+    if (!cardToDelete) return;
+    
+    try {
+        const response = await fetch(`/cards/api/cards/${cardToDelete}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        if (response.ok) {
+            closeModal('deleteConfirmModal');
+            loadCards();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Ошибка при удалении карточки');
+        }
+    } catch (error) {
+        console.error('Error deleting card:', error);
+        alert('Ошибка при удалении карточки');
+    } finally {
+        cardToDelete = null;
+    }
+}
+
+// Обработчик формы редактирования модуля
+document.getElementById('editModuleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = {
+        name: formData.get('name'),
+        type: formData.get('type')
+    };
+    
+    try {
+        const response = await fetch(`/cards/api/modules/{{ module.id }}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (response.ok) {
+            closeModal('editModuleModal');
+            window.location.reload();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Ошибка при обновлении модуля');
+        }
+    } catch (error) {
+        console.error('Error updating module:', error);
+        alert('Ошибка при обновлении модуля');
+    }
+});
+
+function showDeleteModuleModal() {
+    showModal('deleteModuleModal');
+}
+
+async function confirmDeleteModule() {
+    try {
+        const response = await fetch(`/cards/api/modules/{{ module.id }}/delete/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        if (response.ok) {
+            window.location.href = '/cards/';
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Ошибка при удалении модуля');
+        }
+    } catch (error) {
+        alert('Ошибка при удалении модуля');
+    }
+}
+
+// Функция для сохранения модуля
+async function saveModule() {
+    try {
+        const moduleId = {{ module.id }};
+        const saveButton = document.querySelector('.save-module-btn');
+        
+        if (saveButton) {
+            const icon = saveButton.querySelector('i');
+            const text = saveButton.querySelector('span');
+            
+            // Показываем индикатор загрузки
+            if (icon) icon.className = 'bi bi-arrow-repeat spin';
+            if (text) text.textContent = 'Сохранение...';
+        }
+        
+        const response = await fetch(`/cards/api/save-module/${moduleId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            // Успешно сохранено
+            if (saveButton) {
+                saveButton.style.backgroundColor = '#4caf50';
+                saveButton.style.borderColor = '#4caf50';
+                const icon = saveButton.querySelector('i');
+                const text = saveButton.querySelector('span');
+                
+                if (icon) icon.className = 'bi bi-check-circle';
+                if (text) text.textContent = 'Сохранено';
+            }
+            
+            // Показываем уведомление
+            showNotification('Модуль успешно сохранен', 'success');
+            
+            // Через 1.5 секунды перенаправляем на страницу карточек
+            setTimeout(() => {
+                window.location.href = '/cards/';
+            }, 1500);
+        } else {
+            // Ошибка при сохранении
+            if (saveButton) {
+                const icon = saveButton.querySelector('i');
+                const text = saveButton.querySelector('span');
+                
+                if (icon) icon.className = 'bi bi-bookmark';
+                if (text) text.textContent = 'Сохранить модуль';
+            }
+            
+            // Показываем уведомление об ошибке
+            showNotification(data.error || 'Ошибка при сохранении модуля', 'error');
+        }
+    } catch (error) {
+        console.error('Ошибка при сохранении модуля:', error);
+        // Восстанавливаем состояние кнопки
+        const saveButton = document.querySelector('.save-module-btn');
+        if (saveButton) {
+            const icon = saveButton.querySelector('i');
+            const text = saveButton.querySelector('span');
+            
+            if (icon) icon.className = 'bi bi-bookmark';
+            if (text) text.textContent = 'Сохранить модуль';
+        }
+        
+        // Показываем уведомление об ошибке
+        showNotification('Ошибка при сохранении модуля', 'error');
+    }
+}
+
+// Функция для отображения уведомлений
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Добавляем стили для уведомления
+    const style = document.createElement('style');
+    style.textContent = `
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 1000;
+            animation: fadeInOut 3s forwards;
+            max-width: 300px;
+        }
+        
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(-20px); }
+            10% { opacity: 1; transform: translateY(0); }
+            90% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+        
+        .notification.info {
+            background-color: #2196F3;
+        }
+        
+        .notification.success {
+            background-color: #4CAF50;
+        }
+        
+        .notification.error {
+            background-color: #F44336;
+        }
+    `;
+    
+    document.head.appendChild(style);
+    
+    // Удаляем уведомление через 3 секунды
+    setTimeout(() => {
+        notification.remove();
+        style.remove();
+    }, 3000);
+}
+
+// Инициализация
+document.addEventListener('DOMContentLoaded', () => {
+    loadCards();
+});
+
+// Функция для экспорта модуля
+function exportModule(format) {
+    const moduleId = {{ module.id }};
+    let url = `/cards/export/module/${moduleId}/word/`;
+    
+    // Запускаем скачивание сразу
+    window.location.href = url;
+    
+    // Показываем только одно уведомление внизу слева
+    setTimeout(() => {
+        showExportComplete(format);
+    }, 1000);
+}
+
+// Функция для показа уведомления об успешном экспорте
+function showExportComplete(format) {
+    // Создаем уведомление об успешном экспорте
+    const notification = document.createElement('div');
+    notification.className = 'export-notification';
+    
+    const icon = 'bi-file-word';
+    const color = '#2b579a';
+    
+    notification.innerHTML = `
+        <div class="export-notification-icon" style="color:${color}">
+            <i class="bi ${icon}"></i>
+        </div>
+        <div class="export-notification-content">
+            <h3>Экспорт завершен</h3>
+            <p>Модуль "{{ module.name }}" успешно экспортирован в WORD</p>
+        </div>
+        <button class="export-notification-close">×</button>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Добавляем стили для уведомления
+    const style = document.createElement('style');
+    style.textContent = `
+        .export-notification {
+            position: fixed;
+            bottom: 20px;
+            left: 20px; /* Изменено с right на left */
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+            display: flex;
+            padding: 15px;
+            z-index: 1000;
+            animation: slideIn 0.3s forwards;
+            max-width: 400px;
+            border-left: 5px solid ${color};
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(-100%); opacity: 0; } /* Изменено направление анимации */
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        .export-notification-icon {
+            font-size: 2.5rem;
+            margin-right: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .export-notification-content {
+            flex: 1;
+        }
+        
+        .export-notification-content h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.2rem;
+        }
+        
+        .export-notification-content p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .export-notification-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+            align-self: flex-start;
+            padding: 0;
+            margin-left: 10px;
+        }
+    `;
+    
+    document.head.appendChild(style);
+    
+    // Удаляем уведомление через 5 секунд
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s forwards';
+        
+        const slideOutStyle = document.createElement('style');
+        slideOutStyle.textContent = `
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(-100%); opacity: 0; } /* Изменено направление анимации */
+            }
+        `;
+        document.head.appendChild(slideOutStyle);
+        
+        setTimeout(() => {
+            notification.remove();
+            style.remove();
+            slideOutStyle.remove();
+        }, 300);
+    }, 5000);
+    
+    // Обработчик клика по кнопке закрытия
+    notification.querySelector('.export-notification-close').addEventListener('click', () => {
+        notification.remove();
+        style.remove();
+    });
+}
+</script>
+{% endblock %} 

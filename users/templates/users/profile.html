@@ -1,0 +1,320 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Профиль пользователя{% endblock %}
+
+{% block content %}
+<div class="profile-container">
+    <div class="profile-header">
+        <div class="avatar-container">
+            <div class="avatar-wrapper">
+                <img src="{% static 'users/img/default-avatar.png' %}" alt="Аватар" class="profile-avatar">
+                <button class="change-avatar-btn" title="Изменить аватар">
+                    <i class="bi bi-camera"></i>
+                </button>
+            </div>
+            <h2 class="user-name">{{ user.first_name }} {{ user.last_name }}</h2>
+            <p class="user-email">{{ user.email }}</p>
+        </div>
+    </div>
+
+    <div class="profile-content">
+        <div class="profile-card">
+            <div class="card-header">
+                <h3>Личная информация</h3>
+                <button class="edit-btn" id="editButton">
+                    <i class="bi bi-pencil"></i> Редактировать
+                </button>
+            </div>
+
+            <form method="post" class="profile-form" id="profileForm">
+                {% csrf_token %}
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Имя</label>
+                        <input type="text" name="first_name" value="{{ user.first_name }}" class="form-control" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Фамилия</label>
+                        <input type="text" name="last_name" value="{{ user.last_name }}" class="form-control" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" value="{{ user.email }}" class="form-control" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Телефон</label>
+                        <input type="text" name="phone_number" value="{{ user.phone_number }}" class="form-control" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Город</label>
+                        <input type="text" name="city" value="{{ user.city }}" class="form-control" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Дата рождения</label>
+                        <input type="date" name="birth_date" value="{{ user.birth_date|date:'Y-m-d' }}" class="form-control" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Текущий уровень языка</label>
+                        <select name="current_language_level" class="form-control" disabled>
+                            <option value="A1" {% if user.current_language_level == 'A1' %}selected{% endif %}>A1 — Начальный</option>
+                            <option value="A2" {% if user.current_language_level == 'A2' %}selected{% endif %}>A2 — Элементарный</option>
+                            <option value="B1" {% if user.current_language_level == 'B1' %}selected{% endif %}>B1 — Средний</option>
+                            <option value="B2" {% if user.current_language_level == 'B2' %}selected{% endif %}>B2 — Выше среднего</option>
+                            <option value="C1" {% if user.current_language_level == 'C1' %}selected{% endif %}>C1 — Продвинутый</option>
+                            <option value="C2" {% if user.current_language_level == 'C2' %}selected{% endif %}>C2 — Свободный</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Желаемый уровень</label>
+                        <select name="desired_language_level" class="form-control" disabled>
+                            <option value="A2" {% if user.desired_language_level == 'A2' %}selected{% endif %}>A2</option>
+                            <option value="B1" {% if user.desired_language_level == 'B1' %}selected{% endif %}>B1</option>
+                            <option value="B2" {% if user.desired_language_level == 'B2' %}selected{% endif %}>B2</option>
+                            <option value="C1" {% if user.desired_language_level == 'C1' %}selected{% endif %}>C1</option>
+                            <option value="C2" {% if user.desired_language_level == 'C2' %}selected{% endif %}>C2</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-actions" style="display: none;">
+                    <button type="button" class="cancel-btn" onclick="toggleEditMode()">Отмена</button>
+                    <button type="submit" class="save-btn">Сохранить изменения</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .profile-header {
+        background: linear-gradient(135deg, #7c4dff 0%, #6200ea 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        color: white;
+        text-align: center;
+    }
+
+    .avatar-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .avatar-wrapper {
+        position: relative;
+        width: 150px;
+        height: 150px;
+    }
+
+    .profile-avatar {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .change-avatar-btn {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        background: white;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        transition: all 0.3s ease;
+    }
+
+    .change-avatar-btn:hover {
+        transform: scale(1.1);
+    }
+
+    .user-name {
+        font-size: 2rem;
+        margin: 0;
+        font-weight: 700;
+    }
+
+    .user-email {
+        opacity: 0.9;
+        margin: 0;
+    }
+
+    .profile-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+    }
+
+    .card-header h3 {
+        margin: 0;
+        color: #333;
+        font-size: 1.5rem;
+    }
+
+    .edit-btn {
+        background: #7c4dff;
+        color: white;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .edit-btn:hover {
+        background: #6200ea;
+        transform: translateY(-2px);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #666;
+        font-weight: 500;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 0.8rem;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:disabled {
+        background: #f5f5f5;
+        cursor: not-allowed;
+    }
+
+    .form-control:focus {
+        border-color: #7c4dff;
+        box-shadow: 0 0 0 2px rgba(124, 77, 255, 0.2);
+        outline: none;
+    }
+
+    .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .cancel-btn, .save-btn {
+        padding: 0.8rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .cancel-btn {
+        background: #f5f5f5;
+        color: #333;
+        border: 1px solid #ddd;
+    }
+
+    .cancel-btn:hover {
+        background: #e0e0e0;
+    }
+
+    .save-btn {
+        background: #7c4dff;
+        color: white;
+        border: none;
+    }
+
+    .save-btn:hover {
+        background: #6200ea;
+        transform: translateY(-2px);
+    }
+
+    @media (max-width: 768px) {
+        .profile-container {
+            padding: 1rem;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .card-header {
+            flex-direction: column;
+            gap: 1rem;
+            text-align: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const editButton = document.getElementById('editButton');
+        const form = document.getElementById('profileForm');
+        const formActions = document.querySelector('.form-actions');
+        
+        if (!editButton || !form || !formActions) {
+            console.error('Не найдены необходимые элементы');
+            return;
+        }
+
+        editButton.addEventListener('click', function() {
+            const inputs = form.querySelectorAll('input, select');
+            const isDisabled = inputs[0].disabled;
+            
+            inputs.forEach(input => {
+                input.disabled = !isDisabled;
+            });
+
+            if (isDisabled) {
+                editButton.innerHTML = '<i class="bi bi-x"></i> Отменить';
+                formActions.style.display = 'flex';
+            } else {
+                editButton.innerHTML = '<i class="bi bi-pencil"></i> Редактировать';
+                formActions.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %} 

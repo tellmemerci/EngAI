@@ -1,0 +1,93 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}{{ module.title }} - Детали модуля{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'study_modules/css/module_detail.css' %}?v=3.3">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'study_modules/js/module_detail.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="module-container">
+    <a href="/modules/" class="back-button">
+        <i class="bi bi-arrow-left-circle"></i>Вернуться назад
+    </a>
+    
+    <!-- Секция управления модулем -->
+    {% if module.author == user %}
+    <div class="module-management-section">
+        <a href="{% url 'study_modules:add_unit' module.id %}" class="btn btn-success"><i class="bi bi-plus-circle"></i> Добавить юнит</a>
+    </div>
+    {% endif %}
+
+    <h1 class="module-header">{{ module.title }}</h1>
+    
+    {% if module.description %}
+    <div class="module-description">
+        <p>{{ module.description }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Юниты модуля -->
+    {% if units %}
+    <div class="units-section">
+        <h2 class="section-title"><i class="bi bi-journals"></i>Юниты модуля</h2>
+        <div class="units-grid">
+            {% for unit in units %}
+            <div class="unit-card">
+                {% if module.author == user %}
+                <div class="unit-controls">
+                    <a href="{% url 'study_modules:edit_unit' module.id unit.id %}" class="btn btn-sm btn-outline-info"><i class="bi bi-pencil"></i></a>
+                    <a href="{% url 'study_modules:delete_unit' module.id unit.id %}" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></a>
+                </div>
+                {% endif %}
+                <a href="{% url 'study_modules:unit_detail' module.id unit.id %}" class="unit-card-link">
+                    {% if unit.image %}
+                    <img src="{{ unit.image.url }}" alt="{{ unit.title }}" class="unit-image">
+                    {% endif %}
+                    <h3>{{ unit.title }}</h3>
+                    {% if unit.description %}
+                    <p>{{ unit.description|truncatewords:20 }}</p>
+                    {% endif %}
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+        {% if module.author == user %}
+        <div class="alert alert-info text-center" role="alert">
+            Пока нет юнитов в этом модуле. <a href="{% url 'study_modules:add_unit' module.id %}">Добавить первый юнит</a>.
+        </div>
+        {% else %}
+        <div class="alert alert-info text-center" role="alert">
+            В этом модуле еще нет юнитов.
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+
+<script>
+function navigateToSkill(skillType) {
+    // Здесь можно добавить логику навигации к конкретному навыку
+    console.log('Переход к навыку:', skillType);
+    // Пример: window.location.href = `/modules/{{ module.id }}/skill/${skillType}/`;
+}
+
+// Добавляем обработчики для карточек навыков
+document.addEventListener('DOMContentLoaded', function() {
+    const skillCards = document.querySelectorAll('.skill-card:not(.disabled)');
+    skillCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const skillType = this.classList[1]; // Получаем тип навыка из класса
+            navigateToSkill(skillType);
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,2656 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Карточки{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="cards-container">
+    <div class="search-container">
+        <div class="search-wrapper">
+            <div class="search-input-group">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" class="search-input" placeholder="Поиск карточек и модулей..." />
+                <button class="search-btn" onclick="performSearch()">
+                    <i class="bi bi-search"></i>
+                    <span>Найти</span>
+                </button>
+            </div>
+            <div class="search-filters">
+                <button class="filter-btn active" data-filter="all">
+                    <i class="bi bi-grid"></i>
+                    <span>Все</span>
+                </button>
+                <button class="filter-btn" data-filter="modules">
+                    <i class="bi bi-book"></i>
+                    <span>Модули</span>
+                </button>
+                <button class="filter-btn" data-filter="folders">
+                    <i class="bi bi-folder"></i>
+                    <span>Папки</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="cards-content">
+        <div class="folders-section">
+            <div class="section-header">
+                <h2><i class="bi bi-folder"></i> Папки</h2>
+                <button class="create-btn" onclick="showCreateFolderModal()">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Создать папку</span>
+                </button>
+            </div>
+            <div id="foldersList" class="folders-grid">
+                <!-- Папки будут добавлены здесь -->
+            </div>
+        </div>
+
+        <div class="modules-section">
+            <div class="section-header">
+                <h2><i class="bi bi-book"></i> Мои модули</h2>
+                <div class="header-actions">
+                    <button class="create-btn" onclick="showCreateModuleModal()">
+                        <i class="bi bi-plus-lg"></i>
+                        <span>Создать модуль</span>
+                    </button>
+                    <button class="create-btn" onclick="showQuizletImportModal()">
+                        <i class="bi bi-upload"></i>
+                        <span>Экспорт из Квизлета</span>
+                    </button>
+                </div>
+            </div>
+            <div id="modulesList" class="modules-grid">
+                <!-- Модули будут добавлены здесь -->
+            </div>
+        </div>
+
+        <div class="saved-modules-section">
+            <div class="section-header">
+                <h2><i class="bi bi-bookmark"></i> Сохраненные модули</h2>
+            </div>
+            <div id="savedModulesList" class="modules-grid">
+                <!-- Сохраненные модули будут добавлены здесь -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно создания папки -->
+<div class="modal" id="createFolderModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Создать папку</h2>
+            <button class="close-btn" onclick="closeModal('createFolderModal')">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <form id="createFolderForm">
+            <div class="form-group">
+                <label for="folderName">Название папки</label>
+                <input type="text" id="folderName" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="parentFolder">Родительская папка</label>
+                <select id="parentFolder" name="parent">
+                    <option value="">Корневая папка</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="cancel-btn" onclick="closeModal('createFolderModal')">Отмена</button>
+                <button type="submit" class="submit-btn">Создать</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно создания модуля -->
+<div class="modal" id="createModuleModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Создать модуль</h2>
+            <button class="close-btn" onclick="closeModal('createModuleModal')">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <form id="createModuleForm">
+            <div class="form-group">
+                <label for="moduleName">Название модуля</label>
+                <input type="text" id="moduleName" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="moduleFolder">Папка</label>
+                <select id="moduleFolder" name="folder">
+                    <option value="">Без папки</option>
+                    {% for folder in folders %}
+                    <option value="{{ folder.id }}">{{ folder.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="cancel-btn" onclick="closeModal('createModuleModal')">Отмена</button>
+                <button type="submit" class="submit-btn">Создать</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно просмотра карточек -->
+<div class="modal" id="viewCardsModal">
+    <div class="modal-content cards-view">
+        <div class="modal-header">
+            <div class="header-content">
+                <button class="back-btn" onclick="closeModal('viewCardsModal')">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                <h2 id="moduleTitle">Название модуля</h2>
+            </div>
+            <div class="header-actions">
+                <button class="action-btn" onclick="showCreateCardModal()">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Добавить карточку</span>
+                </button>
+            </div>
+        </div>
+        <div class="cards-view-content">
+            <div class="study-modes">
+                <button class="study-mode-btn learn">
+                    <i class="bi bi-book"></i>
+                    <span>Заучивание</span>
+                </button>
+                <button class="study-mode-btn test">
+                    <i class="bi bi-pencil-square"></i>
+                    <span>Тест</span>
+                </button>
+                <button class="study-mode-btn game">
+                    <i class="bi bi-controller"></i>
+                    <span>Игра</span>
+                </button>
+                <button class="study-mode-btn match">
+                    <i class="bi bi-grid-3x3"></i>
+                    <span>Подбор</span>
+                </button>
+            </div>
+            <div class="cards-container">
+                <div class="cards-navigation">
+                    <button class="nav-btn" onclick="previousCard()">
+                        <i class="bi bi-chevron-left"></i>
+                    </button>
+                    <div class="current-card" id="currentCard">
+                        <!-- Карточка будет добавлена динамически -->
+                    </div>
+                    <button class="nav-btn" onclick="nextCard()">
+                        <i class="bi bi-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="cards-progress">
+                    <div class="progress-bar">
+                        <div class="progress" id="progressBar"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">0 из 0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно экспорта из Квизлета -->
+<div class="modal" id="quizletImportModal">
+    <div class="modal-content quizlet-import">
+        <div class="modal-header">
+            <h2>Экспорт из Квизлета</h2>
+            <button class="close-btn" onclick="closeModal('quizletImportModal')">
+                <i class="bi bi-x-lg"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('instructionsTab')">Инструкция</button>
+                <button class="tab-btn" onclick="switchTab('importTab')">Экспорт</button>
+            </div>
+            
+            <div id="instructionsTab" class="tab-content active">
+                <div class="instructions-content">
+                    <h3>Как экспортировать карточки из Квизлета</h3>
+                    <p>Инструкция будет добавлена позже.</p>
+                    <!-- Здесь будут инструкции и фотографии, которые добавит пользователь -->
+                </div>
+            </div>
+            
+            <div id="importTab" class="tab-content">
+                <form id="quizletImportForm">
+                    <div class="form-group">
+                        <label for="importModuleName">Название модуля</label>
+                        <input type="text" id="importModuleName" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="importFolder">Папка</label>
+                        <select id="importFolder" name="folder">
+                            <option value="">Без папки</option>
+                            <!-- Папки будут добавлены динамически -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="importContent">Содержимое</label>
+                        <p class="field-description">Вставьте текст в формате "слово - определение;" через точку с запятой.</p>
+                        <textarea id="importContent" name="content" rows="10" required placeholder="forerunner - предшественник;merchant - торговец;"></textarea>
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="button" class="cancel-btn" onclick="closeModal('quizletImportModal')">Отмена</button>
+                        <button type="submit" class="submit-btn">Импортировать</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+.cards-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #f8f5ff;
+    min-height: 100vh;
+}
+
+.search-container {
+    background: #f8f5ff;
+    padding: 20px;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.search-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.search-input-group {
+    position: relative;
+    flex: 1;
+    display: flex;
+    gap: 10px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #666;
+    font-size: 1.2rem;
+    z-index: 1;
+}
+
+.search-input {
+    width: 100%;
+    padding: 15px 15px 15px 45px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.search-btn {
+    background: #7c4dff;
+    color: white;
+    border: none;
+    padding: 0 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+.search-btn:hover {
+    background: #651fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.2);
+}
+
+.search-btn i {
+    font-size: 1.1rem;
+}
+
+.search-filters {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.filter-btn {
+    background: white;
+    border: 2px solid #e0e0e0;
+    color: #666;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.filter-btn:hover {
+    border-color: #7c4dff;
+    color: #7c4dff;
+}
+
+.filter-btn.active {
+    background: #7c4dff;
+    border-color: #7c4dff;
+    color: white;
+}
+
+.filter-btn i {
+    font-size: 1.1rem;
+}
+
+.cards-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    width: 100%;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header h2 {
+    color: #333;
+    font-size: 1.5rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-header h2 i {
+    color: #7c4dff;
+}
+
+.folders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.folder-item {
+    display: flex;
+    align-items: center;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.folder-item:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.folder-content {
+    display: flex;
+    padding: 16px;
+    width: 100%;
+}
+
+.folder-icon {
+    width: 50px;
+    height: 50px;
+    background-color: #f0e6ff;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+}
+
+.folder-icon i {
+    color: #7c4dff;
+    font-size: 24px;
+}
+
+.folder-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.folder-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 0;
+    color: #333;
+}
+
+.folder-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.folder-badge {
+    font-size: 0.8rem;
+    padding: 3px 8px;
+    border-radius: 15px;
+    background-color: #f0f0f0;
+    color: #666;
+    display: inline-flex;
+    align-items: center;
+}
+
+.folder-badge i {
+    margin-right: 4px;
+    font-size: 0.7rem;
+}
+
+.folder-actions {
+    padding: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.settings-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #777;
+    transition: all 0.2s ease;
+}
+
+.settings-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.settings-btn i {
+    font-size: 18px;
+}
+
+.settings-menu {
+    position: absolute;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    min-width: 180px;
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.menu-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background 0.2s ease;
+}
+
+.menu-item:hover {
+    background: #f9f5ff;
+}
+
+.menu-item i {
+    margin-right: 10px;
+    font-size: 14px;
+    width: 18px;
+    text-align: center;
+}
+
+.menu-item:nth-child(1) {
+    color: #4a6bf5;
+}
+
+.menu-item:nth-child(2) {
+    color: #f05151;
+}
+
+.module-item {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.module-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.1);
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.module-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+}
+
+.module-content {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.module-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.action-btn {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+}
+
+.action-btn:hover {
+    background: #f0f0f0;
+    color: #7c4dff;
+}
+
+.meta-info {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.type-tag {
+    background: #e8e0ff;
+    color: #7c4dff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.author-tag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #666;
+    font-size: 0.9rem;
+    padding: 4px 8px;
+    background: #f8f8f8;
+    border-radius: 6px;
+}
+
+.create-btn {
+    background: white;
+    border: 2px solid #7c4dff;
+    color: #7c4dff;
+    padding: 10px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.create-btn:hover {
+    background: #7c4dff;
+    color: white;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 0;
+    width: 90%;
+    max-width: 500px;
+    margin: 100px auto;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    animation: modalSlideIn 0.3s ease;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.form-group {
+    padding: 20px 24px;
+    border-bottom: 1px solid #eee;
+}
+
+.form-group:last-of-type {
+    border-bottom: none;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #7c4dff;
+    box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.1);
+    outline: none;
+}
+
+.modal-footer {
+    padding: 20px 24px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-secondary {
+    background: #f0f0f0;
+    border: none;
+    color: #666;
+}
+
+.btn-primary {
+    background: #7c4dff;
+    border: none;
+    color: white;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:hover {
+    background: #651fff;
+}
+
+.cards-view {
+    max-width: 800px !important;
+    height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.cards-view .modal-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #eee;
+}
+
+.header-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.cards-view-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.study-modes {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.study-mode-btn {
+    background: white;
+    border: 2px solid #7c4dff;
+    color: #7c4dff;
+    padding: 12px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.study-mode-btn:hover {
+    background: #7c4dff;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.study-mode-btn i {
+    font-size: 1.2rem;
+}
+
+.cards-container {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.cards-navigation {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+}
+
+.nav-btn {
+    background: white;
+    border: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    font-size: 1.5rem;
+    color: #666;
+}
+
+.nav-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    color: #7c4dff;
+}
+
+.current-card {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    min-height: 400px;
+}
+
+.card-item {
+    background: white;
+    border-radius: 20px;
+    padding: 32px;
+    width: 100%;
+    max-width: 600px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    animation: cardSlide 0.3s ease;
+}
+
+@keyframes cardSlide {
+    from {
+        transform: translateX(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.card-image {
+    width: 100%;
+    height: 300px;
+    border-radius: 16px;
+    object-fit: cover;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.card-image-placeholder {
+    width: 100%;
+    height: 300px;
+    border-radius: 16px;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 1.2rem;
+}
+
+.card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.card-term {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #333;
+    text-align: center;
+}
+
+.card-translation {
+    font-size: 1.5rem;
+    color: #666;
+    text-align: center;
+}
+
+.card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: auto;
+}
+
+.action-btn.delete {
+    color: #ff4d4d;
+}
+
+.action-btn.delete:hover {
+    background: #fff0f0;
+}
+
+.cards-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 6px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.progress {
+    height: 100%;
+    background: #7c4dff;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px dashed #dee2e6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: #999;
+}
+
+.import-section {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.import-options {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.import-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.import-btn:hover {
+    background: #f8f9fa;
+    border-color: #7c4dff;
+    color: #7c4dff;
+}
+
+.import-btn i {
+    font-size: 1.2em;
+}
+
+.import-btn.quizlet {
+    color: #4257b2;
+}
+
+.import-btn.quizlet:hover {
+    background: #f0f2ff;
+    border-color: #4257b2;
+}
+
+#quizletImportForm {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.form-text {
+    font-size: 0.85em;
+    color: #666;
+    margin-top: 5px;
+}
+
+.create-btn.quizlet {
+    background: linear-gradient(135deg, #7c4dff, #651fff);
+    border: none;
+    color: white;
+}
+
+.create-btn.quizlet:hover {
+    background: linear-gradient(135deg, #651fff, #5e35b1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.2);
+}
+
+.folder-info {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.info-tag {
+    background: #e8e0ff;
+    color: #7c4dff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.saved-tag {
+    color: #7c4dff;
+    display: flex;
+    align-items: center;
+}
+
+.modal-buttons {
+    padding: 20px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.cancel-btn,
+.submit-btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cancel-btn {
+    background: #f0f0f0;
+    border: none;
+    color: #666;
+}
+
+.submit-btn {
+    background: #7c4dff;
+    border: none;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background: #e0e0e0;
+    transform: translateY(-1px);
+}
+
+.submit-btn:hover {
+    background: #651fff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.2);
+}
+
+.module-author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.module-author i {
+    font-size: 1.2rem;
+}
+
+.module-author span {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.matching-cards {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f8f5ff;
+    border-radius: 8px;
+}
+
+.matching-cards-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #7c4dff;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+
+.matching-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.matching-card {
+    background: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #e0e0e0;
+}
+
+.matching-card .card-term {
+    font-size: 0.9rem;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.matching-card .card-translation {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.save-module {
+    color: #7c4dff;
+    transition: all 0.3s ease;
+}
+
+.save-module:hover {
+    color: #651fff;
+    transform: scale(1.1);
+}
+
+.save-module i {
+    font-size: 1.2rem;
+}
+
+.saved-tag {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: #7c4dff;
+    font-size: 0.9rem;
+}
+
+.saved-tag i {
+    font-size: 1rem;
+}
+
+.modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.module-item {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.module-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.1);
+}
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.module-title {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+}
+
+.meta-info {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.type-tag {
+    background: #e8e0ff;
+    color: #7c4dff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+}
+
+.module-author {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.folders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.folder-item {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.folder-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.1);
+}
+
+.folder-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.folder-icon {
+    width: 40px;
+    height: 40px;
+    background: #f0f0f0;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #7c4dff;
+    font-size: 1.5rem;
+}
+
+.folder-name {
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px dashed #dee2e6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    color: #999;
+}
+
+/* Стили для модального окна экспорта из Квизлета */
+.quizlet-import {
+    width: 90%;
+    max-width: 800px;
+}
+
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    color: #666;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+}
+
+.tab-btn.active {
+    background: #7c4dff;
+    color: white;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.instructions-content {
+    padding: 10px;
+}
+
+.instructions-content h3 {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.instructions-content p {
+    line-height: 1.6;
+    color: #555;
+    margin-bottom: 15px;
+}
+
+.field-description {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 5px 0 10px;
+}
+
+#importContent {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    resize: vertical;
+    font-family: inherit;
+}
+
+#importContent:focus {
+    border-color: #7c4dff;
+    box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.1);
+    outline: none;
+}
+
+/* Стили для заголовка секции */
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentModuleId = null;
+let currentCards = [];
+let currentCardIndex = 0;
+let searchTimeout;
+const searchInput = document.querySelector('.search-input');
+const filterButtons = document.querySelectorAll('.filter-btn');
+let currentFilter = 'all';
+
+// Функция для загрузки всех данных
+async function loadAllContent() {
+    try {
+        console.log('Начинаем загрузку данных...');
+        
+        // Загружаем папки
+        console.log('Запрашиваем папки...');
+        const foldersResponse = await fetch('/cards/api/folders/');
+        console.log('Ответ от сервера (папки):', foldersResponse.status);
+        const foldersData = await foldersResponse.json();
+        console.log('Данные папок:', foldersData);
+        
+        const foldersList = document.getElementById('foldersList');
+        foldersList.innerHTML = '';
+        
+        if (foldersData.folders && foldersData.folders.length > 0) {
+            console.log('Отображаем папки...');
+            foldersData.folders.forEach(folder => {
+                const folderElement = document.createElement('div');
+                folderElement.className = 'folder-item';
+                folderElement.innerHTML = `
+                    <div class="folder-content" onclick="window.location.href = '/cards/folder/${folder.id}/'">
+                        <div class="folder-icon">
+                            <i class="bi bi-folder"></i>
+                        </div>
+                        <div class="folder-info">
+                            <div class="folder-name">${folder.name}</div>
+                        </div>
+                    </div>
+                `;
+                foldersList.appendChild(folderElement);
+            });
+        } else {
+            console.log('Папок нет, показываем пустое состояние');
+            foldersList.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-folder"></i>
+                    <p>Нет папок</p>
+                </div>
+            `;
+        }
+
+        // Загружаем модули
+        console.log('Запрашиваем модули...');
+        const modulesResponse = await fetch('/cards/api/modules/');
+        console.log('Ответ от сервера (модули):', modulesResponse.status);
+        const modulesData = await modulesResponse.json();
+        console.log('Данные модулей:', modulesData);
+        
+        const modulesList = document.getElementById('modulesList');
+        modulesList.innerHTML = '';
+        
+        if (modulesData.modules && modulesData.modules.length > 0) {
+            console.log('Отображаем модули...');
+            modulesData.modules.forEach(module => {
+                const moduleElement = document.createElement('div');
+                moduleElement.className = 'module-item';
+                moduleElement.setAttribute('data-module-id', module.id);
+                
+                // Показываем кнопку сохранения только для чужих модулей, которые еще не сохранены
+                // Определяем, принадлежит ли модуль текущему пользователю
+                const isOwnModule = module.user && module.user.includes('@') === false;
+                
+                // Создаем кнопку сохранения только для чужих модулей
+                const saveButtonHtml = !isOwnModule && !module.is_saved ? 
+                    `<button class="save-module" onclick="event.stopPropagation(); saveModule(${module.id})">
+                        <i class="bi bi-bookmark"></i>
+                     </button>` : '';
+                
+                moduleElement.innerHTML = `
+                    <div class="module-header">
+                        <h3 class="module-title">${module.name}</h3>
+                        ${saveButtonHtml}
+                    </div>
+                    <div class="meta-info">
+                        <span class="type-tag">${module.type === 'public' ? 'Открытый' : 'Частный'}</span>
+                        <span class="author-tag"><i class="bi bi-person"></i> ${module.user}</span>
+                        ${module.is_saved ? '<span class="saved-tag"><i class="bi bi-bookmark-fill"></i></span>' : ''}
+                    </div>
+                `;
+                
+                // Если есть соответствующие карточки, показываем их
+                if (module.matching_cards && module.matching_cards.length > 0) {
+                    const matchingCardsHtml = `
+                        <div class="matching-cards">
+                            <div class="matching-cards-header">
+                                <i class="bi bi-card-text"></i>
+                                <span>Найденные карточки:</span>
+                            </div>
+                            <div class="matching-cards-list">
+                                ${module.matching_cards.map(card => `
+                                    <div class="matching-card">
+                                        <div class="term">${card.term}</div>
+                                        <div class="translation">${card.translation}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    moduleElement.innerHTML += matchingCardsHtml;
+                }
+                
+                moduleElement.onclick = () => window.location.href = `/cards/module/${module.id}/`;
+                modulesList.appendChild(moduleElement);
+            });
+        } else {
+            console.log('Модулей нет, показываем пустое состояние');
+            modulesList.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-book"></i>
+                    <p>Нет модулей</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Подробная информация об ошибке:', error);
+        console.error('Стек ошибки:', error.stack);
+        
+        // Показываем сообщение об ошибке
+        const foldersList = document.getElementById('foldersList');
+        const modulesList = document.getElementById('modulesList');
+        
+        foldersList.innerHTML = `
+            <div class="empty-state">
+                <i class="bi bi-exclamation-triangle"></i>
+                <p>Ошибка при загрузке папок: ${error.message}</p>
+            </div>
+        `;
+        
+        modulesList.innerHTML = `
+            <div class="empty-state">
+                <i class="bi bi-exclamation-triangle"></i>
+                <p>Ошибка при загрузке модулей: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// Функция для выполнения поиска
+async function performSearch() {
+    const searchTerm = searchInput.value.toLowerCase();
+    if (searchTerm.length === 0) {
+        // Если поисковый запрос пустой, показываем все данные
+        document.querySelector('.cards-content').classList.remove('search-results');
+        loadAllContent();
+        return;
+    }
+    
+    // Добавляем класс search-results для применения специальных стилей
+    document.querySelector('.cards-content').classList.add('search-results');
+    
+    try {
+        const response = await fetch(`/cards/api/search/?q=${encodeURIComponent(searchTerm)}&filter=${currentFilter}`);
+        const data = await response.json();
+        
+        // Обновляем список папок
+        const foldersList = document.getElementById('foldersList');
+        foldersList.innerHTML = '';
+        if (data.folders && (currentFilter === 'all' || currentFilter === 'folders')) {
+            data.folders.forEach(folder => {
+                const folderElement = document.createElement('div');
+                folderElement.className = 'folder-item';
+                folderElement.onclick = () => window.location.href = `/cards/folder/${folder.id}/`;
+                folderElement.innerHTML = `
+                    <div class="folder-header">
+                        <div class="folder-icon">
+                            <i class="bi bi-folder"></i>
+                        </div>
+                        <h3 class="folder-name">${folder.name}</h3>
+                    </div>
+                `;
+                foldersList.appendChild(folderElement);
+            });
+        }
+
+        // Обновляем список модулей
+        const modulesList = document.getElementById('modulesList');
+        modulesList.innerHTML = '';
+        if (data.modules && (currentFilter === 'all' || currentFilter === 'modules')) {
+            data.modules.forEach(module => {
+                const moduleElement = document.createElement('div');
+                moduleElement.className = 'module-item';
+                moduleElement.setAttribute('data-module-id', module.id);
+                
+                // Показываем кнопку сохранения только для чужих модулей, которые еще не сохранены
+                // Определяем, принадлежит ли модуль текущему пользователю
+                const isOwnModule = module.user && module.user.includes('@') === false;
+                
+                // Создаем кнопку сохранения только для чужих модулей
+                const saveButtonHtml = !isOwnModule && !module.is_saved ? 
+                    `<button class="save-module" onclick="event.stopPropagation(); saveModule(${module.id})">
+                        <i class="bi bi-bookmark"></i>
+                     </button>` : '';
+                
+                moduleElement.innerHTML = `
+                    <div class="module-header">
+                        <h3 class="module-title">${module.name}</h3>
+                        ${saveButtonHtml}
+                    </div>
+                    <div class="meta-info">
+                        <span class="type-tag">${module.type === 'public' ? 'Открытый' : 'Частный'}</span>
+                        <span class="author-tag"><i class="bi bi-person"></i> ${module.user}</span>
+                        ${module.is_saved ? '<span class="saved-tag"><i class="bi bi-bookmark-fill"></i></span>' : ''}
+                    </div>
+                `;
+                
+                // Если есть соответствующие карточки, показываем их
+                if (module.matching_cards && module.matching_cards.length > 0) {
+                    const matchingCardsHtml = `
+                        <div class="matching-cards">
+                            <div class="matching-cards-header">
+                                <i class="bi bi-card-text"></i>
+                                <span>Найденные карточки:</span>
+                            </div>
+                            <div class="matching-cards-list">
+                                ${module.matching_cards.map(card => `
+                                    <div class="matching-card">
+                                        <div class="term">${card.term}</div>
+                                        <div class="translation">${card.translation}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                    moduleElement.innerHTML += matchingCardsHtml;
+                }
+                
+                moduleElement.onclick = () => window.location.href = `/cards/module/${module.id}/`;
+                modulesList.appendChild(moduleElement);
+            });
+        }
+
+        // Показываем сообщение, если ничего не найдено
+        if ((!data.folders || data.folders.length === 0) && 
+            (!data.modules || data.modules.length === 0)) {
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'empty-state';
+            emptyMessage.innerHTML = `
+                <i class="bi bi-search"></i>
+                <p>Ничего не найдено</p>
+            `;
+            if (currentFilter === 'all' || currentFilter === 'folders') {
+                foldersList.appendChild(emptyMessage);
+            }
+            if (currentFilter === 'all' || currentFilter === 'modules') {
+                modulesList.appendChild(emptyMessage);
+            }
+        }
+    } catch (error) {
+        console.error('Ошибка при поиске:', error);
+    }
+}
+
+// Обработчики событий
+searchInput.addEventListener('input', (e) => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        performSearch();
+    }, 300);
+});
+
+searchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        performSearch();
+    }
+});
+
+filterButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+        filterButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        performSearch();
+    });
+});
+
+// Загружаем данные при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    loadAllContent();
+    loadSavedModules();
+});
+
+// Функции для работы с модальными окнами
+function showModal(modalId) {
+    document.getElementById(modalId).style.display = 'block';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function showCreateModuleModal() {
+    loadFolders('moduleFolder');
+    showModal('createModuleModal');
+}
+
+function showCreateFolderModal() {
+    loadFolders('parentFolder');
+    showModal('createFolderModal');
+}
+
+function showCreateCardModal() {
+    showModal('createCardModal');
+}
+
+// Функция для получения CSRF-токена
+function getCSRFToken() {
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        console.error('CSRF token not found');
+        return null;
+    }
+    return csrfToken.value;
+}
+
+// Функция для создания заголовков запроса
+function getRequestHeaders() {
+    const headers = {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+    };
+    
+    const csrfToken = getCSRFToken();
+    if (csrfToken) {
+        headers['X-CSRFToken'] = csrfToken;
+    }
+    
+    return headers;
+}
+
+// Функция для загрузки папок
+async function loadFolders() {
+    try {
+        const response = await fetch('/cards/api/folders/');
+        const data = await response.json();
+        
+        if (data.folders) {
+            const foldersList = document.getElementById('foldersList');
+            foldersList.innerHTML = '';
+            
+            data.folders.forEach(folder => {
+                const folderElement = document.createElement('div');
+                folderElement.className = 'folder-item';
+                folderElement.innerHTML = `
+                    <div class="folder-content" onclick="window.location.href = '/cards/folder/${folder.id}/'">
+                        <div class="folder-icon">
+                            <i class="bi bi-folder"></i>
+                        </div>
+                        <div class="folder-info">
+                            <div class="folder-name">${folder.name}</div>
+                        </div>
+                    </div>
+                `;
+                foldersList.appendChild(folderElement);
+            });
+        } else {
+            console.error('Ошибка загрузки папок:', data.error);
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке папок:', error);
+    }
+}
+
+// Функция для отображения меню настроек папки
+function showFolderSettings(event, folderId) {
+    // Предотвращаем переход в папку при клике на кнопку настроек
+    event.stopPropagation();
+    
+    // Создаем контекстное меню
+    const settingsMenu = document.createElement('div');
+    settingsMenu.className = 'settings-menu';
+    settingsMenu.innerHTML = `
+        <div class="menu-item" onclick="editFolder(event, ${folderId})">
+            <i class="bi bi-pencil"></i> Редактировать
+        </div>
+        <div class="menu-item" onclick="deleteFolder(event, ${folderId})">
+            <i class="bi bi-trash"></i> Удалить
+        </div>
+    `;
+    
+    // Получаем кнопку настроек
+    const button = event.currentTarget;
+    
+    // Удаляем любые существующие меню
+    document.querySelectorAll('.settings-menu').forEach(menu => menu.remove());
+    
+    // Добавляем меню в DOM
+    document.body.appendChild(settingsMenu);
+    
+    // Позиционируем меню рядом с кнопкой
+    const buttonRect = button.getBoundingClientRect();
+    settingsMenu.style.top = `${buttonRect.bottom + window.scrollY}px`;
+    settingsMenu.style.left = `${buttonRect.left + window.scrollX}px`;
+    
+    // Добавляем обработчик для закрытия меню при клике в другом месте
+    document.addEventListener('click', closeSettingsMenu);
+}
+
+// Функция для закрытия меню настроек
+function closeSettingsMenu(event) {
+    if (!event.target.closest('.settings-menu') && !event.target.closest('.settings-btn')) {
+        document.querySelectorAll('.settings-menu').forEach(menu => menu.remove());
+        document.removeEventListener('click', closeSettingsMenu);
+    }
+}
+
+// Функция для редактирования папки
+function editFolder(event, folderId) {
+    event.stopPropagation();
+    closeSettingsMenu({});
+    
+    // Запрашиваем информацию о папке
+    fetch(`/cards/api/folder/${folderId}/`)
+    .then(response => response.json())
+    .then(data => {
+        // Показываем модальное окно для редактирования папки
+        const editModal = document.createElement('div');
+        editModal.className = 'modal';
+        editModal.id = 'editFolderModal';
+        
+        editModal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Редактировать папку</h2>
+                    <button class="close-btn" onclick="closeModal('editFolderModal')">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                </div>
+                <form id="editFolderForm">
+                    <div class="form-group">
+                        <label for="editFolderName">Название папки</label>
+                        <input type="text" id="editFolderName" name="name" value="${data.name}" required>
+                    </div>
+                    <div class="modal-buttons">
+                        <button type="button" class="cancel-btn" onclick="closeModal('editFolderModal')">Отмена</button>
+                        <button type="submit" class="submit-btn">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        
+        document.body.appendChild(editModal);
+        editModal.style.display = 'block';
+        
+        // Обработчик формы редактирования
+        document.getElementById('editFolderForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            
+            try {
+                const response = await fetch(`/cards/api/update-folder/${folderId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        name: formData.get('name')
+                    })
+                });
+                
+                if (response.ok) {
+                    closeModal('editFolderModal');
+                    loadFolders();
+                } else {
+                    const data = await response.json();
+                    alert(data.error || 'Ошибка при обновлении папки');
+                }
+            } catch (error) {
+                console.error('Ошибка при обновлении папки:', error);
+                alert('Ошибка при обновлении папки');
+            }
+        });
+    })
+    .catch(error => {
+        console.error('Ошибка при получении информации о папке:', error);
+        alert('Ошибка при получении информации о папке');
+    });
+}
+
+// Функция для удаления папки
+function deleteFolder(event, folderId) {
+    event.stopPropagation();
+    closeSettingsMenu({});
+    
+    if (confirm('Вы уверены, что хотите удалить эту папку? Это действие нельзя отменить.')) {
+        fetch(`/cards/api/delete-folder/${folderId}/`, {
+            method: 'DELETE',
+            headers: getHeaders()
+        })
+        .then(response => {
+            if (response.ok) {
+                loadFolders();
+            } else {
+                alert('Ошибка при удалении папки');
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка при удалении папки:', error);
+            alert('Ошибка при удалении папки');
+        });
+    }
+}
+
+// Функция для загрузки модулей
+async function loadModules(folderId = null) {
+    try {
+        const url = folderId ? `/cards/api/modules/?folder_id=${folderId}` : '/cards/api/modules/';
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (data.modules) {
+            const modulesList = document.getElementById('modulesList');
+            modulesList.innerHTML = '';
+            
+            data.modules.forEach(module => {
+                const moduleElement = document.createElement('div');
+                moduleElement.className = 'module-item';
+                moduleElement.innerHTML = `
+                    <div class="module-header">
+                        <h3 class="module-title">${module.name}</h3>
+                    </div>
+                    <div class="meta-info">
+                        <span class="type-tag">${module.type === 'public' ? 'Открытый' : 'Частный'}</span>
+                        <span class="author-tag"><i class="bi bi-person"></i> ${module.user}</span>
+                    </div>
+                `;
+                moduleElement.onclick = () => window.location.href = `/cards/module/${module.id}/`;
+                modulesList.appendChild(moduleElement);
+            });
+        } else {
+            console.error('Ошибка загрузки модулей:', data.error);
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке модулей:', error);
+    }
+}
+
+// Функция для загрузки модулей в папке
+async function loadFolderModules(folderId) {
+    try {
+        const response = await fetch(`/cards/api/modules/?folder_id=${folderId}`);
+        const data = await response.json();
+        
+        if (data.modules) {
+            const modulesList = document.getElementById('modulesList');
+            modulesList.innerHTML = '';
+            
+            data.modules.forEach(module => {
+                const moduleElement = document.createElement('div');
+                moduleElement.className = 'module-item';
+                moduleElement.innerHTML = `
+                    <div class="module-header">
+                        <h3 class="module-title">${module.name}</h3>
+                    </div>
+                    <div class="meta-info">
+                        <span class="type-tag">${module.type === 'public' ? 'Открытый' : 'Частный'}</span>
+                        <span class="author-tag"><i class="bi bi-person"></i> ${module.user}</span>
+                    </div>
+                `;
+                moduleElement.onclick = () => window.location.href = `/cards/module/${module.id}/`;
+                modulesList.appendChild(moduleElement);
+            });
+        } else {
+            console.error('Ошибка загрузки модулей в папке:', data.error);
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке модулей в папке:', error);
+    }
+}
+
+// Обработчики форм
+document.getElementById('createFolderForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    try {
+        const response = await fetch('/cards/api/create-folder/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                name: formData.get('name'),
+                parent_id: formData.get('parent') || null
+            })
+        });
+        
+        if (response.ok) {
+            closeModal('createFolderModal');
+            loadFolders();
+            e.target.reset();
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Ошибка при создании папки');
+        }
+    } catch (error) {
+        console.error('Error creating folder:', error);
+        alert('Ошибка при создании папки');
+    }
+});
+
+document.getElementById('createModuleForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    try {
+        const response = await fetch('/cards/api/create-module/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                name: formData.get('name'),
+                folder_id: formData.get('folder') || null
+            })
+        });
+        
+        if (response.ok) {
+            closeModal('createModuleModal');
+            loadModules();
+            document.getElementById('moduleName').value = '';
+            document.getElementById('moduleFolder').value = '';
+        } else {
+            const data = await response.json();
+            alert(data.error || 'Ошибка при создании модуля');
+        }
+    } catch (error) {
+        console.error('Error creating module:', error);
+        alert('Ошибка при создании модуля');
+    }
+});
+
+// Добавляем функцию сохранения модуля
+async function saveModule(moduleId) {
+    try {
+        // Показываем индикатор загрузки, меняем иконку на спиннер
+        const moduleElement = document.querySelector(`[data-module-id="${moduleId}"]`);
+        if (moduleElement) {
+            const saveButton = moduleElement.querySelector('.save-module i');
+            if (saveButton) {
+                saveButton.className = 'bi bi-arrow-repeat';
+                saveButton.style.animation = 'spin 1s linear infinite';
+            }
+        }
+        
+        const response = await fetch(`/cards/api/save-module/${moduleId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+            // Обновляем отображение модуля
+            if (moduleElement) {
+                const saveButton = moduleElement.querySelector('.save-module');
+                if (saveButton) {
+                    // Удаляем кнопку сохранения
+                    saveButton.remove();
+                }
+                
+                // Добавляем тег "Сохранено"
+                const metaInfo = moduleElement.querySelector('.meta-info');
+                if (metaInfo && !metaInfo.querySelector('.saved-tag')) {
+                    const savedTag = document.createElement('span');
+                    savedTag.className = 'saved-tag';
+                    savedTag.innerHTML = '<i class="bi bi-bookmark-fill"></i>';
+                    metaInfo.appendChild(savedTag);
+                }
+            }
+            
+            // Обновляем список сохраненных модулей
+            loadSavedModules();
+            
+            // Показываем уведомление об успешном сохранении
+            showNotification('Модуль успешно сохранен', 'success');
+        } else {
+            // Возвращаем исходную иконку
+            if (moduleElement) {
+                const saveButton = moduleElement.querySelector('.save-module i');
+                if (saveButton) {
+                    saveButton.className = 'bi bi-bookmark';
+                    saveButton.style.animation = '';
+                }
+            }
+            
+            console.error('Ошибка при сохранении модуля:', data.error);
+            showNotification(data.error || 'Ошибка при сохранении модуля', 'error');
+        }
+    } catch (error) {
+        console.error('Ошибка при сохранении модуля:', error);
+        showNotification('Ошибка при сохранении модуля', 'error');
+    }
+}
+
+// Функция для отображения уведомлений
+function showNotification(message, type = 'success') {
+    // Проверяем, существует ли уже контейнер для уведомлений
+    let notificationContainer = document.getElementById('notificationContainer');
+    if (!notificationContainer) {
+        notificationContainer = document.createElement('div');
+        notificationContainer.id = 'notificationContainer';
+        notificationContainer.style.position = 'fixed';
+        notificationContainer.style.bottom = '20px';
+        notificationContainer.style.right = '20px';
+        notificationContainer.style.zIndex = '9999';
+        document.body.appendChild(notificationContainer);
+    }
+    
+    // Создаем уведомление
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.style.backgroundColor = type === 'success' ? '#4caf50' : '#f44336';
+    notification.style.color = 'white';
+    notification.style.padding = '12px 20px';
+    notification.style.borderRadius = '8px';
+    notification.style.marginTop = '10px';
+    notification.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+    notification.style.display = 'flex';
+    notification.style.alignItems = 'center';
+    notification.style.gap = '8px';
+    notification.style.animation = 'slideIn 0.3s ease forwards';
+    
+    // Добавляем иконку
+    const icon = document.createElement('i');
+    icon.className = type === 'success' ? 'bi bi-check-circle' : 'bi bi-exclamation-triangle';
+    
+    // Добавляем текст
+    const text = document.createElement('span');
+    text.textContent = message;
+    
+    notification.appendChild(icon);
+    notification.appendChild(text);
+    notificationContainer.appendChild(notification);
+    
+    // Добавляем стиль анимации
+    if (!document.getElementById('notificationStyles')) {
+        const style = document.createElement('style');
+        style.id = 'notificationStyles';
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    // Автоматически удаляем уведомление через 3 секунды
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease forwards';
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 3000);
+}
+
+// Функция для загрузки сохраненных модулей
+async function loadSavedModules() {
+    try {
+        const response = await fetch('/cards/api/saved-modules/');
+        const data = await response.json();
+        
+        const savedModulesList = document.getElementById('savedModulesList');
+        savedModulesList.innerHTML = '';
+        
+        if (data.modules && data.modules.length > 0) {
+            data.modules.forEach(module => {
+                const moduleElement = document.createElement('div');
+                moduleElement.className = 'module-item';
+                moduleElement.setAttribute('data-module-id', module.id);
+                moduleElement.innerHTML = `
+                    <div class="module-header">
+                        <h3 class="module-title">${module.name}</h3>
+                    </div>
+                    <div class="meta-info">
+                        <span class="type-tag">${module.type === 'public' ? 'Открытый' : 'Частный'}</span>
+                        <span class="author-tag"><i class="bi bi-person"></i> ${module.user}</span>
+                    </div>
+                `;
+                moduleElement.onclick = () => window.location.href = `/cards/module/${module.id}/`;
+                savedModulesList.appendChild(moduleElement);
+            });
+        } else {
+            savedModulesList.innerHTML = `
+                <div class="empty-state">
+                    <i class="bi bi-bookmark"></i>
+                    <p>Нет сохраненных модулей</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке сохраненных модулей:', error);
+    }
+}
+
+// Добавляем стили только для результатов поиска
+const searchStyles = document.createElement('style');
+searchStyles.textContent = `
+    /* Стили для результатов поиска */
+    .search-results .modules-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 0;
+        margin: 0;
+    }
+
+    .search-results .module-item {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .search-results .module-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(124, 77, 255, 0.1);
+    }
+
+    .search-results .module-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .search-results .module-title {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #333;
+        margin: 0;
+    }
+
+    .search-results .save-module {
+        color: #7c4dff;
+        background: none;
+        border: none;
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .search-results .save-module:hover {
+        background: #f0f0f0;
+        transform: scale(1.1);
+    }
+
+    .search-results .save-module i {
+        font-size: 1.2rem;
+    }
+
+    .search-results .meta-info {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .search-results .type-tag {
+        background: #e8e0ff;
+        color: #7c4dff;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.875rem;
+    }
+
+    .search-results .author-tag {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .search-results .saved-tag {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: #7c4dff;
+        font-size: 0.9rem;
+    }
+
+    .search-results .folders-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        padding: 0;
+        margin: 0;
+    }
+
+    .search-results .folder-item {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .search-results .folder-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(124, 77, 255, 0.1);
+    }
+
+    .search-results .folder-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .search-results .folder-icon {
+        width: 40px;
+        height: 40px;
+        background: #f0f0f0;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #7c4dff;
+        font-size: 1.5rem;
+    }
+
+    .search-results .folder-name {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #333;
+        margin: 0;
+    }
+
+    .search-results .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+        background: #f8f9fa;
+        border-radius: 12px;
+        border: 1px dashed #dee2e6;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .search-results .empty-state i {
+        font-size: 3rem;
+        color: #999;
+    }
+`;
+document.head.appendChild(searchStyles);
+
+// Функционал для экспорта из Квизлета
+function showQuizletImportModal() {
+    // Загружаем список папок в выпадающий список
+    loadFoldersForSelect('importFolder');
+    showModal('quizletImportModal');
+}
+
+// Функция для загрузки списка папок в выпадающий список
+async function loadFoldersForSelect(selectId) {
+    try {
+        const response = await fetch('/cards/api/folders/');
+        const data = await response.json();
+        
+        if (data.folders) {
+            const select = document.getElementById(selectId);
+            // Сохраняем опцию "Без папки"
+            const defaultOption = select.options[0];
+            select.innerHTML = '';
+            select.appendChild(defaultOption);
+            
+            // Добавляем папки в выпадающий список
+            data.folders.forEach(folder => {
+                const option = document.createElement('option');
+                option.value = folder.id;
+                option.textContent = folder.name;
+                select.appendChild(option);
+            });
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке папок:', error);
+        showNotification('Ошибка при загрузке папок', 'error');
+    }
+}
+
+// Обработчик формы импорта из Квизлета
+document.getElementById('quizletImportForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const moduleName = document.getElementById('importModuleName').value;
+    const folderId = document.getElementById('importFolder').value || null;
+    const content = document.getElementById('importContent').value;
+    
+    if (!moduleName || !content) {
+        showNotification('Пожалуйста, заполните все обязательные поля', 'error');
+        return;
+    }
+    
+    // Разбираем контент на пары слово-определение
+    const pairs = parseQuizletContent(content);
+    
+    if (pairs.length === 0) {
+        showNotification('Не удалось найти пары слово-определение в тексте', 'error');
+        return;
+    }
+    
+    try {
+        // Показываем индикатор загрузки
+        showNotification(`Создание модуля с ${pairs.length} карточками...`, 'success');
+        
+        // Сначала создаем модуль
+        const moduleResponse = await fetch('/cards/api/create-module/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                name: moduleName,
+                folder_id: folderId
+            })
+        });
+        
+        const moduleData = await moduleResponse.json();
+        
+        if (!moduleResponse.ok) {
+            console.error('Ответ сервера:', moduleData);
+            showNotification(moduleData.error || 'Ошибка при создании модуля', 'error');
+            return;
+        }
+        
+        console.log('Модуль создан:', moduleData);
+        const moduleId = moduleData.module_id || moduleData.id;
+        
+        if (!moduleId) {
+            console.error('ID модуля не получен:', moduleData);
+            showNotification('Не удалось получить ID модуля', 'error');
+            return;
+        }
+        
+        // Затем добавляем карточки в модуль (обрабатываем последовательно)
+        let successCount = 0;
+        let errorCount = 0;
+        let errorMessages = [];
+        
+        // Получим CSRF-токен для всех запросов
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        console.log('CSRF token:', csrfToken);
+        
+        for (let i = 0; i < pairs.length; i++) {
+            const pair = pairs[i];
+            try {
+                console.log(`Отправка карточки ${i+1}/${pairs.length}:`, pair);
+                
+                // Используем FormData вместо JSON
+                const formData = new FormData();
+                formData.append('term', pair.term);
+                formData.append('translation', pair.definition);
+                
+                const cardResponse = await fetch(`/cards/api/modules/${moduleId}/cards/create/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                });
+                
+                let cardData;
+                const contentType = cardResponse.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                    cardData = await cardResponse.json();
+                } else {
+                    cardData = await cardResponse.text();
+                }
+                
+                if (cardResponse.ok) {
+                    console.log(`Карточка ${i+1} создана успешно:`, cardData);
+                    successCount++;
+                } else {
+                    console.error(`Ошибка создания карточки ${i+1}:`, cardData);
+                    errorCount++;
+                    errorMessages.push(`Карточка ${i+1}: ${typeof cardData === 'string' ? cardData : JSON.stringify(cardData)}`);
+                }
+            } catch (cardError) {
+                console.error(`Исключение при создании карточки ${i+1}:`, cardError);
+                errorCount++;
+                errorMessages.push(`Карточка ${i+1}: ${cardError.message}`);
+            }
+        }
+        
+        // Сообщаем о результатах
+        if (successCount > 0) {
+            showNotification(`Модуль "${moduleName}" создан с ${successCount} карточками`, 'success');
+            
+            // Закрываем модальное окно и сбрасываем форму
+            closeModal('quizletImportModal');
+            document.getElementById('quizletImportForm').reset();
+            
+            // Обновляем список модулей
+            loadModules();
+            
+            // Переходим на страницу созданного модуля
+            setTimeout(() => {
+                window.location.href = `/cards/module/${moduleId}/`;
+            }, 2000);
+        } else {
+            console.error('Детали ошибок:', errorMessages);
+            
+            const errorDetails = errorMessages.length > 0 
+                ? `: ${errorMessages.slice(0, 3).join(', ')}${errorMessages.length > 3 ? '...' : ''}`
+                : '';
+                
+            showNotification(`Модуль создан, но карточки не добавлены (${errorCount} ошибок)${errorDetails}`, 'error');
+        }
+        
+    } catch (error) {
+        console.error('Ошибка при импорте из Квизлета:', error);
+        showNotification('Ошибка при импорте из Квизлета: ' + error.message, 'error');
+    }
+});
+
+// Функция для разбора контента из Квизлета
+function parseQuizletContent(content) {
+    // Разбиваем контент по разделителю ";"
+    const pairs = [];
+    const items = content.split(';').filter(item => item.trim() !== '');
+    
+    for (const item of items) {
+        // Поддерживаем разные форматы с дефисом
+        const separatorRegex = / - |-/;
+        const parts = item.split(separatorRegex, 2);
+        
+        if (parts.length === 2) {
+            const term = parts[0].trim();
+            const definition = parts[1].trim();
+            
+            if (term && definition) {
+                pairs.push({ term, definition });
+                console.log(`Parsed: term="${term}", definition="${definition}"`);
+            }
+        }
+    }
+    
+    console.log(`Total parsed pairs: ${pairs.length}`);
+    return pairs;
+}
+
+// Функция для переключения вкладок
+function switchTab(tabId) {
+    // Скрываем все вкладки
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Снимаем активный класс со всех кнопок вкладок
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Показываем выбранную вкладку
+    document.getElementById(tabId).classList.add('active');
+    
+    // Добавляем активный класс соответствующей кнопке
+    document.querySelector(`.tab-btn[onclick="switchTab('${tabId}')"]`).classList.add('active');
+}
+</script>
+{% endblock %}

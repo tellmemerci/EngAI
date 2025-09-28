@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Регистрация{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/registration.css' %}">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/css/intlTelInput.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="registration-wrapper">
+    <div class="registration-container">
+        <div class="avatar-top">
+            <img src="{% static 'img/avatar.png' %}" alt="Аватар" />
+        </div>
+
+        <div class="progress-line">
+            <div class="circle active" id="step1">1</div>
+            <div class="line"></div>
+            <div class="circle" id="step2">2</div>
+            <div class="line"></div>
+            <div class="circle" id="step3">3</div>
+        </div>
+
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form class="registration-form" method="POST" action="{% url 'register' %}">
+            {% csrf_token %}
+            
+            <!-- Шаг 1 -->
+            <div class="step active" id="form-step-1">
+                <h2>Шаг 1: Аккаунт</h2>
+                {{ form.email }}
+                {% if form.email.errors %}
+                <div class="error-message">{{ form.email.errors }}</div>
+                {% endif %}
+                
+                {{ form.password1 }}
+                {% if form.password1.errors %}
+                <div class="error-message">{{ form.password1.errors }}</div>
+                {% endif %}
+                
+                {{ form.password2 }}
+                {% if form.password2.errors %}
+                <div class="error-message">{{ form.password2.errors }}</div>
+                {% endif %}
+                
+                <div class="step-buttons">
+                    <button type="button" onclick="prevStep()">Назад</button>
+                    <button type="button" onclick="nextStep()">Далее</button>
+                </div>
+            </div>
+
+            <!-- Шаг 2 -->
+            <div class="step hidden" id="form-step-2">
+                <h2>Шаг 2: Личная информация</h2>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}
+                <div class="error-message">{{ form.last_name.errors }}</div>
+                {% endif %}
+                
+                {{ form.first_name }}
+                {% if form.first_name.errors %}
+                <div class="error-message">{{ form.first_name.errors }}</div>
+                {% endif %}
+                
+                {{ form.current_language_level }}
+                {% if form.current_language_level.errors %}
+                <div class="error-message">{{ form.current_language_level.errors }}</div>
+                {% endif %}
+                
+                {{ form.city }}
+                {% if form.city.errors %}
+                <div class="error-message">{{ form.city.errors }}</div>
+                {% endif %}
+                
+                {{ form.desired_language_level }}
+                {% if form.desired_language_level.errors %}
+                <div class="error-message">{{ form.desired_language_level.errors }}</div>
+                {% endif %}
+                
+                {{ form.phone_number }}
+                {% if form.phone_number.errors %}
+                <div class="error-message">{{ form.phone_number.errors }}</div>
+                {% endif %}
+
+                <div class="checkbox-wrapper">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="personal_data_agreement" required />
+                        <span class="checkmark"></span>
+                        <span>Согласен на обработку персональных данных</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="newsletter" />
+                        <span class="checkmark"></span>
+                        <span>Согласен на получение рассылки</span>
+                    </label>
+                </div>
+                
+                <div class="step-buttons">
+                    <button type="button" onclick="prevStep()">Назад</button>
+                    <button type="button" onclick="nextStep()">Далее</button>
+                </div>
+            </div>
+
+            <!-- Шаг 3 -->
+            <div class="step hidden" id="form-step-3">
+                <h2>Шаг 3: Подтверждение</h2>
+                <p>Мы отправили SMS-код на ваш номер.</p>
+                <input type="text" name="sms_code" placeholder="Введите код из SMS" required />
+                <div id="timer-container">
+                    <i id="hourglass" class="bi bi-hourglass-split"></i>
+                    <p>Отправить повторно через <span id="timer">10</span> секунд</p>
+                </div>
+                <div id="resend-btn-container">
+                    <button id="resend-btn" type="button" onclick="resendCode()">Отправить еще раз</button>
+                </div>
+                <div class="step-buttons">
+                    <button type="button" onclick="prevStep()">Назад</button>
+                    <button type="submit">Завершить</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/intlTelInput.min.js"></script>
+<script>
+let currentStep = 1;
+
+// Инициализация телефонного поля
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.querySelector("#id_phone_number");
+    if (input) {
+        window.intlTelInput(input, {
+            initialCountry: "ru",
+            utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/utils.js",
+            separateDialCode: true,
+            preferredCountries: ["ru", "kz", "by", "ua"],
+            formatOnDisplay: true
+        });
+    }
+});
+
+// Функция для обновления списка желаемых уровней
+function updateDesiredLevels(currentLevel) {
+    const desiredSelect = document.getElementById('id_desired_language_level');
+    const levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    const levelNames = {
+        'A1': 'А1 — Начальный',
+        'A2': 'А2 — Элементарный',
+        'B1': 'B1 — Средний',
+        'B2': 'B2 — Выше среднего',
+        'C1': 'C1 — Продвинутый',
+        'C2': 'C2 — Свободный'
+    };
+    
+    // Очищаем текущие опции
+    desiredSelect.innerHTML = '<option value="">Выберите уровень</option>';
+    
+    if (currentLevel) {
+        const currentIndex = levels.indexOf(currentLevel);
+        // Добавляем только уровни выше текущего
+        for (let i = currentIndex + 1; i < levels.length; i++) {
+            const level = levels[i];
+            const option = document.createElement('option');
+            option.value = level;
+            option.textContent = levelNames[level];
+            desiredSelect.appendChild(option);
+        }
+    }
+}
+
+function nextStep() {
+    if (currentStep < 3) {
+        document.getElementById(`form-step-${currentStep}`).classList.remove('active');
+        document.getElementById(`form-step-${currentStep}`).classList.add('hidden');
+        currentStep++;
+        document.getElementById(`form-step-${currentStep}`).classList.remove('hidden');
+        document.getElementById(`form-step-${currentStep}`).classList.add('active');
+        document.getElementById(`step${currentStep}`).classList.add('active');
+        if (currentStep === 3) startTimer();
+    }
+}
+
+function prevStep() {
+    if (currentStep === 1) {
+        window.location.href = "{% url 'login' %}";
+    } else if (currentStep > 1) {
+        document.getElementById(`form-step-${currentStep}`).classList.remove('active');
+        document.getElementById(`form-step-${currentStep}`).classList.add('hidden');
+        currentStep--;
+        document.getElementById(`form-step-${currentStep}`).classList.remove('hidden');
+        document.getElementById(`form-step-${currentStep}`).classList.add('active');
+        document.getElementById(`step${currentStep + 1}`).classList.remove('active');
+    }
+}
+
+function startTimer() {
+    let timeLeft = 10;
+    const timerElement = document.getElementById('timer');
+    const resendBtn = document.getElementById('resend-btn');
+    const timerContainer = document.getElementById('timer-container');
+    
+    const timer = setInterval(() => {
+        timeLeft--;
+        timerElement.textContent = timeLeft;
+        
+        if (timeLeft <= 0) {
+            clearInterval(timer);
+            timerContainer.style.display = 'none';
+            resendBtn.style.display = 'block';
+        }
+    }, 1000);
+}
+
+function resendCode() {
+    // Здесь будет логика повторной отправки кода
+    const resendBtn = document.getElementById('resend-btn');
+    const timerContainer = document.getElementById('timer-container');
+    
+    resendBtn.style.display = 'none';
+    timerContainer.style.display = 'flex';
+    startTimer();
+}
+</script>
+{% endblock %}

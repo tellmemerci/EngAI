@@ -1,0 +1,199 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}{{ topic.title }} — {{ unit.title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+body { background: #faf5ff; }
+.sidebar { width: 310px; background: linear-gradient(160deg, #7c4dff 0%, #6200ea 100%); color: #fff; padding: 25px 15px; position: fixed; height: 100vh; box-shadow: 3px 0 15px rgba(0,0,0,0.1); }
+.sidebar ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; align-items: center; }
+.sidebar li { padding: 15px 25px; margin: 10px 0; border-radius: 8px; background: rgba(255,255,255,0.1); width: 90%; max-width: 240px; transition: .3s; }
+.sidebar li:hover { background: rgba(255,255,255,0.2); transform: scale(1.02); }
+.sidebar li.active { background: #651fff; box-shadow: 0 2px 8px rgba(101,31,255,0.3); }
+.sidebar a { color: inherit; text-decoration: none; display: flex; align-items: center; }
+.profile { background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; text-align: center; margin-top: 20px; border: 1px solid rgba(255,255,255,0.1); width: 90%; align-self: center; }
+.bi { margin-right: 12px; font-size: 1.3em; }
+
+.module-container { margin-left: 310px; padding: 40px 60px; overflow-y: auto; }
+.module-header { text-align: center; color: #2d106a; margin: 0 0 30px; font-size: 2rem; font-weight: 600; }
+.back-button { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(45deg, #7c4dff, #651fff); color: #fff !important; padding: 12px 24px; border-radius: 25px; text-decoration: none !important; box-shadow: 0 4px 15px rgba(124,77,255,0.3); transition: .3s; margin-bottom: 30px; }
+.back-button:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(98,0,234,0.4); }
+
+.content-section { max-width: 1200px; margin: 0 auto; }
+.block { background: #fff; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+.block h2 { color: #7c4dff; display: flex; align-items: center; gap: 10px; margin-top: 0; font-size: 1.4rem; }
+.toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.toolbar button { background: #f1ebff; border: 1px solid #e0d7ff; color: #5b2ee6; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.toolbar button:hover { background: #e9e1ff; }
+.editor { min-height: 200px; outline: none; }
+.editor .purple { color: #651fff; font-weight: 700; }
+.example-card { background: #f8f5ff; padding: 16px; border-radius: 10px; margin-top: 12px; }
+table.sm-table { width: 100%; border-collapse: collapse; }
+table.sm-table th, table.sm-table td { padding: 12px; text-align: left; border-bottom: 2px solid #eee; }
+table.sm-table th { background: rgba(124,77,255,.05); color: #651fff; }
+.image-block img { width: 100%; max-width: 800px; border-radius: 12px; margin: 12px 0; border: 2px solid #f0f0f0; }
+.image-caption { color: #666; text-align: center; font-size: .9em; }
+.video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; }
+.video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+.actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+.btn-primary { background: linear-gradient(45deg,#7c4dff,#651fff); color: #fff; border: 0; padding: 10px 16px; border-radius: 10px; cursor: pointer; }
+.btn-outline { background: transparent; color: #651fff; border: 1px solid #7c4dff; padding: 10px 16px; border-radius: 10px; cursor: pointer; }
+@media (max-width: 768px){ .module-container{ margin-left:0; padding: 20px; } .sidebar{ position: static; height: auto; width: 100%; } }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sidebar">
+    <ul>
+        <li><a href="/modules/"><i class="bi bi-book"></i>Модули</a></li>
+        <li class="active"><a href="#"><i class="bi bi-journal-text"></i>{{ module.title }}</a></li>
+        <li><a href="/text-check/"><i class="bi bi-pencil-square"></i>Проверка текста</a></li>
+        <li><a href="#"><i class="bi bi-mic"></i>Голосовой чат</a></li>
+        <li><a href="#"><i class="bi bi-trophy"></i>Достижения</a></li>
+    </ul>
+    <div class="profile">
+        <h2>Профиль</h2>
+        <p>{{ request.user.get_username }}</p>
+    </div>
+    </div>
+
+<div class="module-container">
+    <a href="{% url 'study_modules:unit_detail' module.id unit.id %}" class="back-button"><i class="bi bi-arrow-left-circle"></i>Вернуться назад</a>
+    <h1 class="module-header">{{ topic.title }}</h1>
+
+    <form method="post" id="topicForm">
+        {% csrf_token %}
+        <div class="content-section" id="contentRoot">
+            <!-- Text block -->
+            <div class="block" data-type="text">
+                <h2><i class="bi bi-info-circle"></i>Текст</h2>
+                <div class="toolbar">
+                    <button type="button" data-cmd="bold"><i class="bi bi-type-bold"></i></button>
+                    <button type="button" data-cmd="purple">фиолетовый</button>
+                    <button type="button" data-cmd="h2">H2</button>
+                    <button type="button" data-action="add-table"><i class="bi bi-table"></i></button>
+                    <button type="button" data-action="add-example">пример</button>
+                </div>
+                <div class="editor" contenteditable="true" id="editorRoot">{{ topic.theory_content|safe }}</div>
+            </div>
+
+            <!-- Image block (dynamic container) -->
+            <div class="block image-block" data-type="image">
+                <h2><i class="bi bi-image"></i>Изображение</h2>
+                <div class="toolbar">
+                    <input type="url" id="imageUrl" placeholder="URL изображения" style="flex:1; padding:8px 10px; border:1px solid #e0d7ff; border-radius:8px;"> 
+                    <input type="text" id="imageCaption" placeholder="Подпись" style="flex:1; padding:8px 10px; border:1px solid #e0d7ff; border-radius:8px;">
+                    <button type="button" data-action="insert-image" class="btn-outline"><i class="bi bi-plus-circle"></i>Вставить</button>
+                </div>
+                <div class="image-preview"></div>
+            </div>
+
+            <!-- Video block -->
+            <div class="block" data-type="video">
+                <h2><i class="bi bi-play-circle"></i>Видео</h2>
+                <div class="toolbar">
+                    <input type="url" id="videoUrl" placeholder="YouTube/RuTube ссылка" style="flex:1; padding:8px 10px; border:1px solid #e0d7ff; border-radius:8px;">
+                    <button type="button" data-action="insert-video" class="btn-outline"><i class="bi bi-plus-circle"></i>Вставить</button>
+                </div>
+                <div class="video-container" id="videoContainer" style="display:none;"></div>
+                <p class="image-caption" id="videoCaption"></p>
+            </div>
+        </div>
+
+        <input type="hidden" name="content" id="contentField">
+        <div class="actions">
+            {% if module.author == user %}
+            <button type="button" class="btn-outline" id="addBlock">Добавить блок</button>
+            <button type="submit" class="btn-primary">Сохранить</button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+    const editor = document.getElementById('editorRoot');
+    const contentField = document.getElementById('contentField');
+    const form = document.getElementById('topicForm');
+
+    function exec(cmd){ document.execCommand(cmd, false, null); }
+    function wrapSelection(tag){
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+        const range = sel.getRangeAt(0);
+        const el = document.createElement(tag);
+        range.surroundContents(el);
+    }
+    document.querySelectorAll('.toolbar button[data-cmd]').forEach(b=>{
+        b.addEventListener('click',()=>{
+            const cmd = b.getAttribute('data-cmd');
+            if(cmd==='bold') exec('bold');
+            if(cmd==='h2') wrapSelection('h2');
+            if(cmd==='purple') wrapSelection('span'), setTimeout(()=>{
+                const sel = window.getSelection(); if (!sel) return; const node = sel.anchorNode && sel.anchorNode.parentElement; if(node){ node.classList.add('purple'); }
+            },0);
+        });
+    });
+
+    document.querySelector('[data-action="add-table"]').addEventListener('click', ()=>{
+        const tableHtml = '<table class="sm-table"><thead><tr><th>Время</th><th>Формула</th><th>Пример</th></tr></thead><tbody><tr><td>Present Simple</td><td>Subject + V1</td><td>She reads books</td></tr><tr><td>Past Continuous</td><td>Subject + was/were + V-ing</td><td>They were playing</td></tr></tbody></table>';
+        editor.focus(); document.execCommand('insertHTML', false, tableHtml);
+    });
+    document.querySelector('[data-action="add-example"]').addEventListener('click', ()=>{
+        const html = '<div class="example-card"><h3>Пример:</h3><p>"I <span class="purple">work</span> every day"</p></div>';
+        editor.focus(); document.execCommand('insertHTML', false, html);
+    });
+
+    document.querySelector('[data-action="insert-image"]').addEventListener('click', ()=>{
+        const url = document.getElementById('imageUrl').value.trim();
+        const cap = document.getElementById('imageCaption').value.trim();
+        if(!url) return;
+        const container = document.querySelector('.image-preview');
+        container.innerHTML = '<img src="'+url+'" alt="image"><p class="image-caption">'+(cap||'')+'</p>';
+        editor.focus(); document.execCommand('insertHTML', false, container.innerHTML);
+        container.innerHTML='';
+    });
+
+    function toEmbed(url){
+        if(!url) return null;
+        // YouTube
+        const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+        if(yt){ return 'https://www.youtube.com/embed/'+yt[1]; }
+        // RuTube
+        const rt = url.match(/rutube\.ru\/video\/([A-Za-z0-9-]+)/);
+        if(rt){ return 'https://rutube.ru/play/embed/'+rt[1]+'/'; }
+        return null;
+    }
+    document.querySelector('[data-action="insert-video"]').addEventListener('click',()=>{
+        const url = document.getElementById('videoUrl').value.trim();
+        const embed = toEmbed(url);
+        if(!embed) return;
+        const html = '<div class="video-container"><iframe src="'+embed+'" allowfullscreen></iframe></div>';
+        editor.focus(); document.execCommand('insertHTML', false, html);
+        document.getElementById('videoContainer').style.display='block';
+        document.getElementById('videoContainer').innerHTML = html;
+    });
+
+    document.getElementById('addBlock').addEventListener('click', ()=>{
+        const block = document.createElement('div');
+        block.className = 'block';
+        block.innerHTML = '<div class="toolbar"><button type="button" class="btn-outline" data-remove>Удалить блок</button></div><div class="editor" contenteditable="true"></div>';
+        document.getElementById('contentRoot').appendChild(block);
+        block.querySelector('[data-remove]').addEventListener('click', ()=> block.remove());
+    });
+
+    document.querySelectorAll('[data-remove]').forEach(btn=> btn.addEventListener('click', e=> e.currentTarget.closest('.block').remove()));
+
+    form.addEventListener('submit', (e)=>{
+        const html = Array.from(document.querySelectorAll('.editor')).map(ed=> ed.innerHTML).join('\n');
+        contentField.value = html;
+    });
+})();
+</script>
+{% endblock %}
+
+

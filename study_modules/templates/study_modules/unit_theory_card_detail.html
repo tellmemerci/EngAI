@@ -1,0 +1,1325 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}{{ card.title }} - {{ unit.title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+body {
+    margin: 0;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    height: 100vh;
+    display: flex;
+    background: #faf5ff;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* Основной контент */
+.module-container {
+    padding: 40px 60px;
+    overflow-y: auto;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.module-header {
+    text-align: center;
+    color: #2d106a;
+    margin: 0 0 40px;
+    font-size: 2.5rem;
+    font-weight: 600;
+}
+
+/* Блоки контента */
+.content-section {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.text-block, .table-block, .image-block, .video-block {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    margin-bottom: 40px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    position: relative;
+}
+
+h2 {
+    color: #7c4dff;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 0;
+    font-size: 1.8rem;
+}
+
+.example-card {
+    background: #f8f5ff;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.highlight {
+    color: #651fff;
+    font-weight: 600;
+}
+
+/* Таблица */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 15px;
+    text-align: left;
+    border-bottom: 2px solid #eee;
+}
+
+th {
+    background: rgba(124, 77, 255, 0.05);
+    color: #651fff;
+}
+
+/* Изображения */
+.image-block img {
+    width: 100%;
+    max-width: 800px;
+    border-radius: 12px;
+    margin: 20px 0;
+    border: 2px solid #f0f0f0;
+}
+
+.image-caption {
+    color: #666;
+    text-align: center;
+    font-size: 0.9em;
+}
+
+/* Видео */
+.video-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    margin: 20px 0;
+    border-radius: 12px;
+}
+
+.video-container iframe {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+.video-caption {
+    color: #666;
+    text-align: center;
+    font-size: 0.9em;
+}
+
+/* Кнопка "Назад" */
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(45deg, #7c4dff, #651fff);
+    color: white !important;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 1rem;
+    text-decoration: none !important;
+    box-shadow: 0 4px 15px rgba(124,77,255,0.3);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    margin-bottom: 30px;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.back-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(98,0,234,0.4);
+}
+
+.back-button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        120deg,
+        transparent,
+        rgba(255,255,255,0.2),
+        transparent
+    );
+    transition: 0.5s;
+}
+
+.back-button:hover::before {
+    left: 100%;
+}
+
+.back-button .bi {
+    font-size: 1.2em;
+    margin-right: 8px;
+    transition: transform 0.3s;
+}
+
+.back-button:hover .bi {
+    transform: translateX(-3px);
+}
+
+/* Панель управления блоками */
+.block-controls {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    display: flex;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.text-block:hover .block-controls,
+.table-block:hover .block-controls,
+.image-block:hover .block-controls,
+.video-block:hover .block-controls {
+    opacity: 1;
+}
+
+.block-controls button {
+    background: rgba(124, 77, 255, 0.1);
+    border: 1px solid rgba(124, 77, 255, 0.3);
+    color: #7c4dff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+}
+
+.block-controls button:hover {
+    background: rgba(124, 77, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+/* Панель добавления блоков */
+.add-blocks-panel {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    text-align: center;
+}
+
+.add-blocks-panel h3 {
+    color: #7c4dff;
+    margin-bottom: 20px;
+    font-size: 1.4rem;
+}
+
+.add-blocks-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.add-block-btn {
+    background: linear-gradient(45deg, #7c4dff, #651fff);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.add-block-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(124,77,255,0.3);
+}
+
+/* Панель инструментов для текста */
+.text-toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.text-toolbar button {
+    background: white;
+    border: 1px solid #dee2e6;
+    color: #495057;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.text-toolbar button:hover {
+    background: #e9ecef;
+    border-color: #7c4dff;
+    color: #7c4dff;
+}
+
+.text-toolbar button.active {
+    background: #7c4dff;
+    color: white;
+    border-color: #7c4dff;
+}
+
+/* Редактор */
+.editor {
+    min-height: 200px;
+    outline: none;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 20px;
+    font-size: 16px;
+    line-height: 1.6;
+    background: #fafafa;
+    transition: all 0.3s;
+}
+
+.editor:focus {
+    border-color: #7c4dff;
+    box-shadow: 0 0 0 3px rgba(124,77,255,0.1);
+    background: white;
+}
+
+.editor .purple {
+    color: #651fff;
+    font-weight: 700;
+}
+
+.editor strong, .editor b {
+    font-weight: bold;
+}
+
+/* Кнопки сохранения */
+.save-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 30px;
+}
+
+.btn-save {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(40, 167, 69, 0.3);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .module-container {
+        padding: 30px 20px;
+    }
+
+    .module-header {
+        font-size: 2rem;
+    }
+    
+    .add-blocks-buttons {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+/* Уведомления */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    border-left: 4px solid #dc3545;
+    z-index: 1000;
+    transform: translateX(400px);
+    transition: transform 0.3s ease;
+    max-width: 350px;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.success {
+    border-left-color: #28a745;
+}
+
+.notification-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.notification-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+}
+
+.notification-icon.error {
+    background: #dc3545;
+}
+
+.notification-icon.success {
+    background: #28a745;
+}
+
+.notification-title {
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.notification-message {
+    color: #666;
+    margin: 0;
+    font-size: 14px;
+}
+
+.notification-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.notification-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.notification-btn.primary {
+    background: #7c4dff;
+    color: white;
+}
+
+.notification-btn.secondary {
+    background: #f8f9fa;
+    color: #6c757d;
+    border: 1px solid #dee2e6;
+}
+
+.notification-btn:hover {
+    transform: translateY(-1px);
+}
+
+/* Улучшенные таблицы */
+.editable-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.editable-table th, 
+.editable-table td {
+    padding: 12px;
+    text-align: left;
+    border: 1px solid #e9ecef;
+    position: relative;
+}
+
+.editable-table th {
+    background: rgba(124, 77, 255, 0.05);
+    color: #651fff;
+    font-weight: 600;
+}
+
+.editable-table td {
+    background: white;
+}
+
+.editable-table td:hover {
+    background: #f8f9fa;
+}
+
+.editable-table td.editing {
+    background: #fff3cd;
+    border-color: #ffc107;
+}
+
+.table-cell-input {
+    width: 100%;
+    border: none;
+    background: transparent;
+    padding: 8px;
+    font-size: 14px;
+    outline: none;
+    resize: none;
+    min-height: 20px;
+}
+
+.table-controls {
+    display: flex;
+    gap: 8px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+.table-control-btn {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #495057;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.table-control-btn:hover {
+    background: #e9ecef;
+    border-color: #7c4dff;
+    color: #7c4dff;
+}
+
+.table-control-btn.primary {
+    background: #7c4dff;
+    color: white;
+    border-color: #7c4dff;
+}
+
+.table-control-btn.primary:hover {
+    background: #651fff;
+}
+
+/* Стили для загрузки изображений и видео */
+.upload-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.upload-tab {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    color: #495057;
+    padding: 8px 16px;
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    border-bottom: none;
+}
+
+.upload-tab.active {
+    background: #7c4dff;
+    color: white;
+    border-color: #7c4dff;
+}
+
+.upload-tab:hover:not(.active) {
+    background: #e9ecef;
+    border-color: #7c4dff;
+    color: #7c4dff;
+}
+
+.upload-content {
+    position: relative;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.image-url-input, .video-url-input, .image-caption-input, .video-caption-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 15px;
+    transition: border-color 0.3s;
+}
+
+.image-url-input:focus, .video-url-input:focus, .image-caption-input:focus, .video-caption-input:focus {
+    outline: none;
+    border-color: #7c4dff;
+    box-shadow: 0 0 0 3px rgba(124,77,255,0.1);
+}
+
+.image-file-input, .video-file-input {
+    width: 100%;
+    padding: 12px;
+    border: 2px dashed #7c4dff;
+    border-radius: 8px;
+    background: #f8f5ff;
+    cursor: pointer;
+    margin-bottom: 15px;
+    transition: all 0.3s;
+}
+
+.image-file-input:hover, .video-file-input:hover {
+    background: #f1ebff;
+    border-color: #651fff;
+}
+
+.paste-area {
+    width: 100%;
+    min-height: 100px;
+    border: 2px dashed #7c4dff;
+    border-radius: 8px;
+    background: #f8f5ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 15px;
+}
+
+.paste-area:hover {
+    background: #f1ebff;
+    border-color: #651fff;
+}
+
+.paste-area i {
+    font-size: 2rem;
+    color: #7c4dff;
+    margin-bottom: 10px;
+}
+
+.paste-area p {
+    color: #7c4dff;
+    margin: 0;
+    text-align: center;
+}
+
+.image-preview img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 15px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.video-container {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    margin: 15px 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.video-container iframe, .video-container video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+}
+
+/* Скроллбар */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f5f3ff;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #7c4dff;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="module-container">
+    <a href="{% url 'study_modules:unit_detail' module.id unit.id %}" class="back-button">
+        <i class="bi bi-arrow-left-circle"></i>Вернуться к юниту
+    </a>
+    
+    <h1 class="module-header">{{ card.title }}</h1>
+
+    <form method="post" id="cardForm">
+        {% csrf_token %}
+        
+        {% if module.author == user %}
+        <div class="add-blocks-panel">
+            <h3><i class="bi bi-plus-circle"></i>Добавить блок контента</h3>
+            <div class="add-blocks-buttons">
+                <button type="button" class="add-block-btn" data-type="text">
+                    <i class="bi bi-type"></i>Текстовый блок
+                </button>
+                <button type="button" class="add-block-btn" data-type="table">
+                    <i class="bi bi-table"></i>Таблица
+                </button>
+                <button type="button" class="add-block-btn" data-type="image">
+                    <i class="bi bi-image"></i>Изображение
+                </button>
+                <button type="button" class="add-block-btn" data-type="video">
+                    <i class="bi bi-play-circle"></i>Видео
+                </button>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="content-section" id="contentRoot">
+            <!-- Существующий контент карточки -->
+            {% if card.content %}
+                {{ card.content|safe }}
+            {% else %}
+                <!-- Пустой текстовый блок по умолчанию -->
+                        <div class="text-block" data-type="text">
+                            <div class="block-controls">
+                                <button type="button" onclick="editBlock(this)"><i class="bi bi-pencil"></i> Редактировать</button>
+                                <button type="button" onclick="deleteBlock(this)"><i class="bi bi-trash"></i> Удалить</button>
+                            </div>
+                            <h2 contenteditable="true" onblur="saveBlockTitle(this)"><i class="bi bi-info-circle"></i>Основные правила</h2>
+                    <div class="text-toolbar">
+                        <button type="button" onclick="formatText(this, 'bold')" title="Жирный"><i class="bi bi-type-bold"></i></button>
+                        <button type="button" onclick="formatText(this, 'purple')" title="Фиолетовый">Фиолетовый</button>
+                        <button type="button" onclick="formatText(this, 'h2')" title="Заголовок">H2</button>
+                    </div>
+                    <div class="editor" contenteditable="true">
+                        <p>Изучите базовые принципы построения предложений в английском языке.</p>
+                        <div class="example-card">
+                            <h3>Пример:</h3>
+                            <p>"I <span class="highlight">work</span> every day" (Present Simple)</p>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        {% if module.author == user %}
+        <div class="save-actions">
+            <button type="submit" class="btn-save">
+                <i class="bi bi-check-circle"></i>Сохранить изменения
+            </button>
+        </div>
+        {% endif %}
+
+        <input type="hidden" name="content" id="contentField">
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const contentRoot = document.getElementById('contentRoot');
+    const form = document.getElementById('cardForm');
+    const contentField = document.getElementById('contentField');
+    
+    // Функция для добавления нового блока
+    function addBlock(type) {
+        let blockHtml = '';
+        
+        switch(type) {
+            case 'text':
+                blockHtml = `
+                    <div class="text-block" data-type="text">
+                        <div class="block-controls">
+                            <button type="button" onclick="editBlock(this)"><i class="bi bi-pencil"></i> Редактировать</button>
+                            <button type="button" onclick="deleteBlock(this)"><i class="bi bi-trash"></i> Удалить</button>
+                        </div>
+                        <h2 contenteditable="true" onblur="saveBlockTitle(this)"><i class="bi bi-info-circle"></i>Текстовый блок</h2>
+                        <div class="text-toolbar">
+                            <button type="button" onclick="formatText(this, 'bold')" title="Жирный"><i class="bi bi-type-bold"></i></button>
+                            <button type="button" onclick="formatText(this, 'purple')" title="Фиолетовый">Фиолетовый</button>
+                            <button type="button" onclick="formatText(this, 'h2')" title="Заголовок">H2</button>
+                        </div>
+                        <div class="editor" contenteditable="true">
+                            <p>Введите ваш текст здесь...</p>
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'table':
+                blockHtml = `
+                    <div class="table-block" data-type="table">
+                        <div class="block-controls">
+                            <button type="button" onclick="editBlock(this)"><i class="bi bi-pencil"></i> Редактировать</button>
+                            <button type="button" onclick="deleteBlock(this)"><i class="bi bi-trash"></i> Удалить</button>
+                        </div>
+                        <h2 contenteditable="true" onblur="saveBlockTitle(this)"><i class="bi bi-table"></i>Таблица</h2>
+                        <table class="editable-table">
+                            <thead>
+                                <tr>
+                                    <th contenteditable="true" onblur="saveTableData(this)">Заголовок 1</th>
+                                    <th contenteditable="true" onblur="saveTableData(this)">Заголовок 2</th>
+                                    <th contenteditable="true" onblur="saveTableData(this)">Заголовок 3</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td contenteditable="true" onblur="saveTableData(this)">Данные 1</td>
+                                    <td contenteditable="true" onblur="saveTableData(this)">Данные 2</td>
+                                    <td contenteditable="true" onblur="saveTableData(this)">Данные 3</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="table-controls">
+                            <button type="button" class="table-control-btn primary" onclick="addTableRow(this)">
+                                <i class="bi bi-plus"></i> Добавить строку
+                            </button>
+                            <button type="button" class="table-control-btn" onclick="addTableColumn(this)">
+                                <i class="bi bi-plus"></i> Добавить столбец
+                            </button>
+                            <button type="button" class="table-control-btn" onclick="deleteTableRow(this)">
+                                <i class="bi bi-dash"></i> Удалить строку
+                            </button>
+                            <button type="button" class="table-control-btn" onclick="deleteTableColumn(this)">
+                                <i class="bi bi-dash"></i> Удалить столбец
+                            </button>
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'image':
+                blockHtml = `
+                    <div class="image-block" data-type="image">
+                        <div class="block-controls">
+                            <button type="button" onclick="editBlock(this)"><i class="bi bi-pencil"></i> Редактировать</button>
+                            <button type="button" onclick="deleteBlock(this)"><i class="bi bi-trash"></i> Удалить</button>
+                        </div>
+                        <h2 contenteditable="true" onblur="saveBlockTitle(this)"><i class="bi bi-image"></i>Изображение</h2>
+                        <div class="image-upload-options">
+                            <div class="upload-tabs">
+                                <button type="button" class="upload-tab active" onclick="switchImageTab(this, 'url')">URL</button>
+                                <button type="button" class="upload-tab" onclick="switchImageTab(this, 'file')">Файл</button>
+                                <button type="button" class="upload-tab" onclick="switchImageTab(this, 'paste')">Вставка</button>
+                            </div>
+                            <div class="upload-content">
+                                <div class="tab-content active" id="image-url-tab">
+                                    <input type="url" class="image-url-input" placeholder="Вставьте URL изображения" onchange="updateImageFromUrl(this)">
+                                </div>
+                                <div class="tab-content" id="image-file-tab">
+                                    <input type="file" class="image-file-input" accept="image/*" onchange="updateImageFromFile(this)">
+                                </div>
+                                <div class="tab-content" id="image-paste-tab">
+                                    <div class="paste-area" onclick="focusPasteArea(this)" onpaste="handleImagePaste(event)">
+                                        <i class="bi bi-clipboard"></i>
+                                        <p>Нажмите сюда и вставьте изображение (Ctrl+V)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="text" class="image-caption-input" placeholder="Подпись к изображению" onchange="updateImageCaption(this)">
+                        <div class="image-preview">
+                            <img src="" alt="Предварительный просмотр" style="display:none;">
+                            <p class="image-caption"></p>
+                        </div>
+                    </div>
+                `;
+                break;
+            case 'video':
+                blockHtml = `
+                    <div class="video-block" data-type="video">
+                        <div class="block-controls">
+                            <button type="button" onclick="editBlock(this)"><i class="bi bi-pencil"></i> Редактировать</button>
+                            <button type="button" onclick="deleteBlock(this)"><i class="bi bi-trash"></i> Удалить</button>
+                        </div>
+                        <h2 contenteditable="true" onblur="saveBlockTitle(this)"><i class="bi bi-play-circle"></i>Видео</h2>
+                        <div class="video-upload-options">
+                            <div class="upload-tabs">
+                                <button type="button" class="upload-tab active" onclick="switchVideoTab(this, 'url')">YouTube/RuTube</button>
+                                <button type="button" class="upload-tab" onclick="switchVideoTab(this, 'file')">Файл</button>
+                            </div>
+                            <div class="upload-content">
+                                <div class="tab-content active" id="video-url-tab">
+                                    <input type="url" class="video-url-input" placeholder="Вставьте ссылку на YouTube или RuTube" onchange="updateVideoFromUrl(this)">
+                                </div>
+                                <div class="tab-content" id="video-file-tab">
+                                    <input type="file" class="video-file-input" accept="video/*" onchange="updateVideoFromFile(this)">
+                                </div>
+                            </div>
+                        </div>
+                        <input type="text" class="video-caption-input" placeholder="Подпись к видео" onchange="updateVideoCaption(this)">
+                        <div class="video-container"></div>
+                        <p class="video-caption"></p>
+                    </div>
+                `;
+                break;
+        }
+        
+        contentRoot.insertAdjacentHTML('beforeend', blockHtml);
+    }
+    
+    // Обработчики для кнопок добавления блоков
+    document.querySelectorAll('.add-block-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const type = this.getAttribute('data-type');
+            addBlock(type);
+        });
+    });
+    
+    // Обработчик отправки формы
+    form.addEventListener('submit', function(e) {
+        const html = contentRoot.innerHTML;
+        contentField.value = html;
+    });
+});
+
+// Функции для управления блоками
+function editBlock(button) {
+    const block = button.closest('.text-block, .table-block, .image-block, .video-block');
+    const editor = block.querySelector('.editor');
+    if (editor) {
+        editor.focus();
+    }
+}
+
+function deleteBlock(button) {
+    const block = button.closest('.text-block, .table-block, .image-block, .video-block');
+    const blockType = block.dataset.type || 'блок';
+    
+    showNotification('Удаление блока', `Вы уверены, что хотите удалить этот ${blockType}?`, 'error', [
+        {
+            text: 'Удалить',
+            class: 'primary',
+            action: function() {
+                block.remove();
+                showNotification('Блок удален', 'Блок успешно удален', 'success');
+            }
+        },
+        {
+            text: 'Отмена',
+            class: 'secondary',
+            action: function() {
+                hideNotification();
+            }
+        }
+    ]);
+}
+
+// Функция форматирования текста
+function formatText(button, format) {
+    const block = button.closest('.text-block');
+    const editor = block.querySelector('.editor');
+    
+    if (!editor) return;
+    
+    editor.focus();
+    
+    // Снимаем выделение с кнопки
+    button.classList.remove('active');
+    
+    switch(format) {
+        case 'bold':
+            document.execCommand('bold', false, null);
+            break;
+        case 'purple':
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                const span = document.createElement('span');
+                span.className = 'purple';
+                try {
+                    range.surroundContents(span);
+                } catch (e) {
+                    // Если не удается обернуть, вставляем span
+                    span.textContent = range.toString();
+                    range.deleteContents();
+                    range.insertNode(span);
+                }
+            }
+            break;
+        case 'h2':
+            const h2Selection = window.getSelection();
+            if (h2Selection.rangeCount > 0) {
+                const h2Range = h2Selection.getRangeAt(0);
+                const h2 = document.createElement('h2');
+                try {
+                    h2Range.surroundContents(h2);
+                } catch (e) {
+                    h2.textContent = h2Range.toString();
+                    h2Range.deleteContents();
+                    h2Range.insertNode(h2);
+                }
+            }
+            break;
+    }
+}
+
+// Функции для работы с таблицами
+function saveTableData(cell) {
+    // Сохраняем данные ячейки (можно добавить логику сохранения)
+    console.log('Сохранение данных ячейки:', cell.textContent);
+}
+
+function addTableRow(button) {
+    const table = button.closest('.table-block').querySelector('.editable-table');
+    const tbody = table.querySelector('tbody');
+    const headerRow = table.querySelector('thead tr');
+    const columnCount = headerRow.children.length;
+    
+    const newRow = document.createElement('tr');
+    for (let i = 0; i < columnCount; i++) {
+        const cell = document.createElement('td');
+        cell.contentEditable = true;
+        cell.setAttribute('onblur', 'saveTableData(this)');
+        cell.textContent = 'Новая ячейка';
+        newRow.appendChild(cell);
+    }
+    
+    tbody.appendChild(newRow);
+    showNotification('Строка добавлена', 'Новая строка успешно добавлена в таблицу', 'success');
+}
+
+function addTableColumn(button) {
+    const table = button.closest('.table-block').querySelector('.editable-table');
+    const headerRow = table.querySelector('thead tr');
+    const tbodyRows = table.querySelectorAll('tbody tr');
+    
+    // Добавляем заголовок
+    const headerCell = document.createElement('th');
+    headerCell.contentEditable = true;
+    headerCell.setAttribute('onblur', 'saveTableData(this)');
+    headerCell.textContent = 'Новый столбец';
+    headerRow.appendChild(headerCell);
+    
+    // Добавляем ячейки в каждую строку
+    tbodyRows.forEach(row => {
+        const cell = document.createElement('td');
+        cell.contentEditable = true;
+        cell.setAttribute('onblur', 'saveTableData(this)');
+        cell.textContent = 'Новая ячейка';
+        row.appendChild(cell);
+    });
+    
+    showNotification('Столбец добавлен', 'Новый столбец успешно добавлен в таблицу', 'success');
+}
+
+function deleteTableRow(button) {
+    const table = button.closest('.table-block').querySelector('.editable-table');
+    const tbody = table.querySelector('tbody');
+    const rows = tbody.querySelectorAll('tr');
+    
+    if (rows.length <= 1) {
+        showNotification('Ошибка', 'Нельзя удалить последнюю строку таблицы', 'error');
+        return;
+    }
+    
+    showNotification('Удаление строки', 'Вы уверены, что хотите удалить последнюю строку?', 'error', [
+        {
+            text: 'Удалить',
+            class: 'primary',
+            action: () => {
+                rows[rows.length - 1].remove();
+                showNotification('Строка удалена', 'Строка успешно удалена из таблицы', 'success');
+            }
+        },
+        {
+            text: 'Отмена',
+            class: 'secondary',
+            action: () => hideNotification()
+        }
+    ]);
+}
+
+function deleteTableColumn(button) {
+    const table = button.closest('.table-block').querySelector('.editable-table');
+    const headerRow = table.querySelector('thead tr');
+    const tbodyRows = table.querySelectorAll('tbody tr');
+    
+    if (headerRow.children.length <= 1) {
+        showNotification('Ошибка', 'Нельзя удалить последний столбец таблицы', 'error');
+        return;
+    }
+    
+    showNotification('Удаление столбца', 'Вы уверены, что хотите удалить последний столбец?', 'error', [
+        {
+            text: 'Удалить',
+            class: 'primary',
+            action: () => {
+                // Удаляем заголовок
+                headerRow.removeChild(headerRow.lastElementChild);
+                
+                // Удаляем ячейки из каждой строки
+                tbodyRows.forEach(row => {
+                    row.removeChild(row.lastElementChild);
+                });
+                
+                showNotification('Столбец удален', 'Столбец успешно удален из таблицы', 'success');
+            }
+        },
+        {
+            text: 'Отмена',
+            class: 'secondary',
+            action: () => hideNotification()
+        }
+    ]);
+}
+
+// Глобальная переменная для хранения действий уведомлений
+let currentNotificationActions = [];
+
+// Функция для выполнения действий уведомлений
+function executeNotificationAction(actionIndex) {
+    if (currentNotificationActions[actionIndex]) {
+        currentNotificationActions[actionIndex].action();
+    }
+    hideNotification();
+}
+
+// Функции для уведомлений
+function showNotification(title, message, type = 'error', actions = []) {
+    currentNotificationActions = actions;
+    // Удаляем существующие уведомления
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    
+    const iconClass = type === 'error' ? 'bi-exclamation-triangle' : 'bi-check-circle';
+    const iconBgClass = type === 'error' ? 'error' : 'success';
+    
+    let actionsHtml = '';
+    if (actions.length > 0) {
+        actionsHtml = `
+            <div class="notification-actions">
+                ${actions.map((action, index) => `
+                    <button class="notification-btn ${action.class}" onclick="executeNotificationAction(${index})">
+                        ${action.text}
+                    </button>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    notification.innerHTML = `
+        <div class="notification-header">
+            <div class="notification-icon ${iconBgClass}">
+                <i class="bi ${iconClass}"></i>
+            </div>
+            <h4 class="notification-title">${title}</h4>
+        </div>
+        <p class="notification-message">${message}</p>
+        ${actionsHtml}
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Показываем уведомление
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // Автоматически скрываем через 5 секунд, если нет действий
+    if (actions.length === 0) {
+        setTimeout(() => {
+            hideNotification();
+        }, 5000);
+    }
+}
+
+function hideNotification() {
+    const notifications = document.querySelectorAll('.notification');
+    notifications.forEach(notification => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    });
+}
+
+// Функция для сохранения заголовка блока
+function saveBlockTitle(element) {
+    console.log('Сохранение заголовка блока:', element.textContent);
+}
+
+// Функции для работы с изображениями
+function switchImageTab(button, tabName) {
+    const block = button.closest('.image-block');
+    const tabs = block.querySelectorAll('.upload-tab');
+    const contents = block.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => tab.classList.remove('active'));
+    contents.forEach(content => content.classList.remove('active'));
+    
+    button.classList.add('active');
+    block.querySelector(`#image-${tabName}-tab`).classList.add('active');
+}
+
+function updateImageFromUrl(input) {
+    const block = input.closest('.image-block');
+    const imagePreview = block.querySelector('.image-preview img');
+    const url = input.value.trim();
+    
+    if (url) {
+        imagePreview.src = url;
+        imagePreview.style.display = 'block';
+        imagePreview.onerror = function() {
+            showNotification('Ошибка', 'Не удалось загрузить изображение по указанному URL', 'error');
+            imagePreview.style.display = 'none';
+        };
+    } else {
+        imagePreview.style.display = 'none';
+    }
+}
+
+function updateImageFromFile(input) {
+    const file = input.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const block = input.closest('.image-block');
+            const imagePreview = block.querySelector('.image-preview img');
+            imagePreview.src = e.target.result;
+            imagePreview.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function focusPasteArea(area) {
+    area.focus();
+}
+
+function handleImagePaste(event) {
+    const items = event.clipboardData.items;
+    for (let item of items) {
+        if (item.type.indexOf('image') !== -1) {
+            const file = item.getAsFile();
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const block = event.target.closest('.image-block');
+                const imagePreview = block.querySelector('.image-preview img');
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                showNotification('Изображение вставлено', 'Изображение успешно вставлено из буфера обмена', 'success');
+            };
+            reader.readAsDataURL(file);
+            break;
+        }
+    }
+}
+
+function updateImageCaption(input) {
+    const block = input.closest('.image-block');
+    const caption = block.querySelector('.image-caption');
+    caption.textContent = input.value;
+}
+
+// Функции для работы с видео
+function switchVideoTab(button, tabName) {
+    const block = button.closest('.video-block');
+    const tabs = block.querySelectorAll('.upload-tab');
+    const contents = block.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => tab.classList.remove('active'));
+    contents.forEach(content => content.classList.remove('active'));
+    
+    button.classList.add('active');
+    block.querySelector(`#video-${tabName}-tab`).classList.add('active');
+}
+
+function updateVideoFromUrl(input) {
+    const block = input.closest('.video-block');
+    const videoContainer = block.querySelector('.video-container');
+    const url = input.value.trim();
+    
+    let embedUrl = '';
+    
+    // YouTube
+    const ytMatch = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+    if (ytMatch) {
+        embedUrl = `https://www.youtube.com/embed/${ytMatch[1]}`;
+    }
+    
+    // RuTube
+    const rtMatch = url.match(/rutube\.ru\/video\/([a-zA-Z0-9-]+)/);
+    if (rtMatch) {
+        embedUrl = `https://rutube.ru/play/embed/${rtMatch[1]}/`;
+    }
+    
+    if (embedUrl) {
+        videoContainer.innerHTML = `<iframe src="${embedUrl}" frameborder="0" allowfullscreen></iframe>`;
+    } else if (url) {
+        showNotification('Ошибка', 'Неподдерживаемый формат ссылки. Поддерживаются только YouTube и RuTube', 'error');
+    }
+}
+
+function updateVideoFromFile(input) {
+    const file = input.files[0];
+    if (file) {
+        const url = URL.createObjectURL(file);
+        const block = input.closest('.video-block');
+        const videoContainer = block.querySelector('.video-container');
+        videoContainer.innerHTML = `<video controls><source src="${url}" type="${file.type}"></video>`;
+    }
+}
+
+function updateVideoCaption(input) {
+    const block = input.closest('.video-block');
+    const caption = block.querySelector('.video-caption');
+    caption.textContent = input.value;
+}
+</script>
+{% endblock %}

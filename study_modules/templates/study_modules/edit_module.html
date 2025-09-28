@@ -1,0 +1,380 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Редактирование модуля - {{ module.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'study_modules/css/module_detail.css' %}">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+.edit-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.edit-section {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 2px solid #f0f0f0;
+}
+
+.edit-section h3 {
+    color: #2d106a;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #7c4dff;
+    box-shadow: 0 0 0 3px rgba(124,77,255,0.1);
+}
+
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #7c4dff, #651fff);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(124,77,255,0.3);
+}
+
+.btn-success {
+    background: linear-gradient(45deg, #4caf50, #66bb6a);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(76,175,80,0.3);
+}
+
+.btn-danger {
+    background: linear-gradient(45deg, #f44336, #ff6b6b);
+    color: white;
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(244,67,54,0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
+
+.skill-item,
+.attachment-item {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.skill-item h5,
+.attachment-item h5 {
+    margin: 0;
+    color: #2d106a;
+}
+
+.skill-item p,
+.attachment-item p {
+    margin: 5px 0 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.item-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.add-item-btn {
+    background: #e3f2fd;
+    border: 2px dashed #2196f3;
+    color: #1976d2;
+    padding: 20px;
+    text-align: center;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 15px;
+}
+
+.add-item-btn:hover {
+    background: #bbdefb;
+    border-color: #1976d2;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #666;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    color: #ccc;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="module-container">
+    <a href="{% url 'study_modules:module_detail' module.id %}" class="back-button">
+        <i class="bi bi-arrow-left-circle"></i>Вернуться к модулю
+    </a>
+    
+    <h1 class="module-header">
+        <i class="bi bi-pencil-square"></i>Редактирование модуля: {{ module.title }}
+    </h1>
+
+    <div class="edit-container">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Основная информация модуля -->
+            <div class="edit-section">
+                <h3><i class="bi bi-info-circle"></i>Основная информация</h3>
+                <div class="form-group">
+                    <label for="id_title">Название модуля</label>
+                    <input type="text" id="id_title" name="title" value="{{ module.title }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="id_description">Описание модуля</label>
+                    <textarea id="id_description" name="description" rows="4">{{ module.description }}</textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="id_module_type">Тип модуля</label>
+                        <select id="id_module_type" name="module_type">
+                            <option value="free" {% if module.module_type == 'free' %}selected{% endif %}>Бесплатный</option>
+                            <option value="premium" {% if module.module_type == 'premium' %}selected{% endif %}>Премиум</option>
+                            <option value="locked" {% if module.module_type == 'locked' %}selected{% endif %}>Закрытый</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="id_image">Изображение модуля</label>
+                        <input type="file" id="id_image" name="image" accept="image/*">
+                        {% if module.image %}
+                        <p class="text-muted">Текущее изображение: {{ module.image.name }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Теоретические секции -->
+            <div class="edit-section">
+                <h3><i class="bi bi-journal-bookmark"></i>Теоретические секции</h3>
+                {% for section in theory_sections %}
+                <div class="skill-item">
+                    <div>
+                        <h5>{{ section.title }}</h5>
+                        <p>{{ section.description|truncatewords:20 }}</p>
+                    </div>
+                    <div class="item-actions">
+                        <a href="{% url 'study_modules:add_theory_card' module.id section.id %}" class="btn btn-success btn-sm">
+                            <i class="bi bi-plus"></i>Добавить карточку
+                        </a>
+                        <a href="#" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-pencil"></i>Редактировать
+                        </a>
+                        <a href="#" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash"></i>Удалить
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="bi bi-journal"></i>
+                    <p>Теоретические секции не добавлены</p>
+                </div>
+                {% endfor %}
+                <a href="{% url 'study_modules:add_section' module.id %}?section_type=theory" class="add-item-btn">
+                    <i class="bi bi-plus-circle"></i>Добавить теоретическую секцию
+                </a>
+            </div>
+
+            <!-- Практические навыки -->
+            <div class="edit-section">
+                <h3><i class="bi bi-tools"></i>Практические навыки</h3>
+                {% for skill in skills %}
+                <div class="skill-item">
+                    <div>
+                        <h5>{{ skill.title }}</h5>
+                        <p>{{ skill.description|truncatewords:20 }}</p>
+                        <small class="text-muted">Тип: {{ skill.get_skill_type_display }}</small>
+                    </div>
+                    <div class="item-actions">
+                        <a href="#" class="btn btn-secondary btn-sm">
+                            <i class="bi bi-pencil"></i>Редактировать
+                        </a>
+                        <a href="#" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash"></i>Удалить
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="bi bi-tools"></i>
+                    <p>Практические навыки не добавлены</p>
+                </div>
+                {% endfor %}
+                <a href="{% url 'study_modules:add_skill' module.id %}" class="add-item-btn">
+                    <i class="bi bi-plus-circle"></i>Добавить навык
+                </a>
+            </div>
+
+            <!-- Прикрепленные файлы -->
+            <div class="edit-section">
+                <h3><i class="bi bi-paperclip"></i>Материалы курса</h3>
+                {% for attachment in attachments %}
+                <div class="attachment-item">
+                    <div>
+                        <h5>{{ attachment.title }}</h5>
+                        <p>{{ attachment.description|truncatewords:20 }}</p>
+                        <small class="text-muted">Тип: {{ attachment.get_file_type_display }} | Размер: {{ attachment.file_size }}</small>
+                    </div>
+                    <div class="item-actions">
+                        <a href="{{ attachment.file.url }}" class="btn btn-secondary btn-sm" target="_blank">
+                            <i class="bi bi-eye"></i>Просмотр
+                        </a>
+                        <a href="#" class="btn btn-danger btn-sm">
+                            <i class="bi bi-trash"></i>Удалить
+                        </a>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="bi bi-paperclip"></i>
+                    <p>Материалы не прикреплены</p>
+                </div>
+                {% endfor %}
+                <a href="{% url 'study_modules:add_attachment' module.id %}" class="add-item-btn">
+                    <i class="bi bi-plus-circle"></i>Добавить файл
+                </a>
+            </div>
+
+            <!-- Кнопки действий -->
+            <div class="edit-section">
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i>Сохранить изменения
+                    </button>
+                    <a href="{% url 'study_modules:module_detail' module.id %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle"></i>Отмена
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Обработчики для кнопок добавления
+    const addButtons = document.querySelectorAll('.add-item-btn');
+    addButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const section = this.closest('.edit-section');
+            const sectionType = section.querySelector('h3').textContent.includes('Теоретические') ? 'theory' : 
+                              section.querySelector('h3').textContent.includes('Практические') ? 'skills' : 'attachments';
+            
+            // Здесь можно добавить модальное окно или форму для добавления нового элемента
+
+        });
+    });
+
+    // Обработчики для кнопок редактирования
+    const editButtons = document.querySelectorAll('.btn-secondary');
+    editButtons.forEach(button => {
+        if (button.textContent.includes('Редактировать')) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+
+            });
+        }
+    });
+
+    // Обработчики для кнопок удаления
+    const deleteButtons = document.querySelectorAll('.btn-danger');
+    deleteButtons.forEach(button => {
+        if (button.textContent.includes('Удалить')) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (confirm('Вы уверены, что хотите удалить этот элемент?')) {
+
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

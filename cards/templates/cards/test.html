@@ -1,0 +1,737 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Тест - {{ module.name }}{% endblock %}
+
+{% block content %}
+<div class="test-container">
+    <div class="test-header">
+        <div class="module-info">
+            <div class="back-to-module">
+                <a href="/cards/module/{{ module.id }}/" class="back-link">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Вернуться к модулю</span>
+                </a>
+            </div>
+            <h1>{{ module.name }}</h1>
+            <div class="test-badge">Тест</div>
+        </div>
+    </div>
+
+    <div class="test-content">
+        <div id="cardsContainer">
+            <!-- Здесь будут все карточки -->
+        </div>
+        
+        <div class="test-actions">
+            <button class="check-btn" id="checkBtn" onclick="checkAllAnswers()">
+                <span class="btn-text">Проверить все</span>
+                <span class="btn-icon">✓</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="test-results" id="testResults" style="display: none;">
+        <div class="results-content">
+            <h2>Результаты теста</h2>
+            <div class="results-stats">
+                <div class="stat-item">
+                    <div class="stat-icon correct">✓</div>
+                    <span class="stat-label">Правильных ответов:</span>
+                    <span class="stat-value" id="correctAnswers">0</span>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon incorrect">✗</div>
+                    <span class="stat-label">Неправильных ответов:</span>
+                    <span class="stat-value" id="incorrectAnswers">0</span>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-icon percentage">%</div>
+                    <span class="stat-label">Процент правильных:</span>
+                    <span class="stat-value" id="correctPercentage">0%</span>
+                </div>
+            </div>
+            <div class="results-actions">
+                <button class="restart-btn" onclick="restartTest()">
+                    <span class="btn-icon">↻</span>
+                    <span class="btn-text">Начать заново</span>
+                </button>
+                <button class="back-btn" onclick="window.location.href='/cards/module/{{ module.id }}/'">
+                    <span class="btn-icon">←</span>
+                    <span class="btn-text">Вернуться к модулю</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.test-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.test-header {
+    margin-bottom: 40px;
+}
+
+.module-info {
+    position: relative;
+    text-align: center;
+}
+
+.back-to-module {
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #7c4dff;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: rgba(124, 77, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.back-link:hover {
+    background: rgba(124, 77, 255, 0.2);
+    transform: translateX(-5px);
+}
+
+.back-link i {
+    font-size: 1.2rem;
+}
+
+.module-info h1 {
+    color: #2c3e50;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin: 0;
+    padding: 20px;
+    display: inline-block;
+    position: relative;
+}
+
+.test-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #7c4dff;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.2);
+}
+
+.card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid rgba(124, 77, 255, 0.1);
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+}
+
+.card-term {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 25px;
+    text-align: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+    border-radius: 15px;
+}
+
+.options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.option-btn {
+    background: white;
+    border: 2px solid #e0e0e0;
+    padding: 20px;
+    border-radius: 15px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    color: #2c3e50;
+    font-weight: 500;
+    position: relative;
+    overflow: hidden;
+}
+
+.option-btn:hover {
+    border-color: #7c4dff;
+    color: #7c4dff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(124, 77, 255, 0.1);
+}
+
+.option-btn.selected {
+    background: #e8e0ff;
+    border-color: #7c4dff;
+    color: #7c4dff;
+    box-shadow: 0 5px 15px rgba(124, 77, 255, 0.2);
+}
+
+.option-btn.correct {
+    background: #e8f5e9;
+    border-color: #4caf50;
+    color: #2e7d32;
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.2);
+}
+
+.option-btn.incorrect {
+    background: #ffebee;
+    border-color: #f44336;
+    color: #c62828;
+    box-shadow: 0 5px 15px rgba(244, 67, 54, 0.2);
+}
+
+.card-input {
+    width: 100%;
+    max-width: 700px;
+    margin: 0 auto 25px;
+    position: relative;
+}
+
+.card-input::before {
+    content: 'Введите перевод';
+    position: absolute;
+    top: -12px;
+    left: 25px;
+    background: white;
+    padding: 0 15px;
+    color: #7c4dff;
+    font-size: 1rem;
+    font-weight: 600;
+    z-index: 1;
+    letter-spacing: 0.5px;
+}
+
+#translationInput {
+    width: 100%;
+    padding: 25px 30px;
+    border: 2px solid #e0e0e0;
+    border-radius: 20px;
+    font-size: 1.3rem;
+    transition: all 0.3s ease;
+    color: #2c3e50;
+    background: white;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    position: relative;
+    min-height: 80px;
+    line-height: 1.5;
+}
+
+#translationInput:focus {
+    border-color: #7c4dff;
+    outline: none;
+    box-shadow: 0 10px 25px rgba(124, 77, 255, 0.2);
+    background: white;
+    transform: translateY(-3px);
+}
+
+#translationInput::placeholder {
+    color: #9e9e9e;
+    font-style: italic;
+    opacity: 0.7;
+    font-size: 1.2rem;
+}
+
+#translationInput:hover {
+    border-color: #7c4dff;
+    box-shadow: 0 8px 20px rgba(124, 77, 255, 0.15);
+}
+
+.card-result {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-top: 15px;
+    padding: 15px;
+    border-radius: 12px;
+    background: #f8f9fa;
+}
+
+.result-text {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.result-icon {
+    font-size: 1.8rem;
+    font-weight: bold;
+}
+
+.result-icon.correct {
+    color: #4caf50;
+}
+
+.result-icon.incorrect {
+    color: #f44336;
+}
+
+.test-actions {
+    margin-top: 40px;
+    display: flex;
+    justify-content: center;
+}
+
+.check-btn {
+    background: #7c4dff;
+    color: white;
+    border: none;
+    padding: 20px 40px;
+    border-radius: 15px;
+    font-size: 1.2rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 5px 15px rgba(124, 77, 255, 0.3);
+}
+
+.check-btn:hover {
+    background: #651fff;
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(124, 77, 255, 0.4);
+}
+
+.btn-icon {
+    font-size: 1.4rem;
+}
+
+.test-results {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    margin-top: 40px;
+}
+
+.results-content {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.results-content h2 {
+    color: #2c3e50;
+    text-align: center;
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.results-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+    padding: 25px;
+    background: #f8f9fa;
+    border-radius: 15px;
+    transition: transform 0.3s ease;
+}
+
+.stat-item:hover {
+    transform: translateY(-5px);
+}
+
+.stat-icon {
+    font-size: 2rem;
+    font-weight: bold;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    margin-bottom: 10px;
+}
+
+.stat-icon.correct {
+    background: #e8f5e9;
+    color: #4caf50;
+}
+
+.stat-icon.incorrect {
+    background: #ffebee;
+    color: #f44336;
+}
+
+.stat-icon.percentage {
+    background: #e3f2fd;
+    color: #2196f3;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.stat-value {
+    color: #2c3e50;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.results-actions {
+    display: flex;
+    gap: 20px;
+}
+
+.restart-btn, .back-btn {
+    flex: 1;
+    padding: 20px;
+    border-radius: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.restart-btn {
+    background: #7c4dff;
+    color: white;
+    border: none;
+    box-shadow: 0 5px 15px rgba(124, 77, 255, 0.3);
+}
+
+.back-btn {
+    background: white;
+    border: 2px solid #7c4dff;
+    color: #7c4dff;
+    box-shadow: 0 5px 15px rgba(124, 77, 255, 0.1);
+}
+
+.restart-btn:hover, .back-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(124, 77, 255, 0.2);
+}
+
+@media (max-width: 768px) {
+    .test-container {
+        padding: 15px;
+    }
+    
+    .module-info h1 {
+        font-size: 2rem;
+    }
+    
+    .back-to-module {
+        position: static;
+        margin-bottom: 20px;
+        text-align: left;
+    }
+    
+    .test-badge {
+        position: static;
+        display: inline-block;
+        margin-top: 10px;
+    }
+    
+    .card {
+        padding: 20px;
+    }
+    
+    .card-term {
+        font-size: 1.8rem;
+    }
+    
+    .options-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .results-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .results-actions {
+        flex-direction: column;
+    }
+}
+
+/* --- Новый стиль для поля с плавающим лейблом --- */
+.floating-label-group {
+    position: relative;
+    margin: 0 auto 32px auto;
+    max-width: 700px;
+    width: 100%;
+}
+.floating-label-group input[type="text"] {
+    width: 100%;
+    padding: 28px 24px 12px 24px;
+    font-size: 1.2rem;
+    border: 2px solid #e0e0e0;
+    border-radius: 16px;
+    background: #fff;
+    color: #2c3e50;
+    transition: border 0.3s, box-shadow 0.3s;
+    box-shadow: 0 4px 16px rgba(124,77,255,0.06);
+}
+.floating-label-group input[type="text"]:focus {
+    border-color: #7c4dff;
+    outline: none;
+    box-shadow: 0 8px 24px rgba(124,77,255,0.13);
+}
+.floating-label-group label {
+    position: absolute;
+    left: 24px;
+    top: 22px;
+    color: #7c4dff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    pointer-events: none;
+    background: #fff;
+    padding: 0 4px;
+    transition: 0.2s cubic-bezier(.4,0,.2,1);
+    transform: translateY(0);
+}
+.floating-label-group input[type="text"]:focus + label,
+.floating-label-group input[type="text"]:not(:placeholder-shown) + label {
+    top: 4px;
+    left: 18px;
+    font-size: 0.95rem;
+    color: #651fff;
+    background: #fff;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let cards = [];
+let correctAnswers = 0;
+let incorrectAnswers = 0;
+
+// Типы заданий
+const TASK_TYPES = {
+    CHOOSE_TRANSLATION: 'choose_translation',
+    WRITE_TRANSLATION: 'write_translation'
+};
+
+// Загрузка карточек при загрузке страницы
+document.addEventListener('DOMContentLoaded', async function() {
+    try {
+        const response = await fetch(`/cards/api/modules/{{ module.id }}/cards/`);
+        const data = await response.json();
+        
+        if (data.cards) {
+            cards = shuffleArray(data.cards);
+            displayAllCards();
+        }
+    } catch (error) {
+        console.error('Ошибка при загрузке карточек:', error);
+    }
+});
+
+// Перемешивание массива
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// Отображение всех карточек
+function displayAllCards() {
+    const container = document.getElementById('cardsContainer');
+    container.innerHTML = '';
+    
+    cards.forEach((card, index) => {
+        // Выбираем случайный тип задания
+        const taskType = Math.random() < 0.5 ? TASK_TYPES.CHOOSE_TRANSLATION : TASK_TYPES.WRITE_TRANSLATION;
+        
+        const cardElement = document.createElement('div');
+        cardElement.className = 'card';
+        cardElement.dataset.cardId = card.id;
+        
+        let cardContent = `
+            <div class="card-term">${card.term}</div>
+        `;
+        
+        if (taskType === TASK_TYPES.CHOOSE_TRANSLATION) {
+            const options = getRandomOptions(card);
+            cardContent += `
+                <div class="options-grid">
+                    ${options.map(option => `
+                        <button class="option-btn" onclick="selectOption(this, '${option}', ${index})">
+                            ${option}
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+        } else {
+            cardContent += `
+                <div class="floating-label-group">
+                    <input type="text" id="translationInput${index}" placeholder=" " autocomplete="off">
+                    <label for="translationInput${index}">Введите перевод</label>
+                </div>
+            `;
+        }
+        
+        cardContent += `
+            <div class="card-result" id="cardResult${index}" style="display: none;">
+                <div class="result-text"></div>
+                <div class="result-icon"></div>
+            </div>
+        `;
+        
+        cardElement.innerHTML = cardContent;
+        container.appendChild(cardElement);
+    });
+}
+
+// Получить случайные варианты ответов
+function getRandomOptions(card) {
+    const options = [card.translation];
+    const otherCards = cards.filter(c => c.id !== card.id);
+    
+    while (options.length < 4 && otherCards.length > 0) {
+        const randomIndex = Math.floor(Math.random() * otherCards.length);
+        const randomCard = otherCards[randomIndex];
+        if (!options.includes(randomCard.translation)) {
+            options.push(randomCard.translation);
+        }
+        otherCards.splice(randomIndex, 1);
+    }
+    
+    return shuffleArray(options);
+}
+
+// Выбор варианта ответа
+function selectOption(button, option, cardIndex) {
+    const card = document.querySelector(`[data-card-id="${cards[cardIndex].id}"]`);
+    
+    // Убираем выделение со всех кнопок в этой карточке
+    card.querySelectorAll('.option-btn').forEach(btn => {
+        btn.classList.remove('selected');
+    });
+    
+    // Выделяем выбранную кнопку
+    button.classList.add('selected');
+    button.dataset.selectedOption = option;
+}
+
+// Проверка всех ответов
+function checkAllAnswers() {
+    correctAnswers = 0;
+    incorrectAnswers = 0;
+    
+    cards.forEach((card, index) => {
+        const cardElement = document.querySelector(`[data-card-id="${card.id}"]`);
+        const resultDiv = document.getElementById(`cardResult${index}`);
+        const resultText = resultDiv.querySelector('.result-text');
+        const resultIcon = resultDiv.querySelector('.result-icon');
+        
+        let isCorrect = false;
+        
+        // Проверяем тип задания
+        if (cardElement.querySelector('.options-grid')) {
+            // Задание на выбор перевода
+            const selectedButton = cardElement.querySelector('.option-btn.selected');
+            if (selectedButton && selectedButton.dataset.selectedOption === card.translation) {
+                isCorrect = true;
+            }
+            
+            // Показываем правильный ответ
+            cardElement.querySelectorAll('.option-btn').forEach(button => {
+                if (button.dataset.selectedOption === card.translation) {
+                    button.classList.add('correct');
+                } else if (button.classList.contains('selected') && button.dataset.selectedOption !== card.translation) {
+                    button.classList.add('incorrect');
+                }
+            });
+        } else {
+            // Задание на ввод перевода
+            const userTranslation = document.getElementById(`translationInput${index}`).value.trim().toLowerCase();
+            const correctTranslation = card.translation.toLowerCase();
+            isCorrect = userTranslation === correctTranslation;
+        }
+        
+        // Обновляем статистику
+        if (isCorrect) {
+            correctAnswers++;
+            resultText.textContent = 'Правильно!';
+            resultIcon.textContent = '✓';
+            resultIcon.className = 'result-icon correct';
+        } else {
+            incorrectAnswers++;
+            resultText.textContent = 'Неправильно!';
+            resultIcon.textContent = '✗';
+            resultIcon.className = 'result-icon incorrect';
+        }
+        
+        resultDiv.style.display = 'flex';
+    });
+    
+    // Показываем результаты
+    showResults();
+}
+
+// Показать результаты
+function showResults() {
+    document.querySelector('.test-content').style.display = 'none';
+    document.getElementById('testResults').style.display = 'block';
+    
+    const total = correctAnswers + incorrectAnswers;
+    const percentage = Math.round((correctAnswers / total) * 100);
+    
+    document.getElementById('correctAnswers').textContent = correctAnswers;
+    document.getElementById('incorrectAnswers').textContent = incorrectAnswers;
+    document.getElementById('correctPercentage').textContent = `${percentage}%`;
+}
+
+// Начать тест заново
+function restartTest() {
+    correctAnswers = 0;
+    incorrectAnswers = 0;
+    cards = shuffleArray(cards);
+    
+    document.querySelector('.test-content').style.display = 'block';
+    document.getElementById('testResults').style.display = 'none';
+    
+    displayAllCards();
+}
+</script>
+{% endblock %} 

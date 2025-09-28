@@ -1,0 +1,455 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Тренировка с AI - {{ module.name }}{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="match-container">
+    <div class="match-header">
+        <button class="back-btn" onclick="window.location.href='{% url 'cards:module' module.id %}'">
+            <i class="bi bi-arrow-left"></i>
+            <span>Назад к модулю</span>
+        </button>
+        <h1>Тренировка с AI</h1>
+    </div>
+
+    <div class="match-words">
+        <h3>Выберите слова для тренировки:</h3>
+        <ul id="wordsListAll">
+            {% for card in cards %}
+                <li data-card-id="{{ card.id }}" data-term="{{ card.term }}" data-translation="{{ card.translation }}" class="word-item">{{ card.term }} - {{ card.translation }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="match-words" style="margin-top: 30px;">
+        <h3>Выбранные слова:</h3>
+        <ul id="wordsListSelected">
+            {# Выбранные слова будут добавляться сюда через JavaScript #}
+        </ul>
+    </div>
+
+    <div class="training-controls">
+        <div class="level-select">
+            <label for="levelSelect">Уровень предложений:</label>
+            <select id="levelSelect" class="form-control level-control">
+                <option value="A1">A1 — Базовый</option>
+                <option value="A2">A2 — Элементарный</option>
+                <option value="B1">B1 — Средний</option>
+                <option value="B2">B2 — Выше среднего</option>
+                <option value="C1">C1 — Продвинутый</option>
+                <option value="C2">C2 — Профессиональный</option>
+            </select>
+        </div>
+        <button type="button" id="startTrainingBtn" class="btn btn-primary mt-4" disabled>Начать тренировку</button>
+    </div>
+    
+    {# Скрытая форма для отправки данных #}
+    <form id="aiTrainingForm" method="POST" action="{% url 'cards:ai_training' module.id %}">
+        {% csrf_token %}
+        <input type="hidden" name="selected_words_data" id="selectedWordsDataInput">
+        <input type="hidden" name="level" id="levelInput">
+    </form>
+
+    {% if sentences %}
+    <div class="card" style="margin-top: 30px;">
+        <div class="card-body">
+            <h5 class="card-title">Сгенерированные предложения</h5>
+            {% for sentence in sentences %}
+            <div class="sentence-container mb-4">
+                <p class="russian-sentence">{{ sentence.russian }}</p>
+                <div class="translation-input">
+                    <input type="text" class="form-control" placeholder="Введите перевод">
+                    <button class="btn btn-secondary check-btn">Проверить</button>
+                </div>
+                <p class="correct-translation" style="display: none;">{{ sentence.english }}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock content %}
+
+{% block extra_css %}
+<style>
+/* =================================== */
+/* Стили скопированы и адаптированы из match.html */
+/* =================================== */
+
+body {
+    background-color: #f8f5ff; /* Light purple background */
+    color: #333; /* Default text color */
+    font-family: 'Arial', sans-serif; /* Пример шрифта, замените на используемый в проекте */
+}
+
+.match-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 30px 10px;
+}
+
+.match-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.match-header h1 {
+    margin: 0;
+    color: #7c4dff; /* Purple color */
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: #7c4dff; /* Purple color */
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+    background: #f0f0f0; /* Light gray background on hover */
+    color: #333;
+}
+
+.match-words {
+    margin-top: 20px;
+}
+
+.match-words h3 {
+    color: #7c4dff; /* Purple color for heading */
+    margin-bottom: 15px;
+    font-size: 1.5rem; /* Larger font size */
+    font-weight: 600;
+}
+
+.match-words ul {
+    display: flex;
+    gap: 10px; /* Smaller gap */
+    flex-wrap: wrap;
+    list-style: none;
+    padding: 0;
+}
+
+.word-item {
+    background: #f8f5ff; /* Light purple background */
+    color: #7c4dff; /* Purple text */
+    padding: 8px 18px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    cursor: pointer;
+    user-select: none;
+    display: flex; /* Allow flex for aligning content and input */
+    align-items: center;
+    gap: 10px; /* Gap between word and input */
+}
+
+.word-item:hover {
+    border-color: #7c4dff; /* Purple border on hover */
+}
+
+.word-item.selected {
+    background: #7c4dff; /* Purple background when selected */
+    color: #fff; /* White text when selected */
+    border-color: #7c4dff;
+}
+
+.word-item.selected span {
+     color: #fff; /* Ensure text color is white when selected */
+}
+
+.sentence-count-input {
+    width: 60px; /* Fixed width for input */
+    padding: 4px 8px;
+    border: 1px solid #ddd; /* Subtle border */
+    border-radius: 6px;
+    font-size: 1rem;
+    background-color: #fff; /* White background for input */
+    color: #333; /* Dark text for input */
+}
+
+/* Стили для раздела сгенерированных предложений (адаптировано из match.html card/modal стилей) */
+.card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.sentence-container {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+}
+
+.russian-sentence {
+    font-size: 18px;
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.translation-input {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.form-control {
+    width: auto; /* Adjust width as needed */
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 16px;
+    flex-grow: 1; /* Allow input to grow */
+}
+
+.correct-translation {
+    color: #28a745;
+    font-weight: 500;
+    margin-top: 10px;
+    padding: 10px;
+    background: #e8f5e9;
+    border-radius: 6px;
+}
+
+/* Стили для кнопки Начать тренировку */
+.btn {
+    padding: 12px 24px; /* Larger padding for button */
+    border: none;
+    border-radius: 8px; /* More rounded corners */
+    cursor: pointer;
+    font-size: 1.2rem; /* Larger font size */
+    transition: background-color 0.2s;
+    display: inline-flex; /* Align icon and text if needed */
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: #7c4dff; /* Purple button */
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #6a3edb; /* Darker purple on hover */
+}
+
+.btn-primary:disabled {
+    background-color: #cccccc; /* Серый цвет для неактивной кнопки */
+    cursor: not-allowed;
+}
+
+/* Styles for the check button in sentence container */
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+/* Блок управления уровнем и стартом */
+.training-controls {
+    display: flex;
+    align-items: flex-end;
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.level-select {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.level-control {
+    min-width: 220px;
+}
+
+/* Адаптивные стили для мобильных устройств */
+@media (max-width: 768px) {
+    .match-container {
+        padding: 20px 10px;
+    }
+    
+    .match-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .match-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .match-words ul {
+        gap: 8px; /* Even smaller gap on mobile */
+    }
+    
+    .word-item {
+        font-size: 1rem;
+        padding: 6px 10px; /* Smaller padding on mobile */
+        flex-direction: column; /* Stack word and input vertically */
+        align-items: flex-start;
+        gap: 4px;
+    }
+
+    .sentence-count-input {
+        width: 50px; /* Smaller width on mobile */
+        font-size: 0.9rem;
+    }
+    
+    .btn {
+        font-size: 1rem;
+        padding: 10px 20px;
+    }
+    .training-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .level-control {
+        width: 100%;
+        min-width: unset;
+    }
+    
+    .translation-input {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .form-control {
+        width: 100%; /* Make input full width on small screens */
+    }
+}
+
+</style>
+{% endblock extra_css %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const wordsListAll = document.getElementById('wordsListAll');
+    const wordsListSelected = document.getElementById('wordsListSelected');
+    const startTrainingBtn = document.getElementById('startTrainingBtn');
+    const aiTrainingForm = document.getElementById('aiTrainingForm');
+    const selectedWordsDataInput = document.getElementById('selectedWordsDataInput');
+    const levelSelect = document.getElementById('levelSelect');
+    const levelInput = document.getElementById('levelInput');
+
+    // Объект для хранения выбранных слов и количества предложений
+    const selectedWordsData = {}; // { card_id: sentence_count, ... }
+
+    // Функция для обновления кнопки "Начать тренировку"
+    function updateStartButton() {
+        startTrainingBtn.disabled = Object.keys(selectedWordsData).length === 0;
+    }
+
+    // Обработчик клика по слову во всех словах
+    wordsListAll.addEventListener('click', function(event) {
+        const item = event.target.closest('.word-item');
+        if (item) {
+            const cardId = item.dataset.cardId;
+            const term = item.dataset.term;
+            const translation = item.dataset.translation;
+
+            if (!selectedWordsData[cardId]) {
+                // Добавляем слово в выбранные
+                selectedWordsData[cardId] = 3; // Значение по умолчанию
+                item.classList.add('selected');
+
+                const selectedItem = document.createElement('li');
+                selectedItem.classList.add('word-item');
+                selectedItem.classList.add('selected'); // Используем тот же стиль selected
+                selectedItem.dataset.cardId = cardId;
+                selectedItem.innerHTML = `
+                    <span>${term} - ${translation}</span>
+                    <input type="number" class="form-control sentence-count-input" value="${selectedWordsData[cardId]}" min="1" max="10" data-card-id="${cardId}">
+                `;
+                wordsListSelected.appendChild(selectedItem);
+
+                // Добавляем обработчик изменения количества предложений
+                selectedItem.querySelector('.sentence-count-input').addEventListener('input', function() {
+                    selectedWordsData[cardId] = parseInt(this.value) || 1; // Обновляем значение
+                });
+
+                 // Добавляем обработчик для удаления слова из выбранных
+                 selectedItem.addEventListener('click', function(e) {
+                     // Проверяем, был ли клик не по инпуту
+                     if (!e.target.classList.contains('sentence-count-input')) {
+                          removeWordFromSelected(cardId, item);
+                     }
+                 });
+
+            } else {
+                // Удаляем слово из выбранных, если оно уже там
+                removeWordFromSelected(cardId, item);
+            }
+            updateStartButton();
+        }
+    });
+
+    // Функция для удаления слова из выбранных
+    function removeWordFromSelected(cardId, originalItem) {
+        delete selectedWordsData[cardId];
+        originalItem.classList.remove('selected');
+        const selectedItemToRemove = wordsListSelected.querySelector(`li[data-card-id="${cardId}"]`);
+        if (selectedItemToRemove) {
+            wordsListSelected.removeChild(selectedItemToRemove);
+        }
+    }
+
+    // Обработчик клика по кнопке "Начать тренировку"
+    startTrainingBtn.addEventListener('click', function() {
+        console.log('Кнопка "Начать тренировку" нажата');
+        if (Object.keys(selectedWordsData).length > 0) {
+            // Формируем данные для отправки
+            const dataToSend = Object.keys(selectedWordsData).map(cardId => ({
+                card_id: parseInt(cardId), // Убедимся, что card_id - число
+                sentence_count: parseInt(selectedWordsData[cardId]) || 1 // Убедимся, что sentence_count - число
+            }));
+            console.log('Данные для отправки:', dataToSend);
+            selectedWordsDataInput.value = JSON.stringify(dataToSend);
+            console.log('Значение hidden input перед отправкой:', selectedWordsDataInput.value);
+            levelInput.value = levelSelect.value;
+            
+            // Проверка, что форма видима и submit() вызывается
+            console.log('Состояние формы:', aiTrainingForm);
+            console.log('Вызов aiTrainingForm.submit()');
+            aiTrainingForm.submit(); // Отправляем форму
+        } else {
+            alert('Пожалуйста, выберите хотя бы одно слово для тренировки.');
+            console.log('Нет выбранных слов.');
+        }
+    });
+
+    // Script for checking translations
+    document.querySelectorAll('.check-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const container = this.closest('.sentence-container');
+            const translation = container.querySelector('.correct-translation');
+            translation.style.display = 'block';
+        });
+    });
+});
+</script>
+{% endblock extra_js %}

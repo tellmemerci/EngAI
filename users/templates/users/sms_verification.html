@@ -1,0 +1,88 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Верификация</title>
+    <link rel="stylesheet" href="{% static 'users/css/registration.css' %}">
+</head>
+<body>
+    <div class="registration-wrapper">
+        <div class="avatar-top">
+            <img src="{% static 'users/img/bulldog.png' %}" alt="Аватар">
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="error-message {% if message.tags %}{{ message.tags }}{% endif %}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post" class="registration-form">
+            {% csrf_token %}
+            <div class="form-group">
+                <h2>Подтверждение номера телефона</h2>
+                <p>Введите код, отправленный на ваш номер телефона</p>
+                <label for="sms_code">SMS-код</label>
+                <input type="text" 
+                       name="sms_code" 
+                       id="sms_code" 
+                       class="form-control" 
+                       placeholder="Введите 6-значный код" 
+                       maxlength="6" 
+                       required>
+            </div>
+
+            <div id="timer-container">
+                <span id="hourglass">⏳</span>
+                <span id="countdown">3:00</span>
+            </div>
+
+            <div class="step-buttons">
+                <button type="button" 
+                        id="resend-btn" 
+                        class="back-btn">
+                    Отправить код повторно
+                </button>
+                <button type="submit" 
+                        class="next-btn">
+                    Подтвердить
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const countdown = document.getElementById('countdown');
+            const resendBtn = document.getElementById('resend-btn');
+            let timeLeft = 180; // 3 минуты
+
+            function updateCountdown() {
+                const minutes = Math.floor(timeLeft / 60);
+                const seconds = timeLeft % 60;
+                countdown.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    resendBtn.style.display = 'block';
+                    countdown.style.display = 'none';
+                } else {
+                    timeLeft--;
+                }
+            }
+
+            const timer = setInterval(updateCountdown, 1000);
+            updateCountdown();
+
+            resendBtn.addEventListener('click', function() {
+                // Здесь будет логика повторной отправки SMS
+                window.location.reload();
+            });
+        });
+    </script>
+</body>
+</html> 

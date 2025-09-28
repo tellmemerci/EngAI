@@ -1,0 +1,413 @@
+{% extends 'users/base.html' %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --notification-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        --notification-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        --notification-unread-bg: rgba(var(--primary-rgb), 0.05);
+        --notification-hover-bg: rgba(var(--primary-rgb), 0.02);
+    }
+
+    .notifications-wrapper {
+        padding: 2rem;
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    .notifications-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .notifications-header h1 {
+        font-size: 1.8rem;
+        color: var(--text-color);
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+    }
+
+    .notifications-header h1 i {
+        color: var(--primary-color);
+        font-size: 1.6rem;
+    }
+
+    .notification-item {
+        background: var(--card-bg);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--notification-shadow);
+        transition: all 0.3s ease;
+        cursor: pointer;
+        border: 1px solid var(--border-color);
+        display: flex;
+        gap: 1.2rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .notification-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--notification-hover-shadow);
+        background: var(--notification-hover-bg);
+    }
+
+    .notification-item.unread {
+        background: var(--notification-unread-bg);
+        border-color: var(--primary-color);
+    }
+
+    .notification-item.unread::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: var(--primary-color);
+        border-radius: 4px 0 0 4px;
+    }
+
+    .notification-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        flex-shrink: 0;
+        background: rgba(var(--primary-rgb), 0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .notification-item:hover .notification-icon {
+        transform: scale(1.1);
+    }
+
+    .notification-content {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    .notification-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 0.5rem;
+        gap: 1rem;
+    }
+
+    .notification-title {
+        font-weight: 600;
+        color: var(--text-color);
+        font-size: 1.1rem;
+        margin: 0;
+        line-height: 1.4;
+    }
+
+    .notification-date {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .notification-text {
+        color: var(--text-color);
+        line-height: 1.5;
+        margin: 0;
+        opacity: 0.9;
+    }
+
+    .notification-image {
+        max-width: 100%;
+        border-radius: 8px;
+        margin-top: 1rem;
+    }
+
+    .mark-all-read {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 500;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 2px 4px rgba(var(--primary-rgb), 0.2);
+    }
+
+    .mark-all-read i {
+        font-size: 1.1rem;
+    }
+
+    .mark-all-read:hover {
+        background: var(--primary-color-dark);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(var(--primary-rgb), 0.3);
+    }
+
+    .no-notifications {
+        text-align: center;
+        color: var(--text-secondary);
+        padding: 4rem 2rem;
+        background: var(--card-bg);
+        border-radius: 12px;
+        border: 2px dashed var(--border-color);
+    }
+
+    .no-notifications i {
+        font-size: 4rem;
+        margin-bottom: 1.5rem;
+        color: var(--text-secondary);
+        opacity: 0.5;
+    }
+
+    .no-notifications p {
+        margin: 0;
+        font-size: 1.2rem;
+        font-weight: 500;
+    }
+
+    .notification-status {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .notification-item.unread .notification-status {
+        opacity: 1;
+    }
+
+    .notification-counter {
+        background: var(--card-bg);
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        color: var(--text-secondary);
+        border: 1px solid var(--border-color);
+    }
+
+    @media (max-width: 768px) {
+        .notifications-wrapper {
+            padding: 1rem;
+        }
+
+        .notifications-header {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+
+        .notifications-header h1 {
+            font-size: 1.5rem;
+        }
+
+        .notification-item {
+            padding: 1rem;
+            flex-direction: column;
+        }
+
+        .notification-icon {
+            width: 40px;
+            height: 40px;
+            font-size: 1.2rem;
+        }
+
+        .notification-header {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .notification-date {
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="notifications-wrapper">
+    <div class="notifications-header">
+        <h1>
+            <i class="bi bi-bell"></i>
+            Уведомления
+            <span class="notification-counter">
+                <span id="unreadCount">0</span> непрочитанных
+            </span>
+        </h1>
+    </div>
+    <div id="notifications-list">
+        <!-- Уведомления будут добавлены здесь через JavaScript -->
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        loadNotifications();
+    });
+
+    function loadNotifications() {
+        fetch('/api/notifications/')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('notifications-list');
+                if (data.length === 0) {
+                    container.innerHTML = `
+                        <div class="no-notifications">
+                            <i class="bi bi-bell-slash"></i>
+                            <p>У вас пока нет уведомлений</p>
+                        </div>
+                    `;
+                    document.getElementById('unreadCount').textContent = '0';
+                    return;
+                }
+
+                let hasUnread = false;
+                let unreadCount = 0;
+                const notificationsHtml = data.map(notification => {
+                    if (!notification.is_read) {
+                        hasUnread = true;
+                        unreadCount++;
+                    }
+                    return `
+                        <div class="notification-item ${notification.is_read ? '' : 'unread'}" data-id="${notification.id}">
+                            <div class="notification-icon" style="color: ${notification.color}">
+                                <i class="bi ${notification.icon_class}"></i>
+                            </div>
+                            <div class="notification-content">
+                                <div class="notification-header">
+                                    <h3 class="notification-title">${notification.title}</h3>
+                                    <div class="notification-date">${notification.created_at}</div>
+                                </div>
+                                <p class="notification-text">${notification.text}</p>
+                                ${notification.image ? `<img src="${notification.image}" class="notification-image" alt="Изображение уведомления">` : ''}
+                            </div>
+                            <div class="notification-status"></div>
+                        </div>
+                    `;
+                }).join('');
+
+                document.getElementById('unreadCount').textContent = unreadCount.toString();
+
+                if (hasUnread) {
+                    container.innerHTML = `
+                        <button class="mark-all-read" onclick="markAllAsRead()">
+                            <i class="bi bi-check2-all"></i>
+                            Отметить все как прочитанные
+                        </button>
+                        ${notificationsHtml}
+                    `;
+                } else {
+                    container.innerHTML = notificationsHtml;
+                }
+
+                // Добавляем обработчики для каждого уведомления
+                document.querySelectorAll('.notification-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        markAsRead(this.dataset.id);
+                    });
+                });
+            })
+            .catch(error => {
+                console.error('Ошибка при загрузке уведомлений:', error);
+                const container = document.getElementById('notifications-list');
+                container.innerHTML = `
+                    <div class="no-notifications">
+                        <i class="bi bi-exclamation-circle"></i>
+                        <p>Произошла ошибка при загрузке уведомлений</p>
+                    </div>
+                `;
+            });
+    }
+
+    function markAsRead(id) {
+        fetch(`/api/notifications/${id}/mark_as_read/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                const item = document.querySelector(`[data-id="${id}"]`);
+                item.classList.remove('unread');
+                
+                // Обновляем счетчик непрочитанных уведомлений
+                const unreadCount = document.querySelectorAll('.notification-item.unread').length;
+                document.getElementById('unreadCount').textContent = unreadCount.toString();
+                
+                // Проверяем, остались ли непрочитанные уведомления
+                if (unreadCount === 0) {
+                    const markAllBtn = document.querySelector('.mark-all-read');
+                    if (markAllBtn) markAllBtn.remove();
+                }
+
+                // Обновляем глобальный счетчик
+                checkNotifications();
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка при отметке уведомления как прочитанного:', error);
+        });
+    }
+
+    function markAllAsRead() {
+        fetch('/api/notifications/mark_all_as_read/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                document.querySelectorAll('.notification-item').forEach(item => {
+                    item.classList.remove('unread');
+                });
+                document.querySelector('.mark-all-read').remove();
+                document.getElementById('unreadCount').textContent = '0';
+                
+                // Обновляем глобальный счетчик
+                checkNotifications();
+            }
+        })
+        .catch(error => {
+            console.error('Ошибка при отметке всех уведомлений как прочитанных:', error);
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %} 

@@ -1,0 +1,5 @@
+Django==4.2.10
+Pillow==10.2.0
+requests==2.31.0
+beautifulsoup4==4.12.3
+mistralai==0.0.7 

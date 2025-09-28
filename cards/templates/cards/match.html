@@ -1,0 +1,532 @@
+{% extends 'users/base.html' %}
+{% load static %}
+{% load card_tags %}
+
+{% block title %}Подбор - {{ module.name }}{% endblock %}
+
+{% block content %}
+<div class="match-container">
+    <div class="match-header">
+        <button class="back-btn" onclick="window.location.href='/cards/module/{{ module.id }}/'">
+            <i class="bi bi-arrow-left"></i>
+            <span>Назад к модулю</span>
+        </button>
+        <h1>Подбор букв</h1>
+    </div>
+    <div class="match-table" id="matchTable">
+        {% for i in range_grid_size %}
+            {% for j in range_grid_size %}
+                <div class="match-cell" data-x="{{ i }}" data-y="{{ j }}">{{ grid|index:i|index:j }}</div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+    <div class="match-words">
+        <h3>Слова для поиска:</h3>
+        <ul id="wordsList">
+            {% for word in words %}
+            <li data-word="{{ word }}" class="word-item">{{ word }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+
+</div>
+
+<!-- Модальное окно с поздравлением -->
+<div id="congratsModal" class="modal">
+    <div class="modal-content">
+        <div class="confetti-container">
+            <canvas id="confetti"></canvas>
+        </div>
+        <div class="congrats-content">
+            <h2>Поздравляем!</h2>
+            <p>Вы нашли все слова!</p>
+            <div class="congrats-buttons">
+                <button onclick="window.location.href='/cards/module/{{ module.id }}/match/'" class="retry-btn">
+                    <i class="bi bi-arrow-repeat"></i>
+                    <span>Пройти заново</span>
+                </button>
+                <button onclick="window.location.href='/cards/module/{{ module.id }}/'" class="back-to-module-btn">
+                    <i class="bi bi-arrow-left"></i>
+                    <span>Вернуться к модулю</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.match-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 30px 10px;
+}
+.match-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+.match-header h1 {
+    margin: 0;
+    color: #7c4dff;
+    font-size: 2rem;
+    font-weight: 700;
+}
+.back-btn {
+    background: none;
+    border: none;
+    color: #7c4dff;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+.back-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+.match-table {
+    display: grid;
+    grid-template-columns: repeat({{ grid_size }}, minmax(35px, 40px));
+    grid-auto-rows: minmax(35px, 40px);
+    gap: 4px;
+    justify-content: center;
+    margin-bottom: 30px;
+    touch-action: none; /* Предотвращает скролл при выделении */
+}
+.match-cell {
+    background: #fff;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1.3rem;
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent; /* Убирает подсветку при тапе на мобильных */
+}
+.match-cell.selected {
+    background: #7c4dff;
+    color: #fff;
+    border-color: #7c4dff;
+}
+.match-cell.found {
+    background: #4caf50;
+    color: #fff;
+    border-color: #4caf50;
+}
+.match-words {
+    margin-top: 20px;
+}
+.match-words h3 {
+    color: #333;
+    margin-bottom: 15px;
+}
+.match-words ul {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+    list-style: none;
+    padding: 0;
+}
+.word-item {
+    background: #f8f5ff;
+    color: #7c4dff;
+    padding: 8px 18px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+.word-item:hover {
+    border-color: #7c4dff;
+}
+.word-item.found {
+    text-decoration: line-through;
+    opacity: 0.6;
+    background: #e0e0e0;
+    color: #666;
+    border-color: transparent;
+}
+.messages {
+    margin-top: 20px;
+}
+.alert {
+    padding: 12px 20px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+}
+.alert-error {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+.alert-warning {
+    background: #fff3e0;
+    color: #ef6c00;
+    border: 1px solid #ffcc80;
+}
+.alert-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+/* Адаптивные стили для мобильных устройств */
+@media (max-width: 768px) {
+    .match-container {
+        padding: 20px 10px;
+    }
+    
+    .match-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .match-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .match-table {
+        grid-template-columns: repeat({{ grid_size }}, minmax(30px, 35px));
+        grid-auto-rows: minmax(30px, 35px);
+        gap: 3px;
+    }
+    
+    .match-cell {
+        font-size: 1.1rem;
+    }
+    
+    .match-words ul {
+        gap: 12px;
+    }
+    
+    .word-item {
+        font-size: 1rem;
+        padding: 6px 14px;
+    }
+}
+
+/* Стили для модального окна */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal.show {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-content {
+    position: relative;
+    background: white;
+    margin: auto;
+    padding: 40px;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+    transform: scale(0.9);
+    transition: transform 0.3s ease;
+}
+
+.modal.show .modal-content {
+    transform: scale(1);
+}
+
+.confetti-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.congrats-content {
+    position: relative;
+    z-index: 1;
+}
+
+.congrats-content h2 {
+    color: #7c4dff;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.congrats-content p {
+    color: #666;
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+}
+
+.congrats-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.retry-btn, .back-to-module-btn {
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.retry-btn {
+    background: #7c4dff;
+    color: white;
+}
+
+.retry-btn:hover {
+    background: #6a3de8;
+    transform: translateY(-2px);
+}
+
+.back-to-module-btn {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.back-to-module-btn:hover {
+    background: #e0e0e0;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .modal-content {
+        padding: 30px 20px;
+    }
+    
+    .congrats-content h2 {
+        font-size: 2rem;
+    }
+    
+    .congrats-content p {
+        font-size: 1.1rem;
+    }
+    
+    .congrats-buttons {
+        flex-direction: column;
+    }
+    
+    .retry-btn, .back-to-module-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script>
+const placedWords = {{ placed_words|safe }};
+let selectedCells = [];
+let foundWords = new Set();
+let isSelecting = false;
+
+// Функция для получения координат касания
+function getTouchCoordinates(e) {
+    const touch = e.touches[0] || e.changedTouches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    return element;
+}
+
+// Функция для начала выделения
+function startSelection(e) {
+    isSelecting = true;
+    const cell = e.type.includes('touch') ? getTouchCoordinates(e) : e.target;
+    if (cell && cell.classList.contains('match-cell')) {
+        selectedCells = [cell];
+        cell.classList.add('selected');
+    }
+}
+
+// Функция для продолжения выделения
+function continueSelection(e) {
+    if (!isSelecting) return;
+    
+    const cell = e.type.includes('touch') ? getTouchCoordinates(e) : e.target;
+    if (cell && cell.classList.contains('match-cell')) {
+        const lastCell = selectedCells[selectedCells.length - 1];
+        if (cell !== lastCell) {
+            cell.classList.add('selected');
+            selectedCells.push(cell);
+        }
+    }
+}
+
+// Функция для завершения выделения
+function endSelection() {
+    if (!isSelecting) return;
+    isSelecting = false;
+    
+    if (selectedCells.length === 0) return;
+    
+    const selectedWord = selectedCells.map(cell => cell.textContent).join('');
+    console.log('Selected word:', selectedWord);
+    
+    // Ищем соответствующее размещенное слово
+    const placedWord = placedWords.find(pw => pw.word === selectedWord);
+    console.log('Placed word:', placedWord);
+    
+    if (placedWord) {
+        const originalWord = placedWord.original;
+        const wordElement = document.querySelector(`#wordsList li[data-word="${originalWord}"]`);
+        console.log('Word element:', wordElement);
+        
+        if (wordElement && !foundWords.has(originalWord)) {
+            // Проверяем, правильно ли выбраны ячейки
+            const coords = selectedCells.map(cell => ({
+                x: parseInt(cell.dataset.x),
+                y: parseInt(cell.dataset.y)
+            }));
+            console.log('Selected coordinates:', coords);
+            
+            const isValidSelection = placedWords.some(placed => {
+                if (placed.word !== selectedWord) return false;
+                
+                const startX = placed.start[0];
+                const startY = placed.start[1];
+                const dx = placed.direction[0];
+                const dy = placed.direction[1];
+                
+                console.log('Checking placement:', { startX, startY, dx, dy });
+                
+                // Проверяем, совпадают ли координаты выбранных ячеек с координатами размещенного слова
+                const isValid = coords.every((coord, i) => {
+                    const expectedX = startX + i * dx;
+                    const expectedY = startY + i * dy;
+                    const matches = coord.x === expectedX && coord.y === expectedY;
+                    console.log(`Checking coord ${i}:`, { coord, expectedX, expectedY, matches });
+                    return matches;
+                });
+                
+                console.log('Is valid selection:', isValid);
+                return isValid;
+            });
+            
+            if (isValidSelection) {
+                // Зачеркиваем слово в списке
+                wordElement.classList.add('found');
+                foundWords.add(originalWord);
+                
+                // Оставляем ячейки закрашенными
+                selectedCells.forEach(cell => {
+                    cell.classList.remove('selected');
+                    cell.classList.add('found');
+                });
+                
+                // Проверяем, все ли слова найдены
+                if (foundWords.size === placedWords.length) {
+                    setTimeout(() => {
+                        showCongrats();
+                    }, 500);
+                }
+            } else {
+                // Если выделение неверное, снимаем выделение
+                selectedCells.forEach(cell => {
+                    cell.classList.remove('selected');
+                });
+            }
+        }
+    } else {
+        // Если слово не найдено, снимаем выделение
+        selectedCells.forEach(cell => {
+            cell.classList.remove('selected');
+        });
+    }
+    
+    selectedCells = [];
+}
+
+// Добавляем обработчики событий для мыши
+document.querySelectorAll('.match-cell').forEach(cell => {
+    cell.addEventListener('mousedown', startSelection);
+    cell.addEventListener('mouseover', continueSelection);
+});
+
+// Добавляем обработчики событий для тач-устройств
+document.querySelectorAll('.match-cell').forEach(cell => {
+    cell.addEventListener('touchstart', startSelection);
+    cell.addEventListener('touchmove', continueSelection);
+});
+
+// Обработчики завершения выделения
+document.addEventListener('mouseup', endSelection);
+document.addEventListener('touchend', endSelection);
+document.addEventListener('touchcancel', endSelection);
+
+// Предотвращаем скролл страницы при выделении на мобильных устройствах
+document.querySelector('.match-table').addEventListener('touchmove', function(e) {
+    if (isSelecting) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// Функция для показа поздравления
+function showCongrats() {
+    const modal = document.getElementById('congratsModal');
+    modal.classList.add('show');
+    
+    // Запускаем конфетти
+    const duration = 3 * 1000;
+    const animationEnd = Date.now() + duration;
+    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+    function randomInRange(min, max) {
+        return Math.random() * (max - min) + min;
+    }
+
+    const interval = setInterval(function() {
+        const timeLeft = animationEnd - Date.now();
+
+        if (timeLeft <= 0) {
+            return clearInterval(interval);
+        }
+
+        const particleCount = 50 * (timeLeft / duration);
+        
+        confetti({
+            ...defaults,
+            particleCount,
+            origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 }
+        });
+        confetti({
+            ...defaults,
+            particleCount,
+            origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 }
+        });
+    }, 250);
+}
+</script>
+{% endblock %} 

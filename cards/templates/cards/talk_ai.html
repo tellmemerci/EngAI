@@ -1,0 +1,279 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Говорить с ИИ{% endblock %}
+
+{% block extra_css %}
+<style>
+.agents-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:24px}
+.agent-card{background:#fff;border-radius:18px;box-shadow:0 8px 28px rgba(0,0,0,.08);padding:16px;transition:.3s;cursor:pointer;display:flex;flex-direction:column;align-items:center}
+.agent-card:hover{transform:translateY(-6px);box-shadow:0 16px 40px rgba(98,0,234,.15)}
+.agent-canvas{width:220px;height:220px;border-radius:16px;background:linear-gradient(180deg,#f5f2ff,#eef0ff);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:12px}
+.agent-name{font-weight:700;color:#2d106a;margin:6px 0 2px}
+.agent-role{color:#6b6b6b;font-size:.95rem;margin:0}
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.start-btn{background:linear-gradient(45deg,#7c4dff,#651fff);color:#fff;border:none;padding:10px 16px;border-radius:10px}
+.mic-wrap{position:fixed;right:24px;bottom:24px;display:flex;align-items:center;gap:12px}
+.mic-btn{width:64px;height:64px;border-radius:50%;border:none;background:linear-gradient(180deg,#ff5a8b,#ff2e63);color:#fff;box-shadow:0 10px 30px rgba(255,46,99,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative}
+.mic-btn.recording{animation:pulse 1.2s infinite}
+.mic-btn.sending{background:linear-gradient(180deg,#4caf50,#2e7d32)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,46,99,.6);}70%{box-shadow:0 0 0 16px rgba(255,46,99,0);}100%{box-shadow:0 0 0 0 rgba(255,46,99,0);}}
+.rec-dot{width:10px;height:10px;border-radius:50%;background:#ff2e63;display:none}
+.rec-label{color:#ff2e63;font-weight:700;display:none}
+.rec-timer{color:#6b6b6b;min-width:42px;text-align:right;display:none}
+.sending-label{color:#2e7d32;font-weight:700;display:none}
+/* визуализация голосового сообщения */
+.wave{position:absolute;inset:-8px;border-radius:50%;pointer-events:none;opacity:.0}
+.mic-btn.recording .wave{animation:wave 1.4s ease-out infinite;opacity:.35;background:radial-gradient(closest-side, rgba(255,46,99,.25), rgba(255,46,99,0))}
+@keyframes wave{0%{transform:scale(1)}100%{transform:scale(1.35)}}
+/* чат и голосовые баблы */
+.chat-log{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:78%;padding:10px 12px;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.msg.me{align-self:flex-end;background:#e9f0ff}
+.msg.ai{align-self:flex-start;background:#f7f7fb}
+.voice-bubble{display:flex;align-items:center;gap:10px}
+.voice-bar{height:8px;background:linear-gradient(90deg,#8e9bff,#b388ff);border-radius:6px;min-width:80px;max-width:220px;width:140px;position:relative;overflow:hidden}
+.voice-dot{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;background:#7c4dff;animation:move 1.6s linear infinite}
+@keyframes move{0%{left:-8px}100%{left:calc(100% - 8px)}}
+.voice-ctl{border:none;background:#7c4dff;color:#fff;border-radius:12px;padding:6px 10px;cursor:pointer}
+.send-ctl{border:none;background:#2e7d32;color:#fff;border-radius:12px;padding:6px 10px;cursor:pointer}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.10.2/lottie.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div style="position:sticky;top:0;z-index:5;display:inline-block;background:#fee;color:#611;padding:4px 8px;border-radius:8px;margin:6px 0;font-size:12px">Talk AI template v2-app</div>
+<div class="container py-3">
+  <div class="page-header">
+    <h2 style="color:#2d106a">Выберите собеседника</h2>
+    <button class="start-btn" onclick="window.location.href='{% url 'cards:api_chat_ai' %}'" disabled>Начать чат</button>
+  </div>
+
+  <div class="agents-grid">
+    {% for a in agents %}
+    <div class="agent-card" data-agent="{{ a.id }}">
+      <div class="agent-canvas" id="{{ a.id }}_canvas"></div>
+      <div class="agent-name">{{ a.name }}</div>
+      <p class="agent-role">{{ a.role }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  <div id="chatLog" class="chat-log"></div>
+  <div class="mic-wrap">
+    <div class="rec-dot" id="recDot"></div>
+    <div class="rec-label" id="recLabel">Запись…</div>
+    <div class="rec-timer" id="recTimer">0:00</div>
+    <div class="sending-label" id="sendingLabel">Отправка…</div>
+    <button class="mic-btn" id="micBtn" title="Говорите">
+      <span class="wave"></span>
+      <i class="bi bi-mic-fill" style="font-size:28px"></i>
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const agents = {{ agents|safe }};
+document.addEventListener('DOMContentLoaded',()=>{
+  agents.forEach(a=>{
+    const container = document.getElementById(a.id + '_canvas');
+    if(!container) return;
+    lottie.loadAnimation({container,renderer:'svg',loop:true,autoplay:true,path:a.animation});
+  });
+  document.querySelectorAll('.agent-card').forEach(card=>{
+    card.addEventListener('click',()=>{
+      document.querySelectorAll('.agent-card').forEach(c=>c.style.outline='none');
+      card.style.outline='3px solid #7c4dff';
+      // здесь можно сохранять выбранного агента в сессию через fetch
+    });
+  });
+
+  // Микрофон и запись (Web Speech + визуализация как голосовое сообщение)
+  const micBtn = document.getElementById('micBtn');
+  const recDot = document.getElementById('recDot');
+  const recLabel = document.getElementById('recLabel');
+  const recTimer = document.getElementById('recTimer');
+  const sendingLabel = document.getElementById('sendingLabel');
+  const chatLog = document.getElementById('chatLog');
+  let recInterval=null, recStart=0;
+  let mediaRecorder=null, chunks=[];
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognition = SR ? new SR() : null;
+  if (recognition){
+    recognition.lang = 'ru-RU';
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (e)=>{
+      const res = e.results[e.results.length-1];
+      const phrase = res[0].transcript;
+      if(res.isFinal && phrase){
+        append('me', phrase);
+        sendTextToAI(phrase);
+      }
+    };
+  }
+
+  async function sendTextToAI(text){
+    toggleSending(true);
+    try{
+      const res = await fetch('{% url "cards:api_chat_ai" %}',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+        body: JSON.stringify({message:text})
+      });
+      const data = await res.json();
+      const reply = data.reply || 'Ошибка ответа';
+      append('ai', reply);
+      await ttsPlay(reply);
+    }catch(e){
+      append('ai','Ошибка связи с ИИ');
+    }finally{
+      toggleSending(false);
+    }
+  }
+
+  async function onVoiceReady(){
+    const blob = new Blob(chunks, {type:'audio/webm'});
+    const url = URL.createObjectURL(blob);
+    appendVoice('me', url);
+  }
+
+  function appendVoice(who, url){
+    const wrap = document.createElement('div');
+    wrap.className = 'msg '+who;
+    const row = document.createElement('div');
+    row.className = 'voice-bubble';
+    const play = document.createElement('button');
+    play.className = 'voice-ctl';
+    play.textContent = '▶️';
+    const bar = document.createElement('div');
+    bar.className = 'voice-bar';
+    const dot = document.createElement('div');
+    dot.className = 'voice-dot';
+    bar.appendChild(dot);
+    const sendBtn = document.createElement('button');
+    sendBtn.className = 'send-ctl';
+    sendBtn.textContent = 'Отправить';
+    const audio = new Audio(url);
+    let playing=false;
+    play.onclick = ()=>{
+      if(!playing){ audio.play(); playing=true; play.textContent='⏸'; }
+      else { audio.pause(); playing=false; play.textContent='▶️'; }
+    };
+    audio.onended = ()=>{ playing=false; play.textContent='▶️'; };
+    sendBtn.onclick = async ()=>{
+      toggleSending(true);
+      try{
+        append('me','[голосовое сообщение]');
+      }finally{
+        toggleSending(false);
+      }
+    };
+    row.appendChild(play);
+    row.appendChild(bar);
+    row.appendChild(sendBtn);
+    wrap.appendChild(row);
+    chatLog.appendChild(wrap);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  function append(who, text){
+    const div = document.createElement('div');
+    div.className = 'msg '+who;
+    div.textContent = (who==='me'?'Вы: ':'ИИ: ')+text;
+    chatLog.appendChild(div);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  }
+
+  let isRecording = false;
+  micBtn.addEventListener('click', async ()=>{
+    if(!isRecording){
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+        chunks = [];
+        mediaRecorder = new MediaRecorder(stream, {mimeType:'audio/webm'});
+        mediaRecorder.ondataavailable = e=>{ if(e.data && e.data.size>0) chunks.push(e.data); };
+        mediaRecorder.onstop = ()=>{ onVoiceReady(); };
+        mediaRecorder.start();
+        if(recognition){ try{ recognition.start(); }catch(_){} }
+        toggleRec(true);
+        isRecording = true;
+      }catch(err){
+        alert('Не удалось получить доступ к микрофону.');
+      }
+    }else{
+      try{ mediaRecorder && mediaRecorder.stop(); }catch(_){ }
+      if(recognition){ try{ recognition.stop(); }catch(_){ } }
+      toggleRec(false);
+      isRecording = false;
+    }
+  });
+
+  function toggleRec(on){
+    micBtn.classList.toggle('recording', on);
+    recDot.style.display = on?'block':'none';
+    recLabel.style.display = on?'block':'none';
+    recTimer.style.display = on?'block':'none';
+    if(on){
+      recStart = Date.now();
+      recInterval && clearInterval(recInterval);
+      recInterval = setInterval(()=>{
+        const sec = Math.floor((Date.now()-recStart)/1000);
+        const m = Math.floor(sec/60);
+        const s = (sec%60).toString().padStart(2,'0');
+        recTimer.textContent = `${m}:${s}`;
+      }, 250);
+    }else{
+      recInterval && clearInterval(recInterval);
+      recInterval = null;
+      recTimer.textContent = '0:00';
+    }
+  }
+
+  function toggleSending(on){
+    micBtn.classList.toggle('sending', on);
+    sendingLabel.style.display = on?'block':'none';
+    micBtn.disabled = on;
+  }
+
+  // Озвучка: серверный нейронный TTS с fallback на Web Speech
+  let speaking = false;
+  async function ttsPlay(text){
+    try{
+      const r = await fetch('{% url "cards:api_tts" %}', {
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+        body: JSON.stringify({text})
+      });
+      const data = await r.json();
+      if (data && data.url){
+        const audio = new Audio(data.url);
+        speaking = true;
+        audio.onended = ()=>{ speaking = false; };
+        await audio.play();
+        return;
+      }
+    }catch(e){ /* ignore and fallback */ }
+    webSpeech(text);
+  }
+  function webSpeech(text){
+    if(!('speechSynthesis' in window)) return;
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = 'ru-RU';
+    utter.rate = 0.95;
+    utter.pitch = 1.0;
+    utter.onstart = ()=>{ speaking = true; };
+    utter.onend = ()=>{ speaking = false; };
+    const voices = speechSynthesis.getVoices();
+    const preferred = voices.find(v=>/Microsoft.*(Dmitry|Svetlana)|Google русский/i.test(v.name))
+                   || voices.find(v=>/ru|russian/i.test(v.lang));
+    if(preferred) utter.voice = preferred;
+    speechSynthesis.speak(utter);
+  }
+});
+</script>
+{% endblock %}
+
+

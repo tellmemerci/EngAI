@@ -1,0 +1,315 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}{{ skill.title }} - {{ unit.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="{% static 'study_modules/css/module_detail.css' %}">
+<link rel="stylesheet" href="{% static 'study_modules/css/practice/grammar_practice.css' %}">
+{% endblock %}
+
+{% block content %}
+
+
+<div class="module-container">
+    <a href="{% url 'study_modules:unit_detail' module.id unit.id %}" class="back-button"><i class="bi bi-arrow-left-circle"></i>Назад к теории</a>
+    <h1 class="module-header">{{ skill.title|upper }}</h1>
+
+    {% if module.author == user %}
+    <div class="author-controls">
+        <a href="{% url 'study_modules:add_grammar_task' module.id unit.id skill.id %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Добавить задание
+        </a>
+    </div>
+    {% endif %}
+
+    <div class="practice-section">
+        {% if tasks %}
+            {% for task in tasks %}
+            <div class="task-block" data-task-id="{{ task.id }}">
+                <div class="task-header">
+                    <h2><i class="bi bi-list-ol"></i>{{ task.title }}</h2>
+                    {% if module.author == user %}
+                    <div class="task-controls">
+                        <button class="btn btn-sm btn-outline-primary edit-task-btn" 
+                                data-task-id="{{ task.id }}"
+                                data-task-title="{{ task.title }}"
+                                data-task-description="{{ task.description }}"
+                                data-task-instruction="{{ task.instruction }}"
+                                data-task-content="{{ task.content }}"
+                                data-task-answer="{{ task.correct_answer }}"
+                                title="Редактировать">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-task-btn" 
+                                data-task-id="{{ task.id }}"
+                                data-task-title="{{ task.title }}"
+                                title="Удалить">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                <p>{{ task.description }}</p>
+                <div class="task-instruction">
+                    <i class="bi bi-info-circle"></i>
+                    {{ task.instruction }}
+                </div>
+                
+                {% if task.task_type == 'matching' %}
+                    <!-- Задание на соединение слов -->
+                    <div class="columns-container">
+                        <div class="column" id="left-column-{{ task.id }}">
+                            {% for item in task.content.left_items %}
+                            <div class="item" data-id="{{ item.id }}">{{ item.text }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="column" id="right-column-{{ task.id }}">
+                            {% for item in task.content.right_items %}
+                            <div class="item" data-id="{{ item.id }}">{{ item.text }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                {% elif task.task_type == 'sentence_rewrite' %}
+                    <!-- Задание на переписывание предложений -->
+                    <div class="sentence-example">
+                        <i class="bi bi-lightbulb"></i>
+                        {{ task.content.example }}
+                    </div>
+                    <div class="input-group">
+                        <textarea class="sentence-input" data-task-id="{{ task.id }}" placeholder="Введите ваш вариант здесь..."></textarea>
+                        <button class="check-button" data-task-id="{{ task.id }}" data-correct-answer="{{ task.correct_answer.answer }}">
+                            <i class="bi bi-check-circle"></i> Проверить
+                        </button>
+                    </div>
+                    <div class="result-message" id="resultTask{{ task.id }}"></div>
+                    
+                {% elif task.task_type == 'translation_choice' %}
+                    <!-- Задание на выбор перевода -->
+                    <div class="sentence-card">
+                        <i class="bi bi-chat-quote"></i>
+                        {{ task.content.sentence }}
+                    </div>
+                    <div class="options-grid">
+                        {% for option in task.content.options %}
+                        <div class="option" data-correct="{{ option.correct|yesno:'true,false' }}" data-task-id="{{ task.id }}">
+                            <div class="option-content">
+                                <i class="bi bi-translate"></i>
+                                <span>{{ option.text }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="check-wrapper">
+                        <button class="check-button" data-task-id="{{ task.id }}">
+                            <i class="bi bi-check-all"></i> Проверить ответ
+                        </button>
+                        <div class="result-message" id="resultTask{{ task.id }}"></div>
+                    </div>
+                    
+                {% elif task.task_type == 'sentence_builder' %}
+                    <!-- Задание на составление предложений -->
+                    <div class="sentence-builder">
+                        <div class="sentence-area" id="sentenceArea{{ task.id }}"></div>
+                        <div class="words-container" id="wordsContainer{{ task.id }}">
+                            {% for word in task.content.words %}
+                            <div class="word">{{ word }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="check-wrapper">
+                            <button class="check-button" data-task-id="{{ task.id }}" data-correct-answer="{{ task.correct_answer.sentence }}">
+                                <i class="bi bi-check-all"></i> Проверить
+                            </button>
+                            <div class="result-message" id="resultTask{{ task.id }}"></div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-tasks">
+                <i class="bi bi-exclamation-circle"></i>
+                <h3>Задания не созданы</h3>
+                <p>{% if module.author == user %}Добавьте первое задание, нажав кнопку выше.{% else %}Автор курса пока не добавил задания для этого раздела.{% endif %}</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% csrf_token %}
+
+<!-- Модальное окно для редактирования задания -->
+<div id="editTaskModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Редактировать задание</h3>
+        <form id="editTaskForm">
+            <div class="form-group">
+                <label for="taskTitle">Название:</label>
+                <input type="text" id="taskTitle" name="title" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label for="taskDescription">Описание:</label>
+                <textarea id="taskDescription" name="description" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="taskInstruction">Инструкция:</label>
+                <textarea id="taskInstruction" name="instruction" class="form-control" rows="2"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" id="cancelEdit">Отмена</button>
+                <button type="submit" class="btn btn-primary">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    // Обработка кнопок проверки для разных типов заданий
+    document.querySelectorAll('.check-button').forEach(function(btn){
+        btn.addEventListener('click', function(){
+            const taskId = this.getAttribute('data-task-id');
+            const taskBlock = document.querySelector(`[data-task-id="${taskId}"]`);
+            const resultDiv = document.getElementById(`resultTask${taskId}`);
+            
+            // Определяем тип задания по содержимому
+            if (taskBlock.querySelector('.sentence-input')) {
+                // Задание на переписывание предложений
+                const userAnswer = taskBlock.querySelector('.sentence-input').value.trim();
+                const correctAnswer = this.getAttribute('data-correct-answer');
+                
+                if(userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
+                    resultDiv.innerHTML = '<div class="success-alert">✅ Верно! Отличная работа!</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="error-alert">❌ Ошибка! Попробуйте еще раз</div>';
+                }
+            } else if (taskBlock.querySelector('.options-grid')) {
+                // Задание на выбор перевода
+                const selected = taskBlock.querySelector('.option.selected');
+                
+                if(!selected) {
+                    resultDiv.innerHTML = '<div class="warning-alert">⚠️ Выберите вариант ответа</div>';
+                    return;
+                }
+                
+                const isCorrect = selected.getAttribute('data-correct') === 'true';
+                resultDiv.innerHTML = isCorrect
+                    ? '<div class="success-alert">✅ Верно! Правильный перевод</div>'
+                    : '<div class="error-alert">❌ Неверно! Попробуйте еще раз</div>';
+            }
+        });
+    });
+    
+    // Обработка выбора вариантов ответа
+    document.querySelectorAll('.option').forEach(function(option){
+        option.addEventListener('click', function(){
+            const taskId = this.getAttribute('data-task-id');
+            const taskBlock = document.querySelector(`[data-task-id="${taskId}"]`);
+            taskBlock.querySelectorAll('.option').forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+        });
+    });
+    
+    // Обработка кнопки редактирования задания
+    document.querySelectorAll('.edit-task-btn').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+            e.stopPropagation();
+            const taskId = this.getAttribute('data-task-id');
+            const taskTitle = this.getAttribute('data-task-title');
+            const taskDescription = this.getAttribute('data-task-description');
+            const taskInstruction = this.getAttribute('data-task-instruction');
+            
+            document.getElementById('taskTitle').value = taskTitle;
+            document.getElementById('taskDescription').value = taskDescription;
+            document.getElementById('taskInstruction').value = taskInstruction;
+            document.getElementById('editTaskForm').setAttribute('data-task-id', taskId);
+            document.getElementById('editTaskModal').style.display = 'block';
+        });
+    });
+    
+    // Обработка кнопки удаления задания
+    document.querySelectorAll('.delete-task-btn').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+            e.stopPropagation();
+            const taskId = this.getAttribute('data-task-id');
+            const taskTitle = this.getAttribute('data-task-title');
+            
+            if (confirm('Вы уверены, что хотите удалить задание "' + taskTitle + '"?')) {
+                fetch('/modules/{{ module.id }}/unit/{{ unit.id }}/skill/{{ skill.id }}/task/' + taskId + '/delete/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Ошибка при удалении задания');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ошибка при удалении задания');
+                });
+            }
+        });
+    });
+    
+    // Закрытие модального окна
+    document.querySelector('.close').addEventListener('click', function(){
+        document.getElementById('editTaskModal').style.display = 'none';
+    });
+    
+    document.getElementById('cancelEdit').addEventListener('click', function(){
+        document.getElementById('editTaskModal').style.display = 'none';
+    });
+    
+    // Обработка отправки формы редактирования
+    document.getElementById('editTaskForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        const taskId = this.getAttribute('data-task-id');
+        
+        const data = {
+            title: document.getElementById('taskTitle').value,
+            description: document.getElementById('taskDescription').value,
+            instruction: document.getElementById('taskInstruction').value
+        };
+        
+        fetch('/modules/{{ module.id }}/unit/{{ unit.id }}/skill/{{ skill.id }}/task/' + taskId + '/edit/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка при сохранении задания');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при сохранении задания');
+        });
+    });
+    
+    // Закрытие модального окна при клике вне его
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('editTaskModal');
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

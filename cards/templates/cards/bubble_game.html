@@ -1,0 +1,1003 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Игра с пузырями - {{ module.name }}{% endblock %}
+
+{% block content %}
+<div class="bubble-game-container">
+    <div class="game-header">
+        <h1>Игра "Мыльные пузыри"</h1>
+        <div style="display: flex; gap: 15px;">
+            <div class="game-record">
+                <i class="bi bi-trophy"></i>
+                <span>Рекорд: <span id="bestRecord">--:--</span></span>
+            </div>
+            <div class="game-timer">
+                <i class="bi bi-clock"></i>
+                <span id="timer">00:00</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-content">
+        <div class="game-left-panel">
+            <div class="current-term">
+                <h2>Найдите перевод:</h2>
+                <div id="termToFind" class="term-to-find">Загрузка...</div>
+            </div>
+            <div class="game-progress">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="progress-text">
+                    <span id="foundCount">0</span> из <span id="totalCount">0</span>
+                </div>
+            </div>
+            <div class="game-score">
+                <div class="score-item">
+                    <i class="bi bi-check-circle-fill text-success"></i>
+                    <span id="correctCount">0</span>
+                </div>
+                <div class="score-item">
+                    <i class="bi bi-x-circle-fill text-danger"></i>
+                    <span id="incorrectCount">0</span>
+                </div>
+            </div>
+            <button id="backToModuleBtn" class="back-to-module-btn">
+                <i class="bi bi-arrow-left"></i>
+                Вернуться к модулю
+            </button>
+        </div>
+        
+        <div class="game-field">
+            <div id="bubblesContainer" class="bubbles-container"></div>
+            <!-- Контейнер для салюта -->
+            <div id="fireworksContainer" class="fireworks-container"></div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно с результатами -->
+    <div id="resultsModal" class="results-modal">
+        <div class="results-content">
+            <h2>Игра завершена!</h2>
+            <div class="results-stats">
+                <div class="result-item">
+                    <span class="result-label">Время:</span>
+                    <span id="finalTime" class="result-value">00:00</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Текущий рекорд:</span>
+                    <span id="finalRecord" class="result-value">--:--</span>
+                </div>
+                <div class="result-item">
+                    <span class="result-label">Правильных ответов:</span>
+                    <span id="finalCorrect" class="result-value">0</span>
+                </div>
+            </div>
+            <div class="results-buttons">
+                <button id="playAgainBtn" class="play-again-btn">Играть снова</button>
+                <button id="backToModuleModalBtn" class="back-to-module-modal-btn">Вернуться к модулю</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Контейнер для серпантина -->
+    <div id="confettiContainer" class="confetti-container"></div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.bubble-game-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 80vh;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.game-header h1 {
+    color: #7c4dff;
+    margin: 0;
+}
+
+.game-timer {
+    background-color: #f0f0f0;
+    padding: 10px 20px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.game-record {
+    background-color: #f8f5ff;
+    padding: 10px 20px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 2px solid #7c4dff;
+}
+
+.game-record i {
+    margin-right: 8px;
+    color: #7c4dff;
+}
+
+.game-timer i {
+    margin-right: 8px;
+    color: #7c4dff;
+}
+
+.game-content {
+    display: flex;
+    flex: 1;
+    gap: 20px;
+}
+
+.game-left-panel {
+    width: 300px;
+    background-color: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+}
+
+.current-term {
+    margin-bottom: 30px;
+}
+
+.current-term h2 {
+    font-size: 1.2rem;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.term-to-find {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #7c4dff;
+    padding: 15px;
+    background-color: #f8f5ff;
+    border-radius: 8px;
+    text-align: center;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.game-progress {
+    margin-bottom: 20px;
+}
+
+.progress-bar {
+    height: 10px;
+    background-color: #eee;
+    border-radius: 5px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.progress-fill {
+    height: 100%;
+    background-color: #7c4dff;
+    border-radius: 5px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    font-size: 0.9rem;
+    color: #666;
+    text-align: right;
+}
+
+.game-score {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 30px;
+    background-color: #f8f8f8;
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.score-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.back-to-module-btn {
+    margin-top: auto;
+    background-color: #7c4dff;
+    color: white;
+    border: none;
+    padding: 12px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.back-to-module-btn:hover {
+    background-color: #6a3de8;
+    transform: translateY(-2px);
+}
+
+.game-field {
+    flex: 1;
+    background-color: #f0f8ff;
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.bubbles-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+.bubble {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), #7c4dff);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: transform 0.1s ease, opacity 0.3s ease;
+    user-select: none;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    animation: float 4s infinite ease-in-out;
+    text-align: center;
+    padding: 10px;
+    line-height: 1.2;
+    box-sizing: border-box;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    overflow: hidden;
+}
+
+.bubble:hover {
+    transform: scale(1.05);
+}
+
+.bubble.popping {
+    animation: pop 0.3s forwards;
+}
+
+.bubble.wrong {
+    animation: shake 0.5s;
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0) translateX(0);
+    }
+    25% {
+        transform: translateY(-25px) translateX(15px);
+    }
+    50% {
+        transform: translateY(0) translateX(30px);
+    }
+    75% {
+        transform: translateY(25px) translateX(15px);
+    }
+}
+
+@keyframes pop {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.5);
+        opacity: 0.5;
+    }
+    100% {
+        transform: scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes shake {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-10px);
+    }
+    50% {
+        transform: translateX(10px);
+    }
+    75% {
+        transform: translateX(-10px);
+    }
+}
+
+/* Модальное окно результатов */
+.results-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.results-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.results-content h2 {
+    color: #7c4dff;
+    margin-bottom: 25px;
+}
+
+.results-stats {
+    margin-bottom: 30px;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.result-item:last-child {
+    border-bottom: none;
+}
+
+.result-label {
+    font-weight: 600;
+    color: #555;
+}
+
+.result-value {
+    font-weight: 700;
+    color: #7c4dff;
+}
+
+.results-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.play-again-btn, .back-to-module-modal-btn {
+    padding: 12px 25px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.play-again-btn {
+    background-color: #7c4dff;
+    color: white;
+}
+
+.play-again-btn:hover {
+    background-color: #6a3de8;
+}
+
+.back-to-module-modal-btn {
+    background-color: #f0f0f0;
+    color: #555;
+}
+
+.back-to-module-modal-btn:hover {
+    background-color: #e0e0e0;
+}
+
+/* Стили для салюта */
+.fireworks-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.firework {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    transform-origin: center;
+}
+
+/* Стили для серпантина */
+.confetti-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 999;
+}
+
+.confetti {
+    position: absolute;
+    width: 10px;
+    height: 20px;
+    animation: confetti-fall linear forwards;
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(-100px) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(calc(100vh + 100px)) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+@keyframes firework-explode {
+    0% {
+        transform: scale(0);
+        opacity: 1;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        transform: scale(20);
+        opacity: 0;
+    }
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 768px) {
+    .game-content {
+        flex-direction: column;
+    }
+    
+    .game-left-panel {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+    
+    .game-field {
+        height: 400px;
+    }
+    
+    .results-content {
+        width: 95%;
+        padding: 20px;
+    }
+    
+    .results-buttons {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Элементы игры
+    const bubblesContainer = document.getElementById('bubblesContainer');
+    const termToFind = document.getElementById('termToFind');
+    const timerElement = document.getElementById('timer');
+    const progressFill = document.getElementById('progressFill');
+    const foundCountElement = document.getElementById('foundCount');
+    const totalCountElement = document.getElementById('totalCount');
+    const correctCountElement = document.getElementById('correctCount');
+    const incorrectCountElement = document.getElementById('incorrectCount');
+    const backToModuleBtn = document.getElementById('backToModuleBtn');
+    const resultsModal = document.getElementById('resultsModal');
+    const finalTimeElement = document.getElementById('finalTime');
+    const finalRecordElement = document.getElementById('finalRecord');
+    const finalCorrectElement = document.getElementById('finalCorrect');
+    const finalIncorrectElement = document.getElementById('finalIncorrect');
+    const playAgainBtn = document.getElementById('playAgainBtn');
+    const backToModuleModalBtn = document.getElementById('backToModuleModalBtn');
+    const bestRecordElement = document.getElementById('bestRecord');
+    const fireworksContainer = document.getElementById('fireworksContainer');
+    const confettiContainer = document.getElementById('confettiContainer');
+
+    // Переменные для игры
+    let cards = [];
+    let currentTerm = null;
+    let foundTerms = 0;
+    let correctAnswers = 0;
+    let incorrectAnswers = 0;
+    let startTime = null;
+    let timerInterval = null;
+    let isGameActive = false;
+    let currentRecord = "{{ record_time }}";
+
+    // Показываем текущий рекорд
+    bestRecordElement.textContent = currentRecord;
+
+    // Обработчики кнопок
+    backToModuleBtn.addEventListener('click', function() {
+        window.location.href = `/cards/module/{{ module.id }}/`;
+    });
+
+    playAgainBtn.addEventListener('click', function() {
+        resultsModal.style.display = 'none';
+        startGame();
+    });
+
+    backToModuleModalBtn.addEventListener('click', function() {
+        window.location.href = `/cards/module/{{ module.id }}/`;
+    });
+
+    // Загрузка рекорда пользователя
+    async function loadUserRecord() {
+        try {
+            const response = await fetch(`/cards/module/{{ module.id }}/bubble-game/record/`);
+            if (response.ok) {
+                const data = await response.json();
+                if (data.has_record) {
+                    currentRecord = data.time_formatted;
+                    bestRecordElement.textContent = currentRecord;
+                }
+            }
+        } catch (error) {
+            console.error('Ошибка при загрузке рекорда:', error);
+        }
+    }
+
+    // Сохранение рекорда
+    async function saveRecord(timeSeconds) {
+        try {
+            // Получаем CSRF токен
+            const csrftoken = getCookie('csrftoken');
+            console.log('CSRF токен:', csrftoken);
+            
+            console.log('Отправка данных рекорда:', {
+                time_seconds: timeSeconds,
+                correct_answers: correctAnswers,
+                incorrect_answers: incorrectAnswers
+            });
+            
+            const response = await fetch(`/cards/module/{{ module.id }}/bubble-game/save-record/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    time_seconds: timeSeconds,
+                    correct_answers: correctAnswers,
+                    incorrect_answers: incorrectAnswers
+                }),
+                credentials: 'same-origin'  // Важно для передачи куки
+            });
+            
+            console.log('Статус ответа:', response.status);
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Полученные данные:', data);
+                
+                if (data.is_new_record) {
+                    currentRecord = data.time_formatted;
+                    bestRecordElement.textContent = currentRecord;
+                    // Показываем уведомление о новом рекорде
+                    showNewRecordNotification();
+                }
+                return data;
+            } else {
+                const errorText = await response.text();
+                console.error('Ошибка от сервера:', errorText);
+            }
+        } catch (error) {
+            console.error('Ошибка при сохранении рекорда:', error);
+        }
+        return null;
+    }
+
+    // Показ уведомления о новом рекорде
+    function showNewRecordNotification() {
+        const notification = document.createElement('div');
+        notification.className = 'notification new-record-notification';
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="bi bi-trophy-fill"></i>
+                <span>Новый рекорд!</span>
+            </div>
+        `;
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+        
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 400);
+        }, 3000);
+    }
+
+    // Функция для создания салюта
+    function createFireworks() {
+        fireworksContainer.innerHTML = '';
+        
+        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ff8800', '#ff0088'];
+        
+        for (let i = 0; i < 8; i++) {
+            setTimeout(() => {
+                // Создаем взрыв в случайной точке поля
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                
+                const firework = document.createElement('div');
+                firework.className = 'firework';
+                firework.style.left = `${x}%`;
+                firework.style.top = `${y}%`;
+                firework.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                firework.style.animation = `firework-explode 1s ease-out forwards`;
+                
+                fireworksContainer.appendChild(firework);
+                
+                // Удаляем взрыв после завершения анимации
+                setTimeout(() => {
+                    firework.remove();
+                }, 1000);
+            }, i * 300); // Интервал между взрывами
+        }
+    }
+    
+    // Функция для создания серпантина
+    function createConfetti() {
+        confettiContainer.innerHTML = '';
+        
+        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ff8800', '#ff0088'];
+        
+        for (let i = 0; i < 100; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            
+            // Случайное положение по ширине
+            const x = Math.random() * 100;
+            confetti.style.left = `${x}%`;
+            
+            // Случайный цвет
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.backgroundColor = color;
+            
+            // Случайная скорость падения
+            const duration = 3 + Math.random() * 2;
+            confetti.style.animationDuration = `${duration}s`;
+            
+            // Случайная задержка начала анимации
+            const delay = Math.random() * 3;
+            confetti.style.animationDelay = `${delay}s`;
+            
+            confettiContainer.appendChild(confetti);
+            
+            // Удаляем после завершения анимации
+            setTimeout(() => {
+                confetti.remove();
+            }, (duration + delay) * 1000);
+        }
+    }
+
+    // Функция для получения CSRF токена
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Загрузка карточек
+    async function loadCards() {
+        try {
+            await loadUserRecord();
+            
+            const response = await fetch(`/cards/api/modules/{{ module.id }}/cards/`);
+            const data = await response.json();
+            
+            if (data.cards && data.cards.length > 0) {
+                cards = data.cards;
+                totalCountElement.textContent = cards.length;
+                startGame();
+            } else {
+                alert('В модуле нет карточек. Добавьте карточки перед началом игры.');
+                window.location.href = `/cards/module/{{ module.id }}/`;
+            }
+        } catch (error) {
+            console.error('Ошибка при загрузке карточек:', error);
+            alert('Не удалось загрузить карточки. Пожалуйста, попробуйте позже.');
+        }
+    }
+
+    // Начало игры
+    function startGame() {
+        // Сброс состояния игры
+        foundTerms = 0;
+        correctAnswers = 0;
+        incorrectAnswers = 0;
+        foundCountElement.textContent = '0';
+        correctCountElement.textContent = '0';
+        incorrectCountElement.textContent = '0';
+        progressFill.style.width = '0%';
+        bubblesContainer.innerHTML = '';
+        isGameActive = true;
+        
+        // Перемешиваем карточки
+        shuffleArray(cards);
+        
+        // Создаем пузыри со словами
+        createBubbles();
+        
+        // Выбираем первый термин для поиска
+        selectNextTerm();
+        
+        // Запускаем таймер
+        startTimer();
+    }
+
+    // Перемешивание массива
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    // Создание пузырей с английскими словами
+    function createBubbles() {
+        bubblesContainer.innerHTML = '';
+        
+        const containerWidth = bubblesContainer.clientWidth;
+        const containerHeight = bubblesContainer.clientHeight;
+        
+        cards.forEach((card, index) => {
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            bubble.textContent = card.term;
+            bubble.dataset.id = card.id;
+            
+            // Определяем размер пузыря
+            let size;
+            const textLength = card.term.length;
+            const hasMultipleWords = card.term.includes(' ');
+            
+            // Стандартный размер для большинства слов (как было изначально)
+            if (textLength < 15 && !hasMultipleWords) {
+                size = Math.floor(Math.random() * 40) + 80; // от 80px до 120px
+            } else {
+                // Увеличенный размер только для очень длинных слов или фраз
+                size = Math.floor(Math.random() * 40) + 120; // от 120px до 160px
+            }
+            
+            bubble.style.width = `${size}px`;
+            bubble.style.height = `${size}px`;
+            
+            // Стандартный размер шрифта с небольшой адаптацией для длинных слов
+            let fontSize = size / 8;
+            if (textLength > 10 || hasMultipleWords) {
+                fontSize = size / 10; // немного уменьшаем для длинных слов
+            }
+            
+            bubble.style.fontSize = `${fontSize}px`;
+            
+            // Центрирование текста
+            bubble.style.display = 'flex';
+            bubble.style.alignItems = 'center';
+            bubble.style.justifyContent = 'center';
+            bubble.style.textAlign = 'center';
+            bubble.style.padding = '5px';
+            
+            // Случайное положение в пределах контейнера
+            const maxLeft = containerWidth - size;
+            const maxTop = containerHeight - size;
+            const left = Math.floor(Math.random() * maxLeft);
+            const top = Math.floor(Math.random() * maxTop);
+            bubble.style.left = `${left}px`;
+            bubble.style.top = `${top}px`;
+            
+            // Случайная задержка анимации
+            bubble.style.animationDelay = `${Math.random() * 5}s`;
+            
+            // Случайный оттенок пузыря
+            const hue = Math.floor(Math.random() * 60) + 240; // оттенки синего и фиолетового
+            bubble.style.background = `radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.8), hsl(${hue}, 80%, 60%))`;
+            
+            // Обработчик нажатия на пузырь
+            bubble.addEventListener('click', handleBubbleClick);
+            
+            bubblesContainer.appendChild(bubble);
+        });
+    }
+
+    // Обработка нажатия на пузырь
+    function handleBubbleClick(event) {
+        if (!isGameActive) return;
+        
+        const bubble = event.currentTarget;
+        const clickedId = bubble.dataset.id;
+        
+        // Находим карточку по ID
+        const clickedCard = cards.find(card => card.id == clickedId);
+        
+        if (clickedCard.translation === currentTerm.translation) {
+            // Правильный ответ
+            correctAnswers++;
+            correctCountElement.textContent = correctAnswers;
+            
+            // Анимация лопающегося пузыря
+            bubble.classList.add('popping');
+            
+            // Удаляем пузырь после анимации
+            setTimeout(() => {
+                bubble.removeEventListener('click', handleBubbleClick);
+                bubble.remove();
+                
+                // Увеличиваем счетчик найденных терминов
+                foundTerms++;
+                foundCountElement.textContent = foundTerms;
+                progressFill.style.width = `${(foundTerms / cards.length) * 100}%`;
+                
+                // Проверяем, не все ли термины найдены
+                if (foundTerms === cards.length) {
+                    endGame();
+                } else {
+                    // Выбираем следующий термин
+                    selectNextTerm();
+                }
+            }, 300);
+        } else {
+            // Неправильный ответ
+            incorrectAnswers++;
+            incorrectCountElement.textContent = incorrectAnswers;
+            
+            // Анимация "встряски" пузыря
+            bubble.classList.add('wrong');
+            setTimeout(() => {
+                bubble.classList.remove('wrong');
+            }, 500);
+        }
+    }
+
+    // Выбор следующего термина для поиска
+    function selectNextTerm() {
+        // Находим карточки, которые ещё на поле (не найдены)
+        const remainingBubbles = document.querySelectorAll('.bubble');
+        
+        if (remainingBubbles.length === 0) {
+            endGame();
+            return;
+        }
+        
+        // Выбираем случайный пузырь из оставшихся
+        const randomIndex = Math.floor(Math.random() * remainingBubbles.length);
+        const randomBubbleId = remainingBubbles[randomIndex].dataset.id;
+        
+        // Находим соответствующую карточку
+        currentTerm = cards.find(card => card.id == randomBubbleId);
+        
+        // Отображаем русский термин для поиска
+        termToFind.textContent = currentTerm.translation;
+    }
+
+    // Запуск таймера
+    function startTimer() {
+        startTime = new Date();
+        
+        timerInterval = setInterval(() => {
+            const currentTime = new Date();
+            const elapsedTime = Math.floor((currentTime - startTime) / 1000);
+            
+            const minutes = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
+            const seconds = (elapsedTime % 60).toString().padStart(2, '0');
+            
+            timerElement.textContent = `${minutes}:${seconds}`;
+        }, 1000);
+    }
+
+    // Завершение игры
+    async function endGame() {
+        isGameActive = false;
+        clearInterval(timerInterval);
+        
+        // Создаем салют и серпантин
+        createFireworks();
+        createConfetti();
+        
+        // Получаем итоговое время в секундах
+        const endTime = new Date();
+        const totalSeconds = Math.floor((endTime - startTime) / 1000);
+        
+        console.log('Игра завершена. Общее время:', totalSeconds, 'сек.');
+        
+        // Обновляем элементы интерфейса
+        finalTimeElement.textContent = timerElement.textContent;
+        finalRecordElement.textContent = currentRecord;
+        finalCorrectElement.textContent = correctAnswers;
+        
+        // Пробуем сохранить рекорд
+        try {
+            console.log('Попытка сохранения рекорда...');
+            const recordResult = await saveRecord(totalSeconds);
+            console.log('Результат сохранения рекорда:', recordResult);
+            
+            // Обновляем отображение рекорда в модальном окне
+            if (recordResult && recordResult.is_new_record) {
+                finalRecordElement.textContent = recordResult.time_formatted;
+                finalRecordElement.classList.add('new-record');
+            }
+        } catch (error) {
+            console.error('Критическая ошибка при сохранении рекорда:', error);
+            alert('Ошибка при сохранении рекорда. Пожалуйста, проверьте соединение.');
+        }
+        
+        // Показываем модальное окно с результатами после небольшой задержки
+        setTimeout(() => {
+            console.log('Отображаем модальное окно с результатами');
+            resultsModal.style.display = 'flex';
+        }, 1000); // Задержка 1 секунда для отображения эффектов
+    }
+
+    // Обработка изменения размера окна
+    window.addEventListener('resize', function() {
+        if (isGameActive) {
+            createBubbles();
+        }
+    });
+
+    // Запускаем загрузку карточек при загрузке страницы
+    loadCards();
+});
+</script>
+{% endblock %} 

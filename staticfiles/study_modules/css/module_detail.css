@@ -1,0 +1,290 @@
+/* Стили в соответствии с дизайном платформы */
+.module-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #ffffff;
+}
+
+/* Кнопка "Вернуться назад" */
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #f8f9fa;
+    color: #6c757d;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    border: 1px solid #dee2e6;
+    transition: all 0.2s ease;
+    margin-bottom: 20px;
+}
+
+.back-button:hover {
+    background: #e9ecef;
+    color: #495057;
+    text-decoration: none;
+}
+
+/* Секция управления модулем */
+.module-management-section {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+/* Кнопки в стиле платформы - переопределяем Bootstrap */
+.module-management-section .btn,
+.units-section .btn {
+    padding: 12px 24px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.module-management-section .btn:hover,
+.units-section .btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    text-decoration: none !important;
+}
+
+/* ВСЕ КНОПКИ ФИОЛЕТОВЫЕ КАК НА ПЛАТФОРМЕ */
+.module-management-section .btn-primary,
+.module-management-section .btn-success,
+.module-management-section .btn-info,
+.units-section .btn-primary,
+.units-section .btn-success,
+.units-section .btn-info {
+    background: linear-gradient(160deg, #7c4dff, #6200ea) !important;
+    color: white !important;
+}
+
+.module-management-section .btn-primary:hover,
+.module-management-section .btn-success:hover,
+.module-management-section .btn-info:hover,
+.units-section .btn-primary:hover,
+.units-section .btn-success:hover,
+.units-section .btn-info:hover {
+    background: linear-gradient(160deg, #6200ea, #7c4dff) !important;
+    color: white !important;
+}
+
+.module-management-section .btn-danger,
+.units-section .btn-danger {
+    background: linear-gradient(160deg, #f44336, #c62828) !important;
+    color: white !important;
+}
+
+.module-management-section .btn-danger:hover,
+.units-section .btn-danger:hover {
+    background: linear-gradient(160deg, #c62828, #f44336) !important;
+    color: white !important;
+}
+
+/* Заголовки */
+.module-header {
+    color: #212529;
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.section-title {
+    color: #495057;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Описание модуля */
+.module-description {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    border-left: 4px solid #007bff;
+}
+
+.module-description p {
+    color: #6c757d;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Сетка юнитов */
+.units-section {
+    margin: 40px 0;
+}
+
+.units-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+    width: 100%;
+    justify-items: start;
+}
+
+.unit-card-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.unit-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    position: relative;
+    width: 100%;
+    max-width: 300px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+}
+
+.unit-card:hover {
+    border-color: #7c4dff;
+    box-shadow: 0 8px 24px rgba(124, 77, 255, 0.2);
+    transform: translateY(-4px);
+    text-decoration: none;
+    color: inherit;
+}
+
+.unit-image {
+    width: 100%;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-bottom: 15px;
+}
+
+.unit-card h3 {
+    color: #212529;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 10px;
+}
+
+.unit-card p {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0;
+    flex-grow: 1;
+}
+
+/* Кнопки управления юнитами */
+.unit-controls {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    display: flex;
+    gap: 5px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.unit-controls .btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    pointer-events: auto;
+    z-index: 11;
+    position: relative;
+}
+
+.unit-controls .btn-outline-info {
+    background: transparent !important;
+    color: #7c4dff !important;
+    border: 1px solid #7c4dff !important;
+    box-shadow: none !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+}
+
+.unit-controls .btn-outline-info:hover {
+    background: #7c4dff !important;
+    color: white !important;
+    transform: translateY(-1px) !important;
+}
+
+.unit-controls .btn-outline-danger {
+    background: transparent !important;
+    color: #f44336 !important;
+    border: 1px solid #f44336 !important;
+    box-shadow: none !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+}
+
+.unit-controls .btn-outline-danger:hover {
+    background: #f44336 !important;
+    color: white !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .module-container {
+        padding: 15px;
+    }
+    
+    .module-header {
+        font-size: 1.5rem;
+    }
+    
+    .units-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .module-management-section {
+        flex-direction: column;
+    }
+    
+    .module-management-section .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .unit-controls {
+        position: static;
+        margin-top: 15px;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .module-container {
+        padding: 10px;
+    }
+    
+    .unit-card {
+        padding: 15px;
+    }
+    
+    .unit-image {
+        height: 120px;
+    }
+}

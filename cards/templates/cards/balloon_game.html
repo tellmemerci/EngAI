@@ -1,0 +1,1682 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Воздушные шары{% endblock %}
+
+{% block head %}
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="-1">
+<!-- FORCE RELOAD: {% now "U" %} -->
+<script>
+// ВАЖНО: Принудительный запуск игры при любых условиях
+window.forceGameInitAttempts = 0;
+window.forceGameInit = function() {
+    if (window.forceGameInitAttempts >= 5) return; // Ограничение попыток
+    
+    window.forceGameInitAttempts++;
+    console.log('Попытка принудительной инициализации игры #' + window.forceGameInitAttempts);
+    
+    if (window.startGame) {
+        console.log('Функция startGame найдена. Вызываем...');
+        try {
+            window.startGame();
+        } catch (e) {
+            console.error('Ошибка при запуске игры:', e);
+        }
+    } else {
+        console.log('Функция startGame не найдена. Ждем...');
+        setTimeout(window.forceGameInit, 1000);
+    }
+};
+
+// Запускаем через 3 секунды после загрузки страницы
+window.addEventListener('load', function() {
+    console.log('Страница полностью загружена. Запланирован принудительный запуск игры.');
+    setTimeout(window.forceGameInit, 3000);
+});
+
+// Принудительная перезагрузка страницы для обхода кеша - уникальная версия для этой задачи
+(function() {
+    // Генерируем уникальный timestamp
+    const timestamp = Date.now();
+    
+    // Если URL не содержит параметр cache_bust или он устарел, перезагружаем страницу
+    const currentCacheBust = new URLSearchParams(window.location.search).get('cache_bust');
+    if (!currentCacheBust || (timestamp - currentCacheBust) > 10000) {
+        console.log('Принудительная перезагрузка для обхода кеша...');
+        
+        // Очищаем кеш браузера для этой страницы
+        try {
+            sessionStorage.clear();
+            localStorage.removeItem('balloon_game_cache');
+            
+            // Очищаем кеш для всех ресурсов
+            if ('caches' in window) {
+                caches.keys().then(function(names) {
+                    names.forEach(function(name) {
+                        caches.delete(name);
+                    });
+                });
+            }
+        } catch (e) {
+            console.error('Ошибка при очистке кеша:', e);
+        }
+        
+        // Перезагружаем страницу с новым параметром cache_bust
+        const url = new URL(window.location.href);
+        url.searchParams.set('cache_bust', timestamp);
+        window.location.href = url.toString();
+    } else {
+        console.log('Страница загружена с актуальным cache_bust:', currentCacheBust);
+    }
+})();
+</script>
+<script>
+// Еще один скрипт для предотвращения кеширования при инициализации игры
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('ВАЖНО: Версия страницы:', Date.now());
+    
+    // Показываем уведомление об успешной загрузке новой версии
+    const notification = document.createElement('div');
+    notification.style.position = 'fixed';
+    notification.style.bottom = '20px';
+    notification.style.left = '50%';
+    notification.style.transform = 'translateX(-50%)';
+    notification.style.background = 'rgba(76, 175, 80, 0.9)';
+    notification.style.color = 'white';
+    notification.style.padding = '10px 20px';
+    notification.style.borderRadius = '5px';
+    notification.style.zIndex = '1000';
+    notification.style.fontWeight = 'bold';
+    notification.textContent = 'НОВАЯ ВЕРСИЯ ИГРЫ ЗАГРУЖЕНА!';
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transition = 'opacity 0.5s';
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
+});
+</script>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="balloon-game-container">
+    <div class="game-header">
+        <button class="back-btn" onclick="window.location.href='/cards/module/{{ module.id }}/'">
+            <i class="bi bi-arrow-left"></i>
+            <span>Назад</span>
+        </button>
+        <h1>{{ module.name }}</h1>
+        <div class="game-stats">
+            <div class="score-container">
+                <span>Счёт: <span id="currentScore">0</span></span>
+            </div>
+            <div class="lives-container">
+                <span>Жизни: </span>
+                <div id="lives">
+                    <i class="bi bi-heart-fill"></i>
+                    <i class="bi bi-heart-fill"></i>
+                    <i class="bi bi-heart-fill"></i>
+                </div>
+            </div>
+            <div class="high-score">
+                <span>Рекорд: <span id="highScore">0</span></span>
+            </div>
+            <div class="sound-toggle">
+                <button id="soundToggleBtn" class="sound-btn">
+                    <i class="bi bi-volume-up-fill"></i>
+                </button>
+                <button id="musicToggleBtn" class="sound-btn">
+                    <i class="bi bi-music-note-beamed"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="game-area">
+        <div class="red-line"></div>
+        <div class="red-line-label">Зона опасности</div>
+        <div id="balloonTarget" class="balloon-target"></div>
+        <div id="gameBalloons" class="balloon-container"></div>
+        
+        <div id="gameStartScreen" class="game-overlay">
+            <div class="game-info">
+                <h2>Игра "Воздушные шары"</h2>
+                <p>Выбирайте шар с правильным переводом слова. Не допускайте, чтобы шары пересекли красную линию!</p>
+                <p>Три пропущенных шара - и игра окончена.</p>
+                <button id="startGameBtn" class="start-btn" onclick="startGame()">Начать игру</button>
+            </div>
+        </div>
+        
+        <div id="gameOverScreen" class="game-overlay" style="display: none;">
+            <div class="game-info">
+                <h2>Игра окончена!</h2>
+                <div class="final-score">
+                    <span>Ваш счёт: <span id="finalScore">0</span></span>
+                </div>
+                <div class="record-info">
+                    <span>Ваш рекорд: <span id="finalHighScore">0</span></span>
+                </div>
+                
+                <div class="game-over-buttons">
+                    <button id="restartGameBtn" class="game-button restart-btn">
+                        <i class="bi bi-arrow-repeat"></i> Играть снова
+                    </button>
+                    <button id="returnToModuleBtn" class="game-button return-btn">
+                        <i class="bi bi-house"></i> К модулю
+                    </button>
+                </div>
+                
+                <!-- Контейнер для серпантина -->
+                <div id="confettiContainer"></div>
+            </div>
+        </div>
+        
+        <!-- Контейнер для частиц попадания -->
+        <div id="particlesContainer"></div>
+    </div>
+    
+    <!-- Аудио элементы -->
+    <audio id="popSound" preload="auto" src="{% static 'audio/pop.mp3' %}?v={% now "U" %}"></audio>
+    <audio id="correctSound" preload="auto" src="{% static 'audio/correct.mp3' %}?v={% now "U" %}"></audio>
+    <audio id="wrongSound" preload="auto" src="{% static 'audio/wrong.mp3' %}?v={% now "U" %}"></audio>
+    <audio id="gameOverSound" preload="auto" src="{% static 'audio/game-over.mp3' %}?v={% now "U" %}"></audio>
+    <audio id="backgroundMusic" loop preload="auto" src="{% static 'audio/game-music.mp3' %}?v={% now "U" %}"></audio>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+.balloon-game-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #f0f7ff;
+    position: relative;
+    overflow: hidden;
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background-color: white;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    z-index: 10;
+    position: relative;
+}
+
+.game-header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+    text-align: center;
+    flex-grow: 1;
+}
+
+.back-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    background: none;
+    padding: 8px 16px;
+    font-size: 1rem;
+    cursor: pointer;
+    color: #555;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+    background-color: #f0f0f0;
+    color: #333;
+}
+
+.back-btn i {
+    font-size: 1.2rem;
+}
+
+.game-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.score-container, .lives-container, .high-score {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+#lives {
+    display: flex;
+    gap: 5px;
+    color: #ff5252;
+}
+
+.sound-toggle {
+    margin-left: 10px;
+}
+
+.sound-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #7c4dff;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.sound-btn:hover {
+    background-color: rgba(124, 77, 255, 0.1);
+}
+
+.sound-btn.muted i {
+    color: #ccc;
+}
+
+.game-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #d0e6ff 0%, #f0f7ff 100%);
+}
+
+.red-line {
+    position: absolute;
+    top: 150px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background-color: rgba(255, 50, 50, 0.3);
+    z-index: 5;
+    box-shadow: 0 0 8px rgba(255, 50, 50, 0.2);
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.red-line-label {
+    position: absolute;
+    top: 125px;
+    right: 20px;
+    background-color: rgba(255, 50, 50, 0.1);
+    color: #ff3333;
+    font-size: 0.8rem;
+    padding: 2px 8px;
+    border-radius: 5px;
+    border: 1px dashed rgba(255, 50, 50, 0.5);
+    z-index: 5;
+    transition: all 0.3s;
+    opacity: 0.7;
+}
+
+.red-line.danger {
+    background-color: rgba(255, 50, 50, 0.8);
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.5);
+    animation: pulse-line 0.5s infinite;
+    height: 4px;
+}
+
+.red-line.danger + .red-line-label {
+    background-color: rgba(255, 50, 50, 0.9);
+    color: white;
+    border: 1px solid #ff5252;
+    font-weight: bold;
+    opacity: 1;
+    animation: pulse-text 0.5s infinite;
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.8);
+}
+
+@keyframes pulse-line {
+    0% { opacity: 0.7; }
+    50% { opacity: 1; box-shadow: 0 0 20px rgba(255, 0, 0, 0.7); }
+    100% { opacity: 0.7; }
+}
+
+@keyframes pulse-text {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); text-shadow: 0 0 10px rgba(255, 0, 0, 1); }
+    100% { transform: scale(1); }
+}
+
+.balloon-target {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: white;
+    padding: 15px 30px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    font-size: 1.8rem;
+    font-weight: 600;
+    text-align: center;
+    min-width: 250px;
+    transition: all 0.3s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+    opacity: 1;
+    color: #7c4dff;
+    border: 2px solid rgba(124, 77, 255, 0.3);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.balloon-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: calc(100% - 100px);
+    overflow: visible;
+    z-index: 10;
+}
+
+.balloon {
+    position: absolute !important;
+    display: flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    z-index: 15 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transform-origin: center bottom;
+    animation: sway 6s ease-in-out infinite alternate;
+}
+
+@keyframes sway {
+    0% { transform: rotate(-5deg); }
+    100% { transform: rotate(5deg); }
+}
+
+.balloon:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+}
+
+.balloon:active {
+    transform: scale(0.95);
+}
+
+.balloon-body {
+    width: auto;
+    min-width: 100px;
+    height: auto;
+    min-height: 120px;
+    background-color: #ff5252;
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+    padding: 15px;
+    font-size: 1.1rem;
+    box-shadow: inset -5px -5px 10px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+    background-image: radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 30%);
+    transition: all 0.3s ease;
+    transform-origin: center;
+}
+
+.balloon-body:after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 35px;
+    width: 4px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+}
+
+.balloon-string {
+    width: 2px;
+    height: 30px;
+    background-color: rgba(0, 0, 0, 0.5);
+    margin-top: -5px;
+    position: relative;
+}
+
+.balloon-string:after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: -2px;
+    width: 6px;
+    height: 3px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 3px;
+}
+
+.balloon.popped {
+    animation-play-state: paused;
+}
+
+.balloon.popped .balloon-body {
+    transform: scale(1.5);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.balloon.popped .balloon-string {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.game-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+}
+
+.game-overlay.hidden {
+    display: none !important;
+}
+
+.game-info {
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    max-width: 500px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+    border: 3px solid rgba(124, 77, 255, 0.3);
+    animation: fadeInInfo 0.5s ease-out;
+}
+
+@keyframes fadeInInfo {
+    from { opacity: 0.5; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.game-info h2 {
+    margin-top: 0;
+    color: #333;
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(90deg, #7c4dff, #651fff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+}
+
+.game-info h3 {
+    margin: 15px 0 10px;
+    color: #555;
+    font-size: 1.2rem;
+}
+
+.game-info p {
+    margin-bottom: 20px;
+    color: #666;
+    line-height: 1.5;
+}
+
+.difficulty-selector {
+    margin: 20px 0;
+}
+
+.difficulty-options {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.difficulty-btn {
+    background-color: #f0f0f0;
+    color: #666;
+    border: none;
+    padding: 8px 15px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.difficulty-btn:hover {
+    background-color: #e0e0e0;
+}
+
+.difficulty-btn.active {
+    background-color: #7c4dff;
+    color: white;
+}
+
+.start-btn, .game-button {
+    background-color: #7c4dff;
+    color: white;
+    border: none;
+    padding: 10px 25px;
+    font-size: 1.1rem;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    margin: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    box-shadow: 0 4px 15px rgba(124, 77, 255, 0.4);
+}
+
+.start-btn:hover, .game-button:hover {
+    background-color: #651fff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(124, 77, 255, 0.3);
+}
+
+.restart-btn {
+    background-color: #7c4dff;
+}
+
+.return-btn {
+    background-color: #26a69a;
+}
+
+.return-btn:hover {
+    background-color: #00897b;
+    box-shadow: 0 5px 15px rgba(38, 166, 154, 0.3);
+}
+
+.game-over-buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    gap: 15px;
+}
+
+.final-score, .record-info {
+    font-size: 1.3rem;
+    margin: 15px 0;
+    color: #333;
+    font-weight: 500;
+}
+
+#finalScore, #finalHighScore {
+    font-weight: bold;
+    color: #7c4dff;
+    font-size: 1.5rem;
+}
+
+/* Таблица лидеров */
+.leaderboard-container {
+    margin: 20px 0;
+    max-height: 200px;
+    overflow-y: auto;
+    background-color: #f9f9f9;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+.leaderboard {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.leaderboard-row {
+    display: flex;
+    padding: 8px 10px;
+    border-bottom: 1px solid #eee;
+    align-items: center;
+}
+
+.leaderboard-position {
+    width: 30px;
+    font-weight: bold;
+    color: #7c4dff;
+}
+
+.leaderboard-username {
+    flex-grow: 1;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.leaderboard-score {
+    width: 50px;
+    font-weight: bold;
+    color: #555;
+}
+
+.leaderboard-row.current-user {
+    background-color: rgba(124, 77, 255, 0.1);
+    font-weight: bold;
+}
+
+.leaderboard-loading {
+    padding: 15px;
+    text-align: center;
+    color: #777;
+}
+
+/* Частицы попадания */
+.particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 30;
+    animation: particleFade 0.8s ease-out forwards;
+    box-shadow: 0 0 5px currentColor;
+}
+
+@keyframes particleFade {
+    0% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.2); opacity: 0; }
+}
+
+/* Цвета для шаров */
+.balloon-color-1 .balloon-body { background-color: #ff5252; }
+.balloon-color-2 .balloon-body { background-color: #7c4dff; }
+.balloon-color-3 .balloon-body { background-color: #29b6f6; }
+.balloon-color-4 .balloon-body { background-color: #66bb6a; }
+.balloon-color-5 .balloon-body { background-color: #ffab40; }
+.balloon-color-6 .balloon-body { background-color: #ec407a; }
+
+/* Индикатор правильного/неправильного выбора */
+.pop-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    z-index: 10;
+    animation: fadeOut 0.5s ease forwards;
+}
+
+.pop-indicator.correct {
+    color: #66bb6a;
+}
+
+.pop-indicator.incorrect {
+    color: #ff5252;
+}
+
+@keyframes fadeOut {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.5); }
+}
+
+@media (max-width: 768px) {
+    .game-header {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    .game-stats {
+        width: 100%;
+        justify-content: space-around;
+        flex-wrap: wrap;
+    }
+    
+    .balloon-target {
+        top: 120px;
+        width: 80%;
+        font-size: 1.2rem;
+    }
+    
+    .red-line {
+        top: 220px;
+    }
+    
+    .game-info {
+        width: 90%;
+        padding: 20px;
+    }
+    
+    .difficulty-options {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .game-over-buttons {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    .game-button {
+        width: auto;
+        margin: 5px;
+        padding: 8px 15px;
+    }
+    
+    .leaderboard-container {
+        max-height: 150px;
+    }
+}
+
+@media (max-width: 480px) {
+    .game-header h1 {
+        font-size: 1.2rem;
+    }
+    
+    .score-container, .lives-container, .high-score {
+        font-size: 0.9rem;
+    }
+    
+    .balloon-target {
+        padding: 10px 15px;
+        font-size: 1rem;
+        min-width: 150px;
+    }
+    
+    .game-info h2 {
+        font-size: 1.5rem;
+    }
+    
+    .final-score, .record-info {
+        font-size: 1.1rem;
+    }
+}
+
+/* Стили для серпантина */
+#confettiContainer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 5;
+    overflow: hidden;
+}
+
+.confetti {
+    position: absolute;
+    z-index: 10;
+    animation: confettiFall 2.5s linear forwards;
+    transform: rotate(0deg);
+}
+
+@keyframes confettiFall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    25% {
+        transform: translateY(100px) rotate(45deg);
+        opacity: 1;
+    }
+    50% {
+        transform: translateY(200px) rotate(90deg);
+        opacity: 0.8;
+    }
+    75% {
+        transform: translateY(300px) rotate(180deg);
+        opacity: 0.6;
+    }
+    100% {
+        transform: translateY(400px) rotate(360deg);
+        opacity: 0;
+    }
+}
+
+/* Анимация удара сердца при потере жизни */
+@keyframes heartbeat {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.3); }
+    50% { transform: scale(1); }
+    75% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+.life-lost {
+    animation: heartbeat 0.6s ease;
+    color: #ff0000 !important;
+}
+
+/* Серпантин при окончании игры */
+
+/* Улучшенная анимация хлопка воздушного шара */
+@keyframes pop {
+    0% { transform: scale(1); filter: brightness(1); }
+    30% { transform: scale(1.3); filter: brightness(1.3); }
+    60% { transform: scale(0.8); opacity: 0.8; filter: brightness(0.8); }
+    100% { transform: scale(0); opacity: 0; filter: brightness(0); }
+}
+
+.balloon.popping {
+    animation-play-state: paused;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    visibility: hidden;
+}
+
+.balloon.popping .balloon-body {
+    transform: scale(1.5);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.balloon.popping .balloon-string {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+/* Добавляем волну при уничтожении шара */
+.balloon-wave {
+    position: absolute;
+    border-radius: 50%;
+    border: 2px solid white;
+    opacity: 0.7;
+    pointer-events: none;
+    z-index: 20;
+    animation: expand 0.6s ease-out forwards;
+}
+
+@keyframes expand {
+    0% { transform: scale(0.5); opacity: 0.7; }
+    100% { transform: scale(3); opacity: 0; }
+}
+
+/* Анимация движения шаров */
+@keyframes float {
+    0% {
+        bottom: -100px;
+        opacity: 1;
+    }
+    100% {
+        bottom: 100%;
+        opacity: 1;
+    }
+}
+
+@keyframes blink {
+    0% { opacity: 0.7; filter: brightness(0.8); }
+    100% { opacity: 1; filter: brightness(1.2); }
+}
+
+/* CSS анимация для целевого слова */
+.target-pulse {
+    animation: targetPulse 0.5s ease-out;
+}
+
+@keyframes targetPulse {
+    0% { transform: translateX(-50%) scale(0.9); opacity: 0.7; }
+    50% { transform: translateX(-50%) scale(1.05); opacity: 1; }
+    100% { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+/* Добавляем новые стили для иконок галочки и крестика */
+.feedback-icon {
+    position: absolute;
+    font-size: 4rem;
+    font-weight: bold;
+    transform: translate(-50%, -50%);
+    z-index: 100;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    animation: feedbackPop 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    pointer-events: none;
+}
+
+.feedback-icon.correct {
+    color: #4CAF50;
+}
+
+.feedback-icon.incorrect {
+    color: #F44336;
+}
+
+@keyframes feedbackPop {
+    0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    30% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+    70% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+console.log('ЗАГРУЖЕН balloon_game.html, Версия: {% now "U" %}');
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация переменных
+    let cards = [];
+    let currentScore = 0;
+    let highScore = 0;
+    let livesRemaining = 3;
+    let currentTarget = null;
+    let gameActive = false;
+    let balloonInterval;
+    let soundEnabled = true;
+    let musicEnabled = false;
+    let usedWords = []; 
+    
+    // Глобальная функция для запуска игры
+    window.startGame = function() {
+        console.log('Глобальная функция startGame вызвана');
+        if (gameActive) return;
+        
+        // Загружаем тестовые карточки, если их нет
+        if (!cards || cards.length === 0) {
+            cards = [
+                { id: 1, term: 'cat', translation: 'кошка' },
+                { id: 2, term: 'dog', translation: 'собака' },
+                { id: 3, term: 'house', translation: 'дом' },
+                { id: 4, term: 'tree', translation: 'дерево' },
+                { id: 5, term: 'car', translation: 'машина' }
+            ];
+        }
+        
+        // Скрываем стартовый экран
+        gameStartScreen.style.display = 'none';
+        
+        // Активируем игру
+        gameActive = true;
+        
+        // Сбрасываем счет и жизни
+        currentScore = 0;
+        livesRemaining = 3;
+        currentScoreElement.textContent = '0';
+        updateLives();
+        
+        // Очищаем контейнер шаров
+        balloonContainer.innerHTML = '';
+        
+        // Выбираем первую цель
+        selectNewTarget();
+        
+        // Создаем первую партию шаров (3 шара сразу)
+        createBalloon();
+        setTimeout(createBalloon, 500);
+        setTimeout(createBalloon, 1000);
+        
+        // Запускаем интервал создания шаров (более частое создание шаров)
+        balloonInterval = setInterval(createBalloon, 2000);
+        
+        console.log('Игра запущена!');
+    };
+    
+    // Настройки игры
+    const difficulty = {
+        initialInterval: 2000,
+        minInterval: 1200,
+        decreaseRate: 100,
+        speedIncreaseScore: 10,
+        wrongBalloonProb: 0.7
+    };
+    
+    // Элементы DOM для звуков
+    const popSound = document.getElementById('popSound');
+    const correctSound = document.getElementById('correctSound');
+    const wrongSound = document.getElementById('wrongSound');
+    const gameOverSound = document.getElementById('gameOverSound');
+    const backgroundMusic = document.getElementById('backgroundMusic');
+    const soundToggleBtn = document.getElementById('soundToggleBtn');
+    const musicToggleBtn = document.getElementById('musicToggleBtn');
+    
+    // Элементы DOM
+    const gameArea = document.querySelector('.game-area');
+    const balloonContainer = document.getElementById('gameBalloons');
+    const balloonTarget = document.getElementById('balloonTarget');
+    const currentScoreElement = document.getElementById('currentScore');
+    const highScoreElement = document.getElementById('highScore');
+    const livesElement = document.getElementById('lives');
+    const gameStartScreen = document.getElementById('gameStartScreen');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const restartGameBtn = document.getElementById('restartGameBtn');
+    const redLine = document.querySelector('.red-line');
+    const particlesContainer = document.getElementById('particlesContainer');
+    
+    // ФУНКЦИЯ ОБРАБОТКИ КЛИКА ПО ШАРУ
+    function handleBalloonClick(balloon, card) {
+        // Игнорируем клик, если шар уже прошел красную линию
+        if (balloon.dataset.passedRedLine === 'true') {
+            console.log('Шар уже прошел красную линию, клик игнорируется');
+            return;
+        }
+        
+        console.log('Клик по шару:', card.term);
+        
+        // Проверяем, это правильный шар или нет
+        if (card.id === currentTarget.id) {
+            // Правильный ответ
+            currentScore++;
+            currentScoreElement.textContent = currentScore;
+            
+            // Эффект лопания
+            balloon.classList.add('popping');
+            createPopEffect(balloon, true);
+            
+            // Показать галочку (✓)
+            showFeedbackIcon(balloon, true);
+            
+            // Звук
+            if (soundEnabled) {
+                correctSound.currentTime = 0;
+                correctSound.play();
+            }
+            
+            // Удаляем шар ПОЛНОСТЬЮ
+            setTimeout(() => {
+                if (balloon.parentNode) balloon.remove();
+            }, 300);
+            
+            // Выбираем новую цель
+            selectNewTarget();
+        } else {
+            // Неправильный ответ
+            livesRemaining--;
+            updateLives();
+            
+            // Эффект лопания
+            balloon.classList.add('popping');
+            createPopEffect(balloon, false);
+            
+            // Показать крестик (✗)
+            showFeedbackIcon(balloon, false);
+            
+            // Звук
+            if (soundEnabled) {
+                wrongSound.currentTime = 0;
+                wrongSound.play();
+            }
+            
+            // Удаляем шар ПОЛНОСТЬЮ
+            setTimeout(() => {
+                if (balloon.parentNode) balloon.remove();
+            }, 300);
+        }
+    }
+    
+    // ФУНКЦИЯ ПОКАЗА ИКОНКИ ОБРАТНОЙ СВЯЗИ (галочка/крестик)
+    function showFeedbackIcon(balloon, isCorrect) {
+        const rect = balloon.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        // Создаем иконку обратной связи
+        const feedbackIcon = document.createElement('div');
+        feedbackIcon.className = 'feedback-icon';
+        feedbackIcon.style.left = centerX + 'px';
+        feedbackIcon.style.top = centerY + 'px';
+        
+        if (isCorrect) {
+            feedbackIcon.innerHTML = '✓';
+            feedbackIcon.classList.add('correct');
+        } else {
+            feedbackIcon.innerHTML = '✗';
+            feedbackIcon.classList.add('incorrect');
+        }
+        
+        document.body.appendChild(feedbackIcon);
+        
+        // Удаляем иконку после анимации
+        setTimeout(() => feedbackIcon.remove(), 1000);
+    }
+    
+    // ФУНКЦИЯ СОЗДАНИЯ ЭФФЕКТА ЛОПАНИЯ
+    function createPopEffect(balloon, isCorrect = true) {
+        const rect = balloon.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        
+        // Создаем частицы от лопнувшего шара
+        const particleCount = 12;
+        const colors = isCorrect ? 
+            ['#4CAF50', '#8BC34A', '#CDDC39', '#FFEB3B'] : 
+            ['#F44336', '#FF5722', '#FF9800', '#FFC107'];
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.left = centerX + 'px';
+            particle.style.top = centerY + 'px';
+            particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            particle.style.setProperty('--x', (Math.random() * 200 - 100) + 'px');
+            particle.style.setProperty('--y', (Math.random() * 200 - 100) + 'px');
+            document.body.appendChild(particle);
+            
+            // Удаляем частицу после анимации
+            setTimeout(() => particle.remove(), 800);
+        }
+    }
+    
+    // НОВАЯ ФУНКЦИЯ СОЗДАНИЯ ШАРА
+    function createBalloon() {
+        if (!gameActive) return;
+        if (!cards || cards.length === 0 || !balloonContainer) return;
+
+        // Добавляем вероятность создания правильного шара (~40%)
+        let card;
+        const createCorrectBalloon = Math.random() < 0.4;
+        
+        if (createCorrectBalloon && currentTarget) {
+            card = currentTarget;
+            } else {
+            // Выбираем случайную карточку, но не текущую цель
+            let randomCards = cards.filter(c => c.id !== (currentTarget ? currentTarget.id : -1));
+            if (randomCards.length > 0) {
+                const randomIndex = Math.floor(Math.random() * randomCards.length);
+                card = randomCards[randomIndex];
+            } else {
+                // Если отфильтрованный массив пуст, используем любую карточку
+                const randomIndex = Math.floor(Math.random() * cards.length);
+                card = cards[randomIndex];
+            }
+        }
+        
+        // 2. Создаем DOM элемент шара
+        const balloon = document.createElement('div');
+        balloon.className = 'balloon';
+        balloon.id = 'balloon-' + Date.now();
+        
+        // 3. Сохраняем данные карточки в шаре
+        balloon.dataset.cardId = card.id;
+        balloon.dataset.term = card.term;
+        
+        // 4. Рассчитываем размер шара в зависимости от длины слова (но меньшего размера)
+        const wordLength = card.term.length;
+        // Уменьшенные размеры шаров (уменьшаем еще больше)
+        const baseWidth = Math.max(80, 60 + wordLength * 4); // Уменьшенная ширина
+        const baseHeight = Math.max(100, 80 + wordLength * 4); // Уменьшенная высота
+        
+        // 5. Находим свободное место для шара (предотвращение наложения)
+        let leftPosition;
+        let attempts = 0;
+        let overlap = true;
+        const existingBalloons = document.querySelectorAll('.balloon');
+        
+        // Ищем позицию без перекрытий
+        while (overlap && attempts < 25) { // Увеличено число попыток (было 15)
+            attempts++;
+            overlap = false;
+            const availableWidth = gameArea.offsetWidth - baseWidth;
+            leftPosition = Math.random() * availableWidth;
+            
+            // Проверяем все существующие шары на перекрытие
+            for (let i = 0; i < existingBalloons.length; i++) {
+                const existingBalloon = existingBalloons[i];
+                const existingLeft = parseInt(existingBalloon.style.left || '0');
+                const existingWidth = parseInt(existingBalloon.style.width || '80');
+                
+                // Проверяем, не перекрываются ли шары с отступом в 60px (было 40px)
+                if (leftPosition < existingLeft + existingWidth + 60 && 
+                    leftPosition + baseWidth + 60 > existingLeft) {
+                    overlap = true;
+                    break;
+                }
+            }
+        }
+        
+        // Если не удалось найти место без перекрытия, ищем лучшее место с минимальным перекрытием
+        if (overlap) {
+            let bestPosition = 0;
+            let minOverlap = Number.MAX_VALUE;
+            
+            // Ищем позицию с минимальным перекрытием
+            for (let i = 0; i < 10; i++) {
+                const testPosition = Math.random() * (gameArea.offsetWidth - baseWidth);
+                let totalOverlap = 0;
+                
+                for (let j = 0; j < existingBalloons.length; j++) {
+                    const existingBalloon = existingBalloons[j];
+                    const existingLeft = parseInt(existingBalloon.style.left || '0');
+                    const existingWidth = parseInt(existingBalloon.style.width || '80');
+                    
+                    const overlap = Math.max(0, 
+                        Math.min(testPosition + baseWidth, existingLeft + existingWidth) - 
+                        Math.max(testPosition, existingLeft));
+                    
+                    totalOverlap += overlap;
+                }
+                
+                if (totalOverlap < minOverlap) {
+                    minOverlap = totalOverlap;
+                    bestPosition = testPosition;
+                }
+            }
+            
+            leftPosition = bestPosition;
+        }
+        
+        // 6. Позиционируем шар
+        balloon.style.position = 'absolute';
+        balloon.style.left = leftPosition + 'px';
+        balloon.style.bottom = '-100px'; // Начинаем ниже экрана
+        balloon.style.width = baseWidth + 'px';
+        balloon.style.height = (baseHeight + 30) + 'px'; // Уменьшенная высота (было +40)
+        
+        // 7. Создаем тело шара
+        const balloonBody = document.createElement('div');
+        balloonBody.className = 'balloon-body';
+        balloonBody.textContent = card.term;
+        balloonBody.style.backgroundColor = getRandomColor();
+        balloonBody.style.width = baseWidth + 'px';
+        balloonBody.style.height = baseHeight + 'px';
+        
+        // Регулировка размера шрифта для длинных слов
+        if (wordLength > 5) { // Уменьшили порог (было 6)
+            balloonBody.style.fontSize = '0.9rem'; // Уменьшили шрифт (было 0.95rem)
+        }
+        if (wordLength > 9) { // Уменьшили порог (было 10)
+            balloonBody.style.fontSize = '0.8rem'; // Уменьшили шрифт (было 0.85rem)
+        }
+        if (wordLength > 14) { // Уменьшили порог (было 15)
+            balloonBody.style.fontSize = '0.7rem'; // Уменьшили шрифт (было 0.75rem)
+        }
+        
+        // 8. Создаем нитку шара
+        const balloonString = document.createElement('div');
+        balloonString.className = 'balloon-string';
+        balloonString.style.height = '25px'; // Уменьшенная длина нити (по умолчанию 30px)
+        
+        // 9. Собираем шар
+        balloon.appendChild(balloonBody);
+        balloon.appendChild(balloonString);
+        
+        // 10. Добавляем шар в DOM
+        balloonContainer.appendChild(balloon);
+        
+        // 11. Добавляем обработчик клика на шар
+        balloon.addEventListener('click', function() {
+            handleBalloonClick(this, card);
+        });
+        
+        // 12. Запускаем анимацию движения
+        animateBalloon(balloon, card);
+    }
+    
+    // ФУНКЦИЯ АНИМАЦИИ ДВИЖЕНИЯ ШАРА
+    function animateBalloon(balloon, card) {
+        let position = -100; // Начальная позиция ниже экрана
+        const speed = 2.0; // Скорость движения (уменьшена с 2.5)
+        
+        // Запускаем интервал для движения шара
+        const moveInterval = setInterval(() => {
+            // Если шар был удален, останавливаем анимацию
+            if (!balloon.parentNode) {
+                clearInterval(moveInterval);
+                return;
+            }
+            
+            // Двигаем шар вверх
+            position += speed;
+            balloon.style.bottom = position + 'px';
+            
+            // Проверяем, достиг ли шар красной линии
+            const balloonTop = gameArea.offsetHeight - position - balloon.offsetHeight;
+            const redLineTop = redLine.offsetTop;
+            
+            if (balloonTop <= redLineTop && !balloon.dataset.passedRedLine) {
+                balloon.dataset.passedRedLine = 'true';
+                
+                // Если это целевой шар, вычитаем жизнь
+                if (card.id === currentTarget.id) {
+                    livesRemaining--;
+                    updateLives();
+                    
+                    // Эффект опасности
+                    redLine.classList.add('danger');
+                    setTimeout(() => redLine.classList.remove('danger'), 1000);
+                    
+                    // Показать крестик на шаре, который прошел красную линию
+                    showFeedbackIcon(balloon, false);
+                    
+                    // Звук
+                    if (soundEnabled) {
+                        wrongSound.currentTime = 0;
+                        wrongSound.play();
+                    }
+                    
+                    // Выбираем новую цель
+                    selectNewTarget();
+                }
+                
+                // Взрываем шары сразу после пересечения красной линии
+                balloon.classList.add('popping');
+                createPopEffect(balloon, false);
+                
+                // Удаляем шар с небольшой задержкой
+            setTimeout(() => {
+                    if (balloon.parentNode) balloon.remove();
+                }, 300);
+                
+                // Останавливаем анимацию движения для этого шара
+                clearInterval(moveInterval);
+                return;
+            }
+            
+            // Если шар вышел за верхний край экрана
+            if (position > gameArea.offsetHeight + 150) {
+                clearInterval(moveInterval);
+                if (balloon.parentNode) {
+                    balloon.remove(); // Полностью удаляем шар
+                }
+            }
+        }, 20);
+    }
+    
+    // Обновление отображения жизней
+    function updateLives() {
+        livesElement.innerHTML = '';
+        for (let i = 0; i < livesRemaining; i++) {
+            const heart = document.createElement('i');
+            heart.className = 'bi bi-heart-fill';
+            livesElement.appendChild(heart);
+        }
+        
+        // Аннимация при потере жизни (если жизни убавились)
+        if (livesRemaining < 3) {
+            livesElement.classList.add('life-lost');
+            setTimeout(() => livesElement.classList.remove('life-lost'), 600);
+        }
+        
+        // Если жизней не осталось, завершаем игру
+        if (livesRemaining <= 0) {
+        gameActive = false;
+        if (balloonInterval) {
+            clearInterval(balloonInterval);
+        }
+        
+            // Проверяем, есть ли новый рекорд
+        if (currentScore > highScore) {
+            highScore = currentScore;
+                highScoreElement.textContent = highScore;
+                
+                // Сохраняем новый рекорд в базу данных
+                saveHighScore(currentScore);
+            }
+            
+            // Воспроизводим звук окончания игры
+            if (soundEnabled) {
+                gameOverSound.currentTime = 0;
+                gameOverSound.play();
+            }
+            
+            // Показываем экран окончания игры с небольшой задержкой
+            setTimeout(() => {
+        gameOverScreen.style.display = 'flex';
+                document.getElementById('finalScore').textContent = currentScore;
+                document.getElementById('finalHighScore').textContent = highScore;
+        
+                // Создаем только серпантин без фейерверков при окончании игры
+                if (currentScore > 0) {
+        createConfetti();
+    }
+            }, 500);
+        }
+    }
+    
+    // Функция для загрузки рекорда из базы данных
+    async function loadHighScore() {
+        try {
+            const response = await fetch(`/cards/api/modules/{{ module.id }}/highscore/`);
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.highscore) {
+                    highScore = data.highscore;
+                    highScoreElement.textContent = highScore;
+                    console.log('Загружен рекорд:', highScore);
+                }
+            } else {
+                console.error('Не удалось загрузить рекорд');
+            }
+        } catch (error) {
+            console.error('Ошибка при загрузке рекорда:', error);
+        }
+    }
+    
+    // Функция для сохранения рекорда в базу данных
+    async function saveHighScore(score) {
+        const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        
+        try {
+            const response = await fetch(`/cards/api/modules/{{ module.id }}/highscore/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ score: score })
+            });
+            
+            if (response.ok) {
+                console.log('Рекорд успешно сохранен:', score);
+            } else {
+                console.error('Не удалось сохранить рекорд');
+            }
+        } catch (error) {
+            console.error('Ошибка при сохранении рекорда:', error);
+        }
+    }
+    
+    // Создание серпантина
+    function createConfetti() {
+        const confettiContainer = document.getElementById('confettiContainer');
+        const colors = ['#FF5252', '#7C4DFF', '#29B6F6', '#66BB6A', '#FFAB40', '#EC407A'];
+        
+        for (let i = 0; i < 80; i++) { // Уменьшено количество (было 100) для производительности
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            
+            // Случайный тип серпантина (квадрат, прямоугольник, круг)
+            const type = Math.floor(Math.random() * 3);
+            if (type === 0) {
+                confetti.style.width = '10px';
+                confetti.style.height = '10px';
+            } else if (type === 1) {
+                confetti.style.width = '8px';
+                confetti.style.height = '15px';
+            } else {
+                confetti.style.width = '12px';
+                confetti.style.height = '12px';
+                confetti.style.borderRadius = '50%';
+            }
+            
+            // Случайный цвет и позиция
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.top = -10 + 'px';
+            confetti.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
+            
+            // Задержка для создания эффекта дождя (уменьшена задержка)
+            confetti.style.animationDelay = Math.random() * 1.5 + 's'; // Ускорено (было 3s)
+            
+            confettiContainer.appendChild(confetti);
+            
+            // Удаляем серпантин после завершения анимации
+            setTimeout(() => {
+                if (confetti.parentNode) {
+                    confetti.parentNode.removeChild(confetti);
+                }
+            }, 4000); // Ускорено (было 7000)
+        }
+    }
+    
+    // Получение случайного цвета для шара
+    function getRandomColor() {
+        const colors = [
+            '#FF5252', '#7C4DFF', '#29B6F6', 
+            '#66BB6A', '#FFAB40', '#EC407A'
+        ];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+    
+    // Выбор новой цели
+    function selectNewTarget() {
+        if (!gameActive) return;
+        
+        // Сначала скрываем текущую цель для эффекта мгновенного обновления
+        balloonTarget.style.opacity = '0';
+        
+        // Через минимальную задержку показываем новую цель
+                    setTimeout(() => {
+            // Отбираем неиспользованные карточки
+            const unusedCards = cards.filter(card => !usedWords.includes(card.id));
+            
+            // Если все карточки использованы, сбрасываем список
+            if (unusedCards.length === 0) {
+                usedWords = [];
+                currentTarget = cards[Math.floor(Math.random() * cards.length)];
+                } else {
+                currentTarget = unusedCards[Math.floor(Math.random() * unusedCards.length)];
+            }
+            
+            usedWords.push(currentTarget.id);
+            
+            // Обновляем отображение цели
+            balloonTarget.textContent = currentTarget.translation;
+            balloonTarget.style.opacity = '1';
+            
+            // Добавляем анимацию появления
+            balloonTarget.classList.add('target-pulse');
+            setTimeout(() => balloonTarget.classList.remove('target-pulse'), 500);
+            
+            console.log('Новая цель:', currentTarget.translation);
+            
+            // Создаем несколько шаров сразу при смене цели,
+            // чтобы у игрока был выбор и он не ждал долго правильный ответ
+            createBalloon(); // Один из них с вероятностью 40% будет правильным
+            setTimeout(createBalloon, 200);
+            setTimeout(createBalloon, 400);
+        }, 50); // Очень короткая задержка для эффекта мгновенного обновления
+    }
+    
+    // Загрузка карточек
+    async function loadCards() {
+        console.log('Загружаем карточки...');
+        
+        // Сразу добавляем тестовые карточки для запасного варианта
+        cards = [
+            { id: 1, term: 'cat', translation: 'кошка' },
+            { id: 2, term: 'dog', translation: 'собака' },
+            { id: 3, term: 'house', translation: 'дом' },
+            { id: 4, term: 'tree', translation: 'дерево' },
+            { id: 5, term: 'car', translation: 'машина' }
+        ];
+        
+        console.log('Тестовые карточки добавлены:', cards);
+        
+        try {
+            const response = await fetch('/cards/api/modules/{{ module.id }}/cards/');
+            
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (data.cards && data.cards.length > 0) {
+                    cards = data.cards.map(card => ({
+                        id: card.id,
+                        term: card.term,
+                        translation: card.translation
+                    }));
+                    console.log('Загружено', cards.length, 'карточек из API');
+                } else {
+                    console.log('Карточки от API не найдены, используем тестовые');
+                }
+        } else {
+                console.error('Ошибка загрузки карточек из API');
+            }
+        } catch (error) {
+            console.error('Ошибка запроса к API:', error);
+        }
+    }
+    
+    // Перезапуск игры
+    restartGameBtn.addEventListener('click', function() {
+        gameOverScreen.style.display = 'none';
+        
+        // Сбрасываем счет и жизни
+        currentScore = 0;
+        livesRemaining = 3;
+        currentScoreElement.textContent = '0';
+        updateLives();
+        
+        // Очищаем контейнер шаров
+        balloonContainer.innerHTML = '';
+        
+        // Активируем игру
+        gameActive = true;
+        
+        // Выбираем первую цель
+        selectNewTarget();
+        
+        // Создаем первый шар
+        createBalloon();
+        setTimeout(createBalloon, 500);
+        setTimeout(createBalloon, 1000);
+        
+        // Запускаем интервал создания шаров (используем тот же интервал)
+        balloonInterval = setInterval(createBalloon, 2000);
+    });
+    
+    // Кнопка возврата к модулю
+    const returnToModuleBtn = document.getElementById('returnToModuleBtn');
+    if (returnToModuleBtn) {
+        returnToModuleBtn.addEventListener('click', function() {
+            window.location.href = '/cards/module/{{ module.id }}/';
+        });
+    }
+    
+    // Загружаем карточки при загрузке страницы
+    loadCards();
+    
+    // Загружаем рекорд при загрузке страницы
+    loadHighScore();
+    
+    // Запуск игры (оставляем для совместимости)
+    startGameBtn.addEventListener('click', function() {
+        console.log('Кнопка "Начать игру" нажата');
+        window.startGame();
+    });
+    
+    // Дополнительная попытка подключить обработчик событий через делегирование
+    document.addEventListener('click', function(event) {
+        if (event.target && (event.target.id === 'startGameBtn' || event.target.closest('#startGameBtn'))) {
+            console.log('Клик по кнопке startGameBtn через делегирование');
+            window.startGame();
+        }
+    });
+    
+    // Принудительная проверка после загрузки страницы
+    setTimeout(function() {
+        console.log('Проверка состояния игры...');
+        if (!gameActive && cards && cards.length > 0) {
+            console.log('Игра не запущена, но карточки загружены. Принудительная проверка кнопки.');
+            const startButton = document.getElementById('startGameBtn');
+            if (startButton) {
+                console.log('Кнопка найдена, повторное подключение событий');
+                startButton.onclick = window.startGame;
+            }
+        }
+    }, 1000);
+});
+</script>
+{% endblock %} 

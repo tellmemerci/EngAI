@@ -1,0 +1,806 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}{{ unit.title }} - Юнит модуля {{ module.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'study_modules/css/module_detail.css' %}?v=3.0">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+/* Стили для страницы юнита */
+.unit-detail-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #ffffff;
+}
+
+.unit-header {
+    color: #212529;
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.unit-image-container {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.unit-detail-image {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.unit-description {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+    border-left: 4px solid #007bff;
+}
+
+.unit-description p {
+    color: #6c757d;
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.topics-section {
+    margin: 40px 0;
+}
+
+.topics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 30px;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.topic-item {
+    background: white;
+    border: 2px solid #f8f9fa;
+    border-radius: 18px;
+    padding: 25px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.topic-item:hover {
+    border-color: #7c4dff;
+    box-shadow: 0 15px 35px rgba(98, 0, 234, 0.15);
+    transform: translateY(-5px);
+}
+
+.topic-item h5 {
+    color: #212529;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 10px;
+}
+
+.topic-item p {
+    color: #6c757d;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0;
+    flex-grow: 1;
+}
+
+.topic-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.topic-controls {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.topic-controls .btn-sm {
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.topic-controls .btn-outline-primary {
+    background: transparent !important;
+    color: #7c4dff !important;
+    border: 1px solid #7c4dff !important;
+}
+
+.topic-controls .btn-outline-primary:hover {
+    background: #7c4dff !important;
+    color: white !important;
+    transform: translateY(-1px);
+}
+
+.topic-controls .btn-outline-info {
+    background: transparent !important;
+    color: #17a2b8 !important;
+    border: 1px solid #17a2b8 !important;
+}
+
+.topic-controls .btn-outline-info:hover {
+    background: #17a2b8 !important;
+    color: white !important;
+    transform: translateY(-1px);
+}
+
+.topic-controls .btn-outline-danger {
+    background: transparent !important;
+    color: #dc3545 !important;
+    border: 1px solid #dc3545 !important;
+}
+
+.topic-controls .btn-outline-danger:hover {
+    background: #dc3545 !important;
+    color: white !important;
+    transform: translateY(-1px);
+}
+
+.section-controls {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.section-controls .btn {
+    padding: 8px 16px !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    transition: all 0.2s ease !important;
+}
+
+.topic-content {
+    flex-grow: 1;
+}
+
+.theory-practice-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.theory-section, .practice-section {
+    margin-bottom: 0;
+    padding: 20px;
+    border-radius: 15px;
+    background: rgba(124, 77, 255, 0.08);
+    border: 2px solid rgba(124, 77, 255, 0.3);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+}
+
+.theory-section {
+    background: rgba(41, 182, 246, 0.08);
+    border-color: rgba(41, 182, 246, 0.3);
+}
+
+.practice-section {
+    background: rgba(76, 175, 80, 0.08);
+    border-color: rgba(76, 175, 80, 0.3);
+}
+
+.theory-section:hover, .practice-section:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+.theory-section h6, .practice-section h6 {
+    color: #2d106a;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.theory-section h6 i {
+    font-size: 1.2rem;
+    color: #29b6f6;
+    padding: 10px;
+    background: rgba(41, 182, 246, 0.1);
+    border-radius: 12px;
+    animation: neonPulse 2s infinite;
+    box-shadow: 0 0 10px rgba(41, 182, 246, 0.3);
+}
+
+.practice-section h6 i {
+    font-size: 1.2rem;
+    color: #4caf50;
+    padding: 10px;
+    background: rgba(76, 175, 80, 0.1);
+    border-radius: 12px;
+    animation: neonPulse 2s infinite;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+}
+
+@keyframes neonPulse {
+    0% {
+        box-shadow: 0 0 10px rgba(41, 182, 246, 0.3),
+                    0 0 20px rgba(41, 182, 246, 0.2);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(41, 182, 246, 0.6),
+                    0 0 30px rgba(41, 182, 246, 0.4);
+    }
+    100% {
+        box-shadow: 0 0 10px rgba(41, 182, 246, 0.3),
+                    0 0 20px rgba(41, 182, 246, 0.2);
+    }
+}
+
+.theory-section p, .practice-section p {
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.empty-content {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Кнопки управления в стиле платформы */
+.module-management-section {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.module-management-section .btn {
+    padding: 12px 24px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    text-decoration: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.module-management-section .btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+    text-decoration: none !important;
+}
+
+.module-management-section .btn-primary {
+    background: linear-gradient(160deg, #7c4dff, #6200ea) !important;
+    color: white !important;
+}
+
+.module-management-section .btn-primary:hover {
+    background: linear-gradient(160deg, #6200ea, #7c4dff) !important;
+    color: white !important;
+}
+
+.module-management-section .btn-info {
+    background: linear-gradient(160deg, #17a2b8, #138496) !important;
+    color: white !important;
+}
+
+.module-management-section .btn-info:hover {
+    background: linear-gradient(160deg, #138496, #17a2b8) !important;
+    color: white !important;
+}
+
+.module-management-section .btn-success {
+    background: linear-gradient(160deg, #28a745, #1e7e34) !important;
+    color: white !important;
+}
+
+.module-management-section .btn-success:hover {
+    background: linear-gradient(160deg, #1e7e34, #28a745) !important;
+    color: white !important;
+}
+
+.module-management-section .btn-danger {
+    background: linear-gradient(160deg, #dc3545, #c82333) !important;
+    color: white !important;
+}
+
+.module-management-section .btn-danger:hover {
+    background: linear-gradient(160deg, #c82333, #dc3545) !important;
+    color: white !important;
+}
+
+/* Заголовки секций */
+.section-title {
+    color: #2d106a;
+    font-size: 1.8rem;
+    font-weight: 600;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+    justify-content: center;
+    text-shadow: 0 2px 4px rgba(45, 16, 106, 0.1);
+}
+
+.section-title i {
+    font-size: 2rem;
+    color: #7c4dff;
+    padding: 12px;
+    background: rgba(124, 77, 255, 0.1);
+    border-radius: 15px;
+    animation: neonPulse 2s infinite;
+    box-shadow: 0 0 15px rgba(124, 77, 255, 0.3);
+}
+
+/* Стили для управления карточками */
+.theory-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.theory-card-controls {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+}
+
+.theory-card-controls .btn-sm {
+    padding: 4px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.theory-card-controls .btn-outline-primary {
+    background: transparent !important;
+    color: #7c4dff !important;
+    border: 1px solid #7c4dff !important;
+}
+
+.theory-card-controls .btn-outline-primary:hover {
+    background: #7c4dff !important;
+    color: white !important;
+    transform: translateY(-1px);
+}
+
+.theory-card-controls .btn-outline-danger {
+    background: transparent !important;
+    color: #dc3545 !important;
+    border: 1px solid #dc3545 !important;
+}
+
+.theory-card-controls .btn-outline-danger:hover {
+    background: #dc3545 !important;
+    color: white !important;
+    transform: translateY(-1px);
+}
+
+/* Модальное окно для редактирования */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border: none;
+    border-radius: 15px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: #000;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .unit-detail-container {
+        padding: 15px;
+    }
+    
+    .unit-header {
+        font-size: 1.5rem;
+    }
+    
+    .topics-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .theory-practice-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .module-management-section {
+        flex-direction: column;
+    }
+    
+    .module-management-section .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .topic-controls {
+        position: static;
+        margin-top: 15px;
+        justify-content: center;
+    }
+    
+    .theory-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .theory-card-controls {
+        margin-top: 10px;
+        align-self: flex-end;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="unit-detail-container">
+    <a href="{% url 'study_modules:module_detail' module.id %}" class="back-button">
+        <i class="bi bi-arrow-left-circle"></i>Вернуться к модулю
+    </a>
+
+    <!-- Секция управления юнитом -->
+    {% if module.author == user %}
+    <div class="module-management-section">
+        <a href="{% url 'study_modules:add_unit_section' module.id unit.id %}?section_type=theory" class="btn btn-primary"><i class="bi bi-book"></i> Добавить теорию</a>
+        <a href="{% url 'study_modules:add_unit_skill' module.id unit.id %}" class="btn btn-info"><i class="bi bi-pencil"></i> Добавить практику</a>
+        <a href="{% url 'study_modules:add_unit_attachment' module.id unit.id %}" class="btn btn-warning"><i class="bi bi-paperclip"></i> Добавить файл</a>
+        <a href="{% url 'study_modules:edit_unit_content' module.id unit.id %}" class="btn btn-secondary"><i class="bi bi-pencil-square"></i> Редактировать содержимое</a>
+        <a href="{% url 'study_modules:edit_unit' module.id unit.id %}" class="btn btn-outline-info"><i class="bi bi-gear"></i> Настройки</a>
+        <a href="{% url 'study_modules:delete_unit' module.id unit.id %}" class="btn btn-outline-danger"><i class="bi bi-trash"></i> Удалить</a>
+    </div>
+    {% endif %}
+
+    <h1 class="unit-header">{{ unit.title }}</h1>
+
+    {% if unit.image %}
+    <div class="unit-image-container">
+        <img src="{{ unit.image.url }}" alt="{{ unit.title }}" class="unit-detail-image">
+    </div>
+    {% endif %}
+
+    {% if unit.description %}
+    <div class="unit-description">
+        <p>{{ unit.description }}</p>
+    </div>
+    {% endif %}
+
+
+    <!-- Теоретическая часть -->
+    {% if theory_sections %}
+    <h3 class="centre_pr">1. Теоретическая часть</h3>
+    <div class="skills-grid">
+        {% for section in theory_sections %}
+        <div class="skill-card theory">
+            <div class="icon-wrapper neon-pulse">
+                <i class="bi bi-journal-bookmark"></i>
+            </div>
+            <h3>{{ section.title }}</h3>
+            {% if section.description %}
+            <p>{{ section.description|truncatewords:15 }}</p>
+            {% endif %}
+            {% if section.theory_cards.all %}
+            <div class="theory-cards-grid">
+                {% for card in section.theory_cards.all %}
+                <div class="theory-card" data-href="{% url 'study_modules:unit_theory_card_detail' module.id unit.id section.id card.id %}" style="cursor:pointer;">
+                    <div class="theory-card-header">
+                        <h4>{{ card.title }}</h4>
+                        {% if module.author == user %}
+                        <div class="theory-card-controls">
+                            <button class="btn btn-sm btn-outline-primary edit-card-btn" 
+                                    data-card-id="{{ card.id }}" 
+                                    data-card-title="{{ card.title }}" 
+                                    data-card-content="{{ card.content|default:'' }}"
+                                    title="Редактировать">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger delete-card-btn" 
+                                    data-card-id="{{ card.id }}" 
+                                    data-card-title="{{ card.title }}"
+                                    title="Удалить">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% if card.content %}
+                    <p>{{ card.content|truncatewords:20 }}</p>
+                    {% else %}
+                    <p>Нажмите для редактирования содержимого</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% if module.author == user %}
+            <div class="section-controls">
+                <a href="{% url 'study_modules:add_unit_theory_card' module.id unit.id section.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus"></i> Добавить карточку
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    
+    <!-- Практическая часть -->
+    {% if skills %}
+    <h3 class="centre_pr">2. Практическая часть</h3>
+    <div class="skills-grid">
+        {% for skill in skills %}
+        <div class="skill-card {{ skill.skill_type }}{% if not skill.is_available %} disabled{% endif %}" 
+             data-skill-id="{{ skill.id }}"
+             {% if skill.is_available %}onclick="navigateToSkill('{{ skill.skill_type }}')"{% endif %}>
+            <div class="icon-wrapper neon-pulse">
+                <i class="bi bi-{% if skill.skill_type == 'listening' %}headphones{% elif skill.skill_type == 'writing' %}pen{% elif skill.skill_type == 'grammar' %}book{% elif skill.skill_type == 'reading' %}file-text{% elif skill.skill_type == 'speaking' %}mic{% elif skill.skill_type == 'words' %}translate{% elif skill.skill_type == 'watching' %}eye-fill{% elif skill.skill_type == 'test' %}stickies{% endif %}"></i>
+            </div>
+            <h3>{{ skill.title }}</h3>
+            {% if skill.description %}
+            <p>{{ skill.description|truncatewords:15 }}</p>
+            {% endif %}
+            {% if not skill.is_available %}
+            <div class="locked-overlay">
+                <i class="bi bi-lock-fill"></i>
+                <span>Заблокировано</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Материалы юнита -->
+    {% if attachments %}
+    <div class="attachments-section">
+        <h2 class="section-title">
+            <i class="bi bi-paperclip"></i>Материалы юнита
+        </h2>
+        <div class="files-grid">
+            {% for attachment in attachments %}
+            <div class="file-card">
+                <div class="file-icon {{ attachment.file_type }}">
+                    <i class="bi bi-{% if attachment.file_type == 'pdf' %}file-earmark-pdf{% elif attachment.file_type == 'audio' %}file-earmark-music{% elif attachment.file_type == 'doc' %}file-earmark-text{% elif attachment.file_type == 'image' %}file-earmark-image{% elif attachment.file_type == 'video' %}file-earmark-play{% else %}file-earmark{% endif %}"></i>
+                </div>
+                <div class="file-details">
+                    <h4>{{ attachment.title }}</h4>
+                    <p>{{ attachment.file_size }}{% if attachment.description %} · {{ attachment.description }}{% endif %}</p>
+                    <a href="{{ attachment.file.url }}" class="download-link" download>
+                        <i class="bi bi-download"></i>Скачать
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Прикрепленные модули карточек -->
+    {% if attached_card_modules %}
+    <div class="attachments-section">
+        <h2 class="section-title">
+            <i class="bi bi-card-text"></i>Модули карточек
+        </h2>
+        <div class="files-grid">
+            {% for attachment in attached_card_modules %}
+            <div class="file-card">
+                <div class="file-icon doc">
+                    <i class="bi bi-collection"></i>
+                </div>
+                <div class="file-details">
+                    <h4>{{ attachment.card_module.name }}</h4>
+                    <p>{{ attachment.card_module.description|truncatewords:10|default:"Модуль карточек" }} · {{ attachment.card_module.cards.count }} карточек</p>
+                    <a href="{% url 'cards:module' attachment.card_module.id %}" class="download-link">
+                        <i class="bi bi-eye"></i>Открыть модуль
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Модальное окно для редактирования карточки -->
+    <div id="editCardModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Редактировать карточку</h3>
+            <form id="editCardForm">
+                <div class="form-group">
+                    <label for="cardTitle">Название:</label>
+                    <input type="text" id="cardTitle" name="title" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="cardContent">Содержание:</label>
+                    <textarea id="cardContent" name="content" class="form-control" rows="5"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" id="cancelEdit">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    // Обработка клика по карточке (только если не кликнули по кнопке управления)
+    document.querySelectorAll('.theory-card').forEach(function(card){
+        card.addEventListener('click', function(e){
+            // Проверяем, не кликнули ли по кнопке управления
+            if (e.target.closest('.theory-card-controls')) {
+                return;
+            }
+            var href = this.getAttribute('data-href');
+            if(href){ window.location.href = href; }
+        });
+    });
+
+    // Обработка кнопки редактирования
+    document.querySelectorAll('.edit-card-btn').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+            e.stopPropagation();
+            var cardId = this.getAttribute('data-card-id');
+            var cardTitle = this.getAttribute('data-card-title');
+            var cardContent = this.getAttribute('data-card-content');
+            
+            document.getElementById('cardTitle').value = cardTitle;
+            document.getElementById('cardContent').value = cardContent;
+            document.getElementById('editCardForm').setAttribute('data-card-id', cardId);
+            document.getElementById('editCardModal').style.display = 'block';
+        });
+    });
+
+    // Обработка кнопки удаления
+    document.querySelectorAll('.delete-card-btn').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+            e.stopPropagation();
+            var cardId = this.getAttribute('data-card-id');
+            var cardTitle = this.getAttribute('data-card-title');
+            
+            if (confirm('Вы уверены, что хотите удалить карточку "' + cardTitle + '"?')) {
+                // Отправляем запрос на удаление
+                fetch('/modules/{{ module.id }}/unit/{{ unit.id }}/card/' + cardId + '/delete/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Ошибка при удалении карточки');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Ошибка при удалении карточки');
+                });
+            }
+        });
+    });
+
+    // Закрытие модального окна
+    document.querySelector('.close').addEventListener('click', function(){
+        document.getElementById('editCardModal').style.display = 'none';
+    });
+
+    document.getElementById('cancelEdit').addEventListener('click', function(){
+        document.getElementById('editCardModal').style.display = 'none';
+    });
+
+    // Обработка отправки формы редактирования
+    document.getElementById('editCardForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        var cardId = this.getAttribute('data-card-id');
+        var formData = new FormData(this);
+        
+        fetch('/modules/{{ module.id }}/unit/{{ unit.id }}/card/' + cardId + '/edit/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка при сохранении карточки');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ошибка при сохранении карточки');
+        });
+    });
+
+    // Закрытие модального окна при клике вне его
+    window.addEventListener('click', function(event) {
+        var modal = document.getElementById('editCardModal');
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    });
+});
+
+// Функция для перехода к навыку
+function navigateToSkill(skillType) {
+    // Находим карточку навыка с нужным типом
+    var skillCard = document.querySelector('.skill-card.' + skillType);
+    if (skillCard) {
+        // Получаем ID навыка из data-атрибута или другим способом
+        var skillId = skillCard.getAttribute('data-skill-id');
+        if (skillId) {
+            if (skillType === 'grammar') {
+                // Переходим к грамматической практике
+                window.location.href = '/modules/{{ module.id }}/unit/{{ unit.id }}/skill/' + skillId + '/grammar-practice/';
+            } else {
+                // Для других типов навыков можно добавить соответствующие страницы
+                alert('Страница для навыка ' + skillType + ' пока не реализована');
+            }
+        }
+    }
+}
+</script>
+</div>
+{% endblock %}

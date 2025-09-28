@@ -1,0 +1,307 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Главная страница{% endblock %}
+
+{% block content %}
+<div class="main-content">
+    <div class="welcome-section">
+        <div class="welcome-text">
+            <h1>Добро пожаловать в лингвистический помощник!</h1>
+            <p class="subtitle">Ваш надежный компаньон в изучении языков</p>
+            <div class="mascot-container">
+                <img src="{% static 'users/img/bulldog.png' %}" alt="Бульдог - наш талисман" class="mascot">
+                <div class="speech-bubble">
+                    Привет! Я буду помогать тебе в изучении языков!
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modules-section">
+        <h2>Инновационный подход к изучению языков</h2>
+        <div class="modules-grid">
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="bi bi-book"></i>
+                </div>
+                <h3>Словарь</h3>
+                <p>Изучайте новые слова с помощью нашего умного словаря</p>
+                <a href="{% url 'dictionary' %}" class="module-btn">Начать</a>
+            </div>
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="bi bi-chat-dots"></i>
+                </div>
+                <h3>Разговорная практика</h3>
+                <p>Практикуйте разговорные навыки с нашим виртуальным собеседником</p>
+                <button class="module-btn" disabled>Скоро</button>
+            </div>
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="bi bi-headphones"></i>
+                </div>
+                <h3>Аудирование</h3>
+                <p>Совершенствуйте восприятие речи на слух с помощью интерактивных упражнений</p>
+                <button class="module-btn" disabled>Скоро</button>
+            </div>
+            <div class="module-card">
+                <div class="module-icon">
+                    <i class="bi bi-pencil"></i>
+                </div>
+                <h3>Письмо</h3>
+                <p>Развивайте навыки письменной речи с ИИ-помощником</p>
+                <button class="module-btn" disabled>Скоро</button>
+            </div>
+        </div>
+
+        <div class="features-section">
+            <h2>Почему стоит выбрать наш сервис?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <i class="bi bi-robot"></i>
+                    <h3>Искусственный интеллект</h3>
+                    <p>Наш ИИ-ассистент анализирует ваш прогресс и адаптирует программу обучения</p>
+                </div>
+                <div class="feature-card">
+                    <i class="bi bi-graph-up"></i>
+                    <h3>Персонализация</h3>
+                    <p>Индивидуальный подход к каждому ученику с учетом его уровня и целей</p>
+                </div>
+                <div class="feature-card">
+                    <i class="bi bi-clock-history"></i>
+                    <h3>Гибкий график</h3>
+                    <p>Занимайтесь в удобное для вас время, без привязки к расписанию</p>
+                </div>
+                <div class="feature-card">
+                    <i class="bi bi-trophy"></i>
+                    <h3>Прогресс</h3>
+                    <p>Отслеживайте свой прогресс и получайте награды за достижения</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .main-content {
+        padding: 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .welcome-section {
+        background: linear-gradient(135deg, #7c4dff 0%, #6200ea 100%);
+        border-radius: 20px;
+        padding: 3rem;
+        margin-bottom: 3rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .welcome-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 300px;
+        height: 300px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+        border-radius: 50%;
+    }
+
+    .welcome-text h1 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        font-weight: 700;
+    }
+
+    .subtitle {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        margin-bottom: 2rem;
+    }
+
+    .mascot-container {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .mascot {
+        width: 200px;
+        height: auto;
+        animation: bounce 2s infinite;
+    }
+
+    .speech-bubble {
+        background: white;
+        color: #333;
+        padding: 1rem 2rem;
+        border-radius: 20px;
+        position: relative;
+        max-width: 300px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .speech-bubble::before {
+        content: '';
+        position: absolute;
+        left: -20px;
+        top: 50%;
+        border: 10px solid transparent;
+        border-right-color: white;
+    }
+
+    .modules-section {
+        margin-top: 3rem;
+    }
+
+    .modules-section h2 {
+        text-align: center;
+        margin-bottom: 2rem;
+        color: #333;
+        font-size: 2rem;
+    }
+
+    .modules-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+    }
+
+    .module-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .module-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .module-icon {
+        font-size: 2.5rem;
+        color: #7c4dff;
+        margin-bottom: 1rem;
+    }
+
+    .module-card h3 {
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .module-card p {
+        color: #666;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .module-btn {
+        display: inline-block;
+        background: linear-gradient(135deg, #7c4dff, #651fff);
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .module-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(124, 77, 255, 0.2);
+    }
+
+    .module-btn:disabled {
+        background: #e0e0e0;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .features-section {
+        margin-top: 4rem;
+        padding: 2rem 0;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin-top: 2rem;
+    }
+
+    .feature-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .feature-card i {
+        font-size: 2.5rem;
+        color: #7c4dff;
+        margin-bottom: 1rem;
+    }
+
+    .feature-card h3 {
+        margin-bottom: 1rem;
+        color: #333;
+    }
+
+    .feature-card p {
+        color: #666;
+        line-height: 1.6;
+    }
+
+    @keyframes bounce {
+        0%, 100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    @media (max-width: 768px) {
+        .welcome-section {
+            padding: 2rem;
+        }
+
+        .welcome-text h1 {
+            font-size: 2rem;
+        }
+
+        .mascot-container {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .speech-bubble::before {
+            left: 50%;
+            top: -20px;
+            transform: translateX(-50%);
+            border: 10px solid transparent;
+            border-bottom-color: white;
+        }
+
+        .modules-section h2 {
+            font-size: 1.8rem;
+        }
+    }
+</style>
+{% endblock %} 

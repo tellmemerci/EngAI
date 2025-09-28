@@ -1,0 +1,966 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}
+{% if form_type == 'section' %}Добавить секцию
+{% elif form_type == 'theory_card' %}Добавить карточку
+{% elif form_type == 'skill' %}Добавить навык
+{% elif form_type == 'attachment' %}Добавить файл
+{% elif form_type == 'unit_section' %}Добавить секцию юнита
+{% elif form_type == 'unit_skill' %}Добавить навык юнита
+{% elif form_type == 'unit_attachment' %}Добавить файл юнита
+{% elif form_type == 'unit_theory_card' %}Добавить карточку юнита
+{% elif form_type == 'grammar_task' %}Добавить задание грамматики
+{% elif form_type == 'unit' %}
+    {% if unit %}Редактировать юнит: {{ unit.title }}{% else %}Добавить юнит{% endif %}
+{% elif form_type == 'topic' %}
+    {% if topic %}Редактировать тему: {{ topic.title }}{% else %}Добавить тему{% endif %}
+{% elif form_type == 'task' %}
+    {% if task %}Редактировать задание: {{ task.get_task_type_display }}{% else %}Добавить задание{% endif %}
+{% endif %} - {{ module.title }}
+{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+<style>
+.add-container {
+    max-width: none;
+    margin: 0;
+    padding: 20px;
+    margin-left: 310px;
+    width: calc(100% - 310px);
+    box-sizing: border-box;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+.add-section {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 2px solid #f0f0f0;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+
+.add-section h2 {
+    color: #2d106a;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1rem;
+    transition: all 0.3s;
+    background: #fafafa;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #7c4dff;
+    box-shadow: 0 0 0 3px rgba(124,77,255,0.1);
+    background: white;
+}
+
+.form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.btn {
+    padding: 15px 30px;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    margin-right: 15px;
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #7c4dff, #651fff);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(124,77,255,0.3);
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    color: white;
+}
+
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(45deg, #7c4dff, #651fff);
+    color: white !important;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 1rem;
+    text-decoration: none !important;
+    box-shadow: 0 4px 15px rgba(124,77,255,0.3);
+    transition: all 0.3s ease;
+    margin-bottom: 30px;
+}
+
+.back-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(98,0,234,0.4);
+    color: white !important;
+}
+
+.help-text {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Стили для заданий грамматики */
+.task-content-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+    border: 1px solid #e9ecef;
+}
+
+.task-content-section h4 {
+    color: #495057;
+    margin-bottom: 20px;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+
+.task-type-content {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    margin-top: 15px;
+}
+
+.task-type-content .form-group {
+    margin-bottom: 15px;
+}
+
+.task-type-content label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.task-type-content .form-control {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 14px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.task-type-content .form-control:focus {
+    border-color: #7c4dff;
+    box-shadow: 0 0 0 0.2rem rgba(124, 77, 255, 0.25);
+}
+
+#task-type-display {
+    color: #7c4dff;
+    font-weight: 600;
+}
+
+/* Стили для кнопок "Готовое описание" */
+.btn-outline-primary {
+    background: transparent;
+    border: 2px solid #7c4dff;
+    color: #7c4dff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.btn-outline-primary:hover {
+    background: #7c4dff;
+    color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.3);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .add-container {
+        margin-left: 0;
+        width: 100%;
+        padding: 15px;
+    }
+    
+    .add-section {
+        padding: 20px;
+    }
+    
+    .task-content-section {
+        padding: 15px;
+    }
+    
+    .task-type-content {
+        padding: 10px;
+    }
+}
+
+/* Дополнительные стили для полной ширины */
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+
+.task-content-section {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+
+.task-type-content {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+}
+
+.required {
+    color: #dc3545;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .add-container {
+        padding: 10px;
+    }
+    
+    .add-section {
+        padding: 20px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="add-container">
+    <a href="{% if form_type == 'grammar_task' %}
+                {% url 'study_modules:grammar_practice' module.id unit.id skill.id %}
+            {% elif form_type == 'task' or form_type == 'topic' or form_type == 'unit_section' or form_type == 'unit_skill' or form_type == 'unit_attachment' or form_type == 'unit_theory_card' %}
+                {% url 'study_modules:unit_detail' module.id unit.id %}
+            {% else %}
+                {% url 'study_modules:module_detail' module.id %}
+            {% endif %}" class="back-button">
+        <i class="bi bi-arrow-left-circle"></i>
+        {% if form_type == 'grammar_task' %}Вернуться к грамматике
+        {% elif form_type == 'task' or form_type == 'topic' or form_type == 'unit_section' or form_type == 'unit_skill' or form_type == 'unit_attachment' or form_type == 'unit_theory_card' %}Вернуться к юниту
+        {% else %}Вернуться к модулю
+        {% endif %}
+    </a>
+    
+    <div class="add-section">
+        <h2>
+            <i class="bi bi-{% if form_type == 'section' %}plus-square
+            {% elif form_type == 'theory_card' %}journal-plus
+            {% elif form_type == 'skill' %}tools
+            {% elif form_type == 'attachment' %}paperclip
+            {% elif form_type == 'unit_section' %}plus-square
+            {% elif form_type == 'unit_skill' %}tools
+            {% elif form_type == 'unit_attachment' %}paperclip
+            {% elif form_type == 'unit_theory_card' %}journal-plus
+            {% elif form_type == 'unit' %}stack
+            {% elif form_type == 'topic' %}lightbulb
+            {% elif form_type == 'task' %}card-checklist
+            {% endif %}"></i>
+            {% if form_type == 'section' %}Добавить секцию
+            {% elif form_type == 'theory_card' %}Добавить теоретическую карточку
+            {% elif form_type == 'skill' %}Добавить навык
+            {% elif form_type == 'attachment' %}Добавить файл
+            {% elif form_type == 'unit_section' %}Добавить секцию юнита
+            {% elif form_type == 'unit_skill' %}Добавить навык юнита
+            {% elif form_type == 'unit_attachment' %}Добавить файл юнита
+            {% elif form_type == 'unit_theory_card' %}Добавить карточку юнита
+            {% elif form_type == 'grammar_task' %}Добавить задание грамматики
+            {% elif form_type == 'unit' %}
+                {% if unit %}Редактировать юнит: {{ unit.title }}{% else %}Добавить юнит{% endif %}
+            {% elif form_type == 'topic' %}
+                {% if topic %}Редактировать тему: {{ topic.title }}{% else %}Добавить тему{% endif %}
+            {% elif form_type == 'task' %}
+                {% if task %}Редактировать задание: {{ task.get_task_type_display }}{% else %}Добавить задание{% endif %}
+            {% endif %}
+        </h2>
+        
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            {% if form_type == 'section' %}
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название секции <span class="required">*</span></label>
+                    {{ form.title }}
+                    {% if form.title.help_text %}
+                        <div class="help-text">{{ form.title.help_text }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Описание секции</label>
+                    {{ form.description }}
+                </div>
+                
+                <div class="form-group">
+                    <label>Тип секции</label>
+                    <select name="section_type" class="form-control" required>
+                        <option value="theory" {% if request.GET.section_type == 'theory' %}selected{% endif %}>Теоретическая часть</option>
+                        <option value="practice" {% if request.GET.section_type == 'practice' %}selected{% endif %}>Практическая часть</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.order.id_for_label }}">Порядок <span class="required">*</span></label>
+                    {{ form.order }}
+                </div>
+                
+            {% elif form_type == 'theory_card' %}
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название карточки <span class="required">*</span></label>
+                    {{ form.title }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.content.id_for_label }}">Содержание карточки</label>
+                    {{ form.content }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.order.id_for_label }}">Порядок <span class="required">*</span></label>
+                    {{ form.order }}
+                </div>
+                
+            {% elif form_type == 'skill' %}
+                <div class="form-group">
+                    <label for="{{ form.skill_type.id_for_label }}">Тип навыка <span class="required">*</span></label>
+                    {{ form.skill_type }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название навыка <span class="required">*</span></label>
+                    {{ form.title }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Описание навыка</label>
+                    {{ form.description }}
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.order.id_for_label }}">Порядок <span class="required">*</span></label>
+                        {{ form.order }}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.is_available.id_for_label }}">
+                            {{ form.is_available }} Доступен
+                        </label>
+                    </div>
+                </div>
+                
+            {% elif form_type == 'attachment' %}
+                <div class="form-group">
+                    <label for="{{ form.file_type.id_for_label }}">Тип файла <span class="required">*</span></label>
+                    {{ form.file_type }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название файла <span class="required">*</span></label>
+                    {{ form.title }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.file.id_for_label }}">Файл <span class="required">*</span></label>
+                    {{ form.file }}
+                    {% if attachment.file %}
+                        <p class="help-text">Текущий файл: <a href="{{ attachment.file.url }}">{{ attachment.file.name }}</a></p>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Описание файла</label>
+                    {{ form.description }}
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.file_size.id_for_label }}">Размер файла</label>
+                        {{ form.file_size }}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.order.id_for_label }}">Порядок <span class="required">*</span></label>
+                        {{ form.order }}
+                    </div>
+                </div>
+                
+            {% elif form_type == 'unit_section' %}
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название секции <span class="required">*</span></label>
+                    {{ form.title }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Описание секции</label>
+                    {{ form.description }}
+                </div>
+                
+                <div class="form-group">
+                    <label>Тип секции</label>
+                    <select name="section_type" class="form-control" required>
+                        <option value="theory" {% if request.GET.section_type == 'theory' %}selected{% endif %}>Теоретическая часть</option>
+                        <option value="practice" {% if request.GET.section_type == 'practice' %}selected{% endif %}>Практическая часть</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.order.id_for_label }}">Порядок <span class="required">*</span></label>
+                    {{ form.order }}
+                </div>
+                
+            {% elif form_type == 'unit_skill' %}
+                <div class="form-group">
+                    <label for="{{ form.skill_type.id_for_label }}">Тип навыка <span class="required">*</span></label>
+                    {{ form.skill_type }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название навыка <span class="required">*</span></label>
+                    {{ form.title }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Описание навыка</label>
+                    {{ form.description }}
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.order.id_for_label }}">Порядок <span class="required">*</span></label>
+                        {{ form.order }}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.is_available.id_for_label }}">
+                            {{ form.is_available }} Доступен
+                        </label>
+                    </div>
+                </div>
+                
+            {% elif form_type == 'unit_attachment' %}
+                <div class="form-group">
+                    <label for="{{ form.file_type.id_for_label }}">Тип файла <span class="required">*</span></label>
+                    {{ form.file_type }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название файла <span class="required">*</span></label>
+                    {{ form.title }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.file.id_for_label }}">Файл <span class="required">*</span></label>
+                    {{ form.file }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Описание файла</label>
+                    {{ form.description }}
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="{{ form.file_size.id_for_label }}">Размер файла</label>
+                        {{ form.file_size }}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="{{ form.order.id_for_label }}">Порядок <span class="required">*</span></label>
+                        {{ form.order }}
+                    </div>
+                </div>
+                
+            {% elif form_type == 'unit_theory_card' %}
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название карточки <span class="required">*</span></label>
+                    {{ form.title }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.content.id_for_label }}">Содержание карточки</label>
+                    {{ form.content }}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.order.id_for_label }}">Порядок <span class="required">*</span></label>
+                    {{ form.order }}
+                </div>
+            {% elif form_type == 'unit' %}
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название юнита <span class="required">*</span></label>
+                    {{ form.title }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Описание юнита</label>
+                    {{ form.description }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.image.id_for_label }}">Изображение юнита</label>
+                    {{ form.image }}
+                    {% if unit.image %}
+                        <p class="help-text">Текущее изображение: <a href="{{ unit.image.url }}">{{ unit.image.name }}</a></p>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.order.id_for_label }}">Порядок <span class="required">*</span></label>
+                    {{ form.order }}
+                </div>
+            {% elif form_type == 'grammar_task' %}
+                <div class="form-group">
+                    <label for="{{ form.task_type.id_for_label }}">Тип задания <span class="required">*</span></label>
+                    {{ form.task_type }}
+                    <div class="help-text">Выберите тип задания, которое хотите создать</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название задания <span class="required">*</span></label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        {{ form.title }}
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleTitle()">
+                            <i class="bi bi-magic"></i> Готовое описание
+                        </button>
+                    </div>
+                    <div class="help-text">Например: "Соединение слов - Времена глаголов"</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Описание задания</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        {{ form.description }}
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleDescription()">
+                            <i class="bi bi-magic"></i> Готовое описание
+                        </button>
+                    </div>
+                    <div class="help-text">Краткое описание того, что нужно сделать</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.instruction.id_for_label }}">Инструкция для студентов</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        {{ form.instruction }}
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleInstruction()">
+                            <i class="bi bi-magic"></i> Готовое описание
+                        </button>
+                    </div>
+                    <div class="help-text">Четкие указания, что должен сделать студент</div>
+                </div>
+                
+                <!-- Простые поля вместо JSON -->
+                <div class="task-content-section">
+                    <h4>Содержание задания</h4>
+                    
+                    <div class="form-group">
+                        <label>Тип задания: <span id="task-type-display">Выберите тип выше</span></label>
+                    </div>
+                    
+                    <!-- Для задания на соединение слов -->
+                    <div id="matching-content" class="task-type-content" style="display: none;">
+                        <div class="form-group">
+                            <label>Слова на английском (по одному на строку):</label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <textarea name="left_words" class="form-control" rows="5" placeholder="I work&#10;She is reading&#10;We will go&#10;They played"></textarea>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleMatching()">
+                                    <i class="bi bi-magic"></i> Готовое описание
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Переводы на русский (в том же порядке):</label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <textarea name="right_words" class="form-control" rows="5" placeholder="Я работаю&#10;Она читает&#10;Мы пойдем&#10;Они играли"></textarea>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleMatchingRight()">
+                                    <i class="bi bi-magic"></i> Готовое описание
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Для задания на переписывание предложений -->
+                    <div id="sentence-rewrite-content" class="task-type-content" style="display: none;">
+                        <div class="form-group">
+                            <label>Пример предложения:</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" name="sentence_example" class="form-control" placeholder="She (go) to school every day → Present Simple">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleSentenceRewrite()">
+                                    <i class="bi bi-magic"></i> Готовое описание
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Правильный ответ:</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" name="sentence_answer" class="form-control" placeholder="She goes to school every day">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleSentenceAnswer()">
+                                    <i class="bi bi-magic"></i> Готовое описание
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Для задания на выбор перевода -->
+                    <div id="translation-choice-content" class="task-type-content" style="display: none;">
+                        <div class="form-group">
+                            <label>Предложение на английском:</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" name="english_sentence" class="form-control" placeholder="I have been studying English for 3 years">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleTranslationChoice()">
+                                    <i class="bi bi-magic"></i> Готовое описание
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Варианты ответов (по одному на строку, правильный отметьте *):</label>
+                            <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                <textarea name="translation_options" class="form-control" rows="4" placeholder="*Я изучаю английский уже 3 года&#10;Я буду изучать английский 3 года&#10;Я изучал английский 3 года&#10;Я изучаю английский 3 года назад"></textarea>
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleTranslationOptions()">
+                                    <i class="bi bi-magic"></i> Готовое описание
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Для задания на составление предложений -->
+                    <div id="sentence-builder-content" class="task-type-content" style="display: none;">
+                        <div class="form-group">
+                            <label>Слова для составления предложения (через запятую):</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" name="sentence_words" class="form-control" placeholder="She, is, reading, a, book, now">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleSentenceBuilder()">
+                                    <i class="bi bi-magic"></i> Готовое описание
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Правильное предложение:</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" name="correct_sentence" class="form-control" placeholder="She is reading a book now">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="fillSampleCorrectSentence()">
+                                    <i class="bi bi-magic"></i> Готовое описание
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.order.id_for_label }}">Порядок отображения <span class="required">*</span></label>
+                    {{ form.order }}
+                    <div class="help-text">Число для определения порядка заданий (1, 2, 3...)</div>
+                </div>
+                
+            {% elif form_type == 'topic' %}
+                <div class="form-group">
+                    <label for="{{ form.title.id_for_label }}">Название темы <span class="required">*</span></label>
+                    {{ form.title }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.theory_content.id_for_label }}">Теоретическая часть</label>
+                    {{ form.theory_content }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.practice_content.id_for_label }}">Практическая часть</label>
+                    {{ form.practice_content }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.order.id_for_label }}">Порядок <span class="required">*</span></label>
+                    {{ form.order }}
+                </div>
+            {% elif form_type == 'task' %}
+                <div class="form-group">
+                    <label for="{{ form.task_type.id_for_label }}">Тип задания <span class="required">*</span></label>
+                    {{ form.task_type }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.prompt.id_for_label }}">Неправильное или условное предложение <span class="required">*</span></label>
+                    {{ form.prompt }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.description.id_for_label }}">Описание задания / инструкция</label>
+                    {{ form.description }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.correct_answer.id_for_label }}">Правильный ответ</label>
+                    {{ form.correct_answer }}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.media_image.id_for_label }}">Изображение к заданию</label>
+                    {{ form.media_image }}
+                    {% if task.media_image %}
+                        <p class="help-text">Текущее изображение: <a href="{{ task.media_image.url }}">{{ task.media_image.name }}</a></p>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.media_audio.id_for_label }}">Аудио к заданию</label>
+                    {{ form.media_audio }}
+                    {% if task.media_audio %}
+                        <p class="help-text">Текущее аудио: <a href="{{ task.media_audio.url }}">{{ task.media_audio.name }}</a></p>
+                    {% endif %}
+                </div>
+                {# Скрытые поля для topic и task_block #}
+                {{ form.topic.as_hidden }}
+                {{ form.task_block.as_hidden }}
+            {% endif %}
+            
+            <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-circle"></i>
+                    {% if form_type == 'unit' %}
+                        {% if unit %}Сохранить изменения{% else %}Добавить юнит{% endif %}
+                    {% elif form_type == 'topic' %}
+                        {% if topic %}Сохранить изменения{% else %}Добавить тему{% endif %}
+                    {% elif form_type == 'task' %}
+                        {% if task %}Сохранить изменения{% else %}Добавить задание{% endif %}
+                    {% elif form_type == 'grammar_task' %}Добавить задание
+                    {% else %}Добавить{% endif %}
+                </button>
+                <a href="{% if form_type == 'grammar_task' %}
+                            {% url 'study_modules:grammar_practice' module.id unit.id skill.id %}
+                        {% elif form_type == 'task' or form_type == 'topic' or form_type == 'unit_section' or form_type == 'unit_skill' or form_type == 'unit_attachment' or form_type == 'unit_theory_card' %}
+                            {% url 'study_modules:unit_detail' module.id unit.id %}
+                        {% else %}
+                            {% url 'study_modules:module_detail' module.id %}
+                        {% endif %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i>Отмена
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if form_type == 'grammar_task' %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const taskTypeSelect = document.querySelector('select[name="task_type"]');
+    const taskTypeDisplay = document.getElementById('task-type-display');
+    const taskTypeContents = document.querySelectorAll('.task-type-content');
+    
+    function showTaskTypeContent(selectedType) {
+        // Скрываем все блоки
+        taskTypeContents.forEach(content => {
+            content.style.display = 'none';
+        });
+        
+        // Показываем нужный блок
+        if (selectedType) {
+            const contentId = selectedType + '-content';
+            const contentElement = document.getElementById(contentId);
+            if (contentElement) {
+                contentElement.style.display = 'block';
+            }
+            
+            // Обновляем отображение типа
+            const typeNames = {
+                'matching': 'Соединение слов',
+                'sentence_rewrite': 'Переписывание предложений',
+                'translation_choice': 'Выбор перевода',
+                'sentence_builder': 'Составление предложений'
+            };
+            taskTypeDisplay.textContent = typeNames[selectedType] || selectedType;
+        } else {
+            taskTypeDisplay.textContent = 'Выберите тип выше';
+        }
+    }
+    
+    // Обработчик изменения типа задания
+    if (taskTypeSelect) {
+        taskTypeSelect.addEventListener('change', function() {
+            showTaskTypeContent(this.value);
+        });
+        
+        // Показываем контент для уже выбранного типа
+        showTaskTypeContent(taskTypeSelect.value);
+    }
+});
+
+// Функции для заполнения готовых описаний
+function fillSampleTitle() {
+    const taskType = document.querySelector('select[name="task_type"]').value;
+    const titleField = document.querySelector('input[name="title"]');
+    
+    const titles = {
+        'matching': 'Соединение слов - Времена глаголов',
+        'sentence_rewrite': 'Переписывание предложений - Present Simple',
+        'translation_choice': 'Выбор перевода - Present Perfect',
+        'sentence_builder': 'Составление предложений - Present Continuous'
+    };
+    
+    if (titleField && titles[taskType]) {
+        titleField.value = titles[taskType];
+    }
+}
+
+function fillSampleDescription() {
+    const taskType = document.querySelector('select[name="task_type"]').value;
+    const descriptionField = document.querySelector('textarea[name="description"]');
+    
+    const descriptions = {
+        'matching': 'Соедините английские фразы с их русскими переводами. Кликните на фразу слева, затем на соответствующий перевод справа.',
+        'sentence_rewrite': 'Перепишите предложения, используя правильную форму глагола в Present Simple. Обратите внимание на окончания глаголов.',
+        'translation_choice': 'Выберите правильный перевод предложения. Учитывайте времена и контекст.',
+        'sentence_builder': 'Составьте правильное предложение из предложенных слов. Кликайте на слова в правильном порядке.'
+    };
+    
+    if (descriptionField && descriptions[taskType]) {
+        descriptionField.value = descriptions[taskType];
+    }
+}
+
+function fillSampleInstruction() {
+    const taskType = document.querySelector('select[name="task_type"]').value;
+    const instructionField = document.querySelector('textarea[name="instruction"]');
+    
+    const instructions = {
+        'matching': '1. Прочитайте фразы в левом столбце\n2. Найдите соответствующие переводы в правом столбце\n3. Кликните на фразу, затем на её перевод\n4. Проверьте правильность соединений',
+        'sentence_rewrite': '1. Прочитайте пример предложения\n2. Определите, какое время нужно использовать\n3. Перепишите предложение с правильной формой глагола\n4. Нажмите "Проверить" для проверки ответа',
+        'translation_choice': '1. Прочитайте предложение на английском\n2. Внимательно изучите все варианты перевода\n3. Выберите наиболее точный перевод\n4. Нажмите "Проверить ответ"',
+        'sentence_builder': '1. Прочитайте все предложенные слова\n2. Определите правильный порядок слов\n3. Кликайте на слова в нужной последовательности\n4. Проверьте правильность составленного предложения'
+    };
+    
+    if (instructionField && instructions[taskType]) {
+        instructionField.value = instructions[taskType];
+    }
+}
+
+function fillSampleMatching() {
+    const leftWordsField = document.querySelector('textarea[name="left_words"]');
+    
+    if (leftWordsField) {
+        leftWordsField.value = 'I work\nShe is reading\nWe will go\nThey played\nHe has studied';
+    }
+}
+
+function fillSampleMatchingRight() {
+    const rightWordsField = document.querySelector('textarea[name="right_words"]');
+    
+    if (rightWordsField) {
+        rightWordsField.value = 'Я работаю\nОна читает\nМы пойдем\nОни играли\nОн изучал';
+    }
+}
+
+function fillSampleSentenceRewrite() {
+    const exampleField = document.querySelector('input[name="sentence_example"]');
+    
+    if (exampleField) {
+        exampleField.value = 'She (go) to school every day → Present Simple';
+    }
+}
+
+function fillSampleSentenceAnswer() {
+    const answerField = document.querySelector('input[name="sentence_answer"]');
+    
+    if (answerField) {
+        answerField.value = 'She goes to school every day';
+    }
+}
+
+function fillSampleTranslationChoice() {
+    const sentenceField = document.querySelector('input[name="english_sentence"]');
+    
+    if (sentenceField) {
+        sentenceField.value = 'I have been studying English for 3 years';
+    }
+}
+
+function fillSampleTranslationOptions() {
+    const optionsField = document.querySelector('textarea[name="translation_options"]');
+    
+    if (optionsField) {
+        optionsField.value = '*Я изучаю английский уже 3 года\nЯ буду изучать английский 3 года\nЯ изучал английский 3 года\nЯ изучаю английский 3 года назад';
+    }
+}
+
+function fillSampleSentenceBuilder() {
+    const wordsField = document.querySelector('input[name="sentence_words"]');
+    
+    if (wordsField) {
+        wordsField.value = 'She, is, reading, a, book, now';
+    }
+}
+
+function fillSampleCorrectSentence() {
+    const sentenceField = document.querySelector('input[name="correct_sentence"]');
+    
+    if (sentenceField) {
+        sentenceField.value = 'She is reading a book now';
+    }
+}
+</script>
+{% endif %}
+{% endblock %}

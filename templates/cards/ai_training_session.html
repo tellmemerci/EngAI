@@ -1,0 +1,160 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Тренировка: задания — {{ module.name }}{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="session-container">
+    <div class="session-header">
+        <button class="back-btn" onclick="window.location.href='{% url 'cards:ai_training' module.id %}'">
+            <i class="bi bi-arrow-left"></i>
+            <span>К выбору слов</span>
+        </button>
+        <div class="title-wrap">
+            <h1>Задания AI</h1>
+            <span class="level-chip">Уровень: {{ level }}</span>
+        </div>
+    </div>
+
+    <div class="tips">
+        <div class="tip"><b>Подсказка:</b> если не уверены, нажмите «Показать подсказку» для примеров и грамматики.</div>
+        <div class="tip"><b>Совет:</b> сначала попробуйте перевести сами, затем сверяйтесь с ответом.</div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            {% for sentence in sentences %}
+            <div class="task">
+                <div class="russian">{{ sentence.russian }}</div>
+                <div class="controls">
+                    <input type="text" class="form-control user-input" placeholder="Введите перевод на английском">
+                    <button type="button" class="btn btn-secondary check-btn">Проверить</button>
+                    <button type="button" class="btn btn-hint hint-btn">Показать подсказку</button>
+                </div>
+                <div class="answer" hidden>
+                    <div class="answer-title">Правильный перевод</div>
+                    <div class="answer-text">{{ sentence.english }}</div>
+                </div>
+                <div class="hint" hidden>
+                    <div class="hint-title">Подсказка</div>
+                    <ul class="hint-list">
+                        <li>Обратите внимание на порядок слов в английском предложении (SVO).</li>
+                        <li>Используйте лексику уровня {{ level }} и простые конструкции.</li>
+                        <li>Ключевое слово из модуля должно присутствовать в переводе.</li>
+                    </ul>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+.session-container{max-width:900px;margin:0 auto;padding:30px 10px}
+.session-header{display:flex;align-items:center;gap:16px;margin-bottom:20px}
+.title-wrap{display:flex;align-items:center;gap:12px}
+.level-chip{background:#f0e9ff;color:#6a3edb;border-radius:999px;padding:6px 10px;font-weight:600}
+.back-btn{background:none;border:none;color:#7c4dff;cursor:pointer;padding:8px 16px;border-radius:8px;display:flex;align-items:center;gap:8px}
+.back-btn:hover{background:#f0f0f0;color:#333}
+.tips{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.tip{background:#fff8e1;border:1px solid #ffe0a3;color:#6b5b2e;padding:10px 12px;border-radius:8px}
+.card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.card-body{padding:20px}
+.task{background:#f8f9fa;border-radius:10px;padding:16px;margin-bottom:14px}
+.russian{font-size:18px;margin-bottom:12px}
+.controls{display:flex;gap:10px;flex-wrap:wrap}
+.form-control{flex:1;min-width:240px;padding:10px;border:1px solid #ddd;border-radius:6px}
+.btn{padding:10px 14px;border:none;border-radius:8px;cursor:pointer}
+.btn-secondary{background:#6c757d;color:#fff}
+.btn-secondary:hover{background:#545b62}
+.btn-hint{background:#7c4dff;color:#fff}
+.btn-hint:hover{background:#6a3edb}
+.answer{margin-top:10px;background:#e8f5e9;border-radius:6px;padding:10px}
+.answer-title{font-weight:600;color:#2e7d32;margin-bottom:6px}
+.hint{margin-top:10px;background:#eef2ff;border-radius:6px;padding:10px}
+.hint-title{font-weight:600;color:#3a4bb3;margin-bottom:6px}
+.hint-list{margin:0;padding-left:18px}
+@media(max-width:768px){.controls{flex-direction:column}.form-control{min-width:unset;width:100%}}
+.input-error{border-color:#f44336;background:#fff5f5}
+.attempts{margin-top:6px;color:#6b7280;font-size:14px}
+.result-ok{color:#2e7d32;font-weight:600;margin-top:6px}
+.result-bad{color:#c62828;font-weight:600;margin-top:6px}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  // Инициализация счетчиков попыток для каждого задания
+  document.querySelectorAll('.task').forEach((task)=>{
+    task.dataset.attempts = '0';
+    const info = document.createElement('div');
+    info.className = 'attempts';
+    info.textContent = 'Попытки: 0 / 3';
+    task.appendChild(info);
+  });
+
+  // Проверка ответа
+  document.querySelectorAll('.check-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const task = btn.closest('.task');
+      const input = task.querySelector('.user-input');
+      const answer = task.querySelector('.answer');
+      const answerText = task.querySelector('.answer-text').textContent.trim();
+      const attemptsNode = task.querySelector('.attempts');
+      let attempts = parseInt(task.dataset.attempts || '0', 10);
+
+      const user = (input.value || '').trim();
+      // Простейшая нормализация: без регистра и лишних пробелов
+      const normalize = s => s.replace(/\s+/g,' ').trim().toLowerCase();
+      const isCorrect = normalize(user) === normalize(answerText);
+
+      // Очистка предыдущих состояний
+      input.classList.remove('input-error');
+      const oldMsgs = task.querySelectorAll('.result-ok, .result-bad');
+      oldMsgs.forEach(n=>n.remove());
+
+      if (isCorrect) {
+        const ok = document.createElement('div');
+        ok.className = 'result-ok';
+        ok.textContent = 'Верно!';
+        task.appendChild(ok);
+        answer.hidden = false;
+        input.disabled = true;
+        btn.disabled = true;
+        return;
+      }
+
+      // Неверно — увеличиваем попытку
+      attempts += 1;
+      task.dataset.attempts = String(attempts);
+      attemptsNode.textContent = `Попытки: ${attempts} / 3`;
+      input.classList.add('input-error');
+      const bad = document.createElement('div');
+      bad.className = 'result-bad';
+      bad.textContent = attempts < 3 ? 'Неверно, попробуйте ещё раз.' : 'Попытки закончились.';
+      task.appendChild(bad);
+
+      if (attempts >= 3) {
+        answer.hidden = false;
+        input.disabled = true;
+        btn.disabled = true;
+      }
+    });
+  });
+  document.querySelectorAll('.hint-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const task = btn.closest('.task');
+      const hint = task.querySelector('.hint');
+      hint.hidden = !hint.hidden;
+    });
+  });
+});
+</script>
+{% endblock %}
+
+

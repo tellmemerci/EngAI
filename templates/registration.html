@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Регистрация</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/css/intlTelInput.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/registration.css') }}" />
+</head>
+<body>
+<div class="registration-wrapper">
+    <div class="registration-container">
+        <div class="avatar-top">
+            <img src="{{ url_for('static', filename='img/avatar.png') }}" alt="Аватар" />
+        </div>
+
+        <div class="progress-line">
+            <div class="circle active" id="step1">1</div>
+            <div class="line"></div>
+            <div class="circle" id="step2">2</div>
+            <div class="line"></div>
+            <div class="circle" id="step3">3</div>
+        </div>
+
+        <form class="registration-form" method="POST" action="{{ url_for('auth.register') }}">
+            <!-- Шаг 1 -->
+            <div class="step active" id="form-step-1">
+                <h2>Шаг 1: Аккаунт</h2>
+                <input type="email" name="email" placeholder="Электронная почта" required />
+                <input type="password" name="password" placeholder="Придумайте пароль" required />
+                <input type="password" name="confirm_password" placeholder="Повторите пароль" required />
+                <div class="step-buttons">
+                    <button type="button" disabled>Назад</button>
+                    <button type="button" onclick="nextStep()">Далее</button>
+                </div>
+            </div>
+
+            <!-- Шаг 2 -->
+            <div class="step hidden" id="form-step-2">
+                <h2>Шаг 2: Личная информация</h2>
+                <input type="text" name="last_name" placeholder="Фамилия" required />
+                <input type="text" name="first_name" placeholder="Имя" required />
+                <select name="current_level" required>
+                    <option disabled selected>Уровень владения языком</option>
+                    <option value="A1">А1 — Начальный</option>
+                    <option value="A2">А2 — Элементарный</option>
+                    <option value="B1">B1 — Средний</option>
+                    <option value="B2">B2 — Выше среднего</option>
+                    <option value="C1">C1 — Продвинутый</option>
+                    <option value="C2">C2 — Свободный</option>
+                </select>
+                <input type="text" name="city" placeholder="Город проживания" required />
+                <select name="desired_level" required>
+                    <option disabled selected>Желаемый уровень</option>
+                    <option value="A2">A2</option>
+                    <option value="B1">B1</option>
+                    <option value="B2">B2</option>
+                    <option value="C1">C1</option>
+                    <option value="C2">C2</option>
+                </select>
+                <input id="phone" name="phone" type="tel" required />
+
+                <div class="checkbox-wrapper">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="privacy_policy" required />
+                        <span class="checkmark"></span>
+                        <span>Согласен на обработку персональных данных</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="newsletter" />
+                        <span class="checkmark"></span>
+                        <span>Согласен на получение рассылки</span>
+                    </label>
+                </div>
+
+                <div class="step-buttons">
+                    <button type="button" onclick="prevStep()">Назад</button>
+                    <button type="button" onclick="nextStep()">Далее</button>
+                </div>
+            </div>
+
+            <!-- Шаг 3 -->
+            <div class="step hidden" id="form-step-3">
+                <h2>Шаг 3: Подтверждение</h2>
+                <p>Мы отправили SMS-код на ваш номер.</p>
+                <input type="text" name="verification_code" placeholder="Введите код из SMS" required />
+                <div id="timer-container">
+                    <i id="hourglass" class="bi bi-hourglass-split"></i>
+                    <p>Отправить повторно через <span id="timer">10</span> секунд</p>
+                </div>
+                <div id="resend-btn-container">
+                    <button id="resend-btn" type="button" onclick="resendCode()">Отправить еще раз</button>
+                </div>
+                <div class="step-buttons">
+                    <button type="button" onclick="prevStep()">Назад</button>
+                    <button type="submit">Завершить</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/js/intlTelInput.min.js"></script>
+<script src="{{ url_for('static', filename='js/registration.js') }}"></script>
+</body>
+</html> 

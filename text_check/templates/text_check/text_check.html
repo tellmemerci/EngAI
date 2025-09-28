@@ -1,0 +1,1024 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Проверка текста{% endblock %}
+
+{% block extra_head %}
+<!-- Добавляем Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="text-check-container">
+    <div class="text-check-header">
+        <h1>Проверка текста</h1>
+        <p class="subtitle">Напишите текст на английском языке, и мы проверим его на ошибки</p>
+        <button id="historyButton" class="history-button" title="История">
+            <i class="bi bi-clock-history"></i>
+            История
+        </button>
+    </div>
+
+    <div class="text-check-content">
+        <div class="input-section">
+            <textarea id="textInput" class="text-input" placeholder="Введите текст для проверки..."></textarea>
+            <button id="checkButton" class="check-button">
+                <i class="bi bi-check2-circle"></i>
+                Проверить
+            </button>
+        </div>
+
+        <div id="results" class="results-section" style="display: none;">
+            <div class="result-card">
+                <h3>Исправленный текст</h3>
+                <div id="correctedText" class="corrected-text"></div>
+            </div>
+
+            <div class="result-card">
+                <h3>Найденные ошибки</h3>
+                <div id="errorsList" class="errors-list"></div>
+            </div>
+
+            <div class="result-card">
+                <h3>Рекомендуемые темы для повторения</h3>
+                <div id="themesList" class="themes-list"></div>
+            </div>
+
+            <div class="result-card">
+                <h3>Анализ текста</h3>
+                <div class="analysis-content">
+                    <div class="word-topics">
+                        <h4>Использованные темы</h4>
+                        <div id="wordTopicsList" class="word-topics-list">
+                            <span class="topic-tag">Путешествия</span>
+                            <span class="topic-tag">Семья</span>
+                            <span class="topic-tag">Работа</span>
+                            <span class="topic-tag">Хобби</span>
+                        </div>
+                    </div>
+                    <div class="errors-chart">
+                        <h4>Статистика ошибок</h4>
+                        <div class="chart-container">
+                            <canvas id="errorsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Offcanvas история -->
+    <div id="historyOffcanvas" class="history-offcanvas">
+        <div class="history-header">
+            <span>История текстов за месяц</span>
+            <button class="close-history" id="closeHistoryBtn"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="history-list" id="historyList">
+            <div class="history-loading">Загрузка...</div>
+        </div>
+    </div>
+    <div id="historyOverlay" class="history-overlay"></div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.text-check-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 30px 20px;
+}
+
+.text-check-header {
+    position: relative;
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.text-check-header h1 {
+    color: #7c4dff;
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.text-check-content {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.input-section {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.input-section-flex {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.text-input {
+    width: 100%;
+    min-height: 200px;
+    padding: 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    resize: vertical;
+    margin-bottom: 20px;
+}
+
+.input-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 0;
+}
+
+.check-button, .history-button {
+    width: 140px;
+    justify-content: center;
+}
+
+.check-button {
+    background: linear-gradient(135deg, #7c4dff, #651fff);
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+}
+
+.check-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(124, 77, 255, 0.3);
+}
+
+.history-button {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: #fff;
+    color: #7c4dff;
+    border: 2px solid #7c4dff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.history-button:hover {
+    background: #7c4dff;
+    color: #fff;
+}
+
+.results-section {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.result-card {
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.result-card h3 {
+    color: #7c4dff;
+    margin-bottom: 20px;
+    font-size: 1.3rem;
+}
+
+.corrected-text {
+    line-height: 1.6;
+    font-size: 1.1rem;
+}
+
+.errors-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.error-item {
+    background: #fff3f3;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 4px solid #ff5252;
+}
+
+.error-item .error-text {
+    color: #ff5252;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.error-item .correction {
+    color: #666;
+}
+
+.themes-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.theme-card {
+    background: #f8f5ff;
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+}
+
+.theme-card h4 {
+    color: #7c4dff;
+    margin-bottom: 10px;
+}
+
+.theme-card p {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* Offcanvas история */
+.history-offcanvas {
+    position: fixed;
+    top: 0;
+    right: -420px;
+    width: 400px;
+    height: 100vh;
+    background: #fff;
+    box-shadow: -4px 0 24px rgba(124,77,255,0.08);
+    z-index: 2000;
+    transition: right 0.3s cubic-bezier(.4,0,.2,1);
+    display: flex;
+    flex-direction: column;
+}
+.history-offcanvas.open {
+    right: 0;
+}
+.history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 24px 12px 24px;
+    border-bottom: 1px solid #eee;
+    font-size: 1.2rem;
+    color: #7c4dff;
+    font-weight: 700;
+}
+.close-history {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    color: #7c4dff;
+    cursor: pointer;
+}
+.history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 24px;
+}
+.history-item {
+    background: #f8f5ff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(124,77,255,0.04);
+}
+.history-item .date {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 10px;
+    display: block;
+}
+.history-item .original-text {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+.history-item .corrected-text {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+.history-item .errors {
+    margin-bottom: 15px;
+}
+.history-item .error-item {
+    background: #fff3f3;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 3px solid #ff5252;
+}
+.history-item .themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.history-item .theme-tag {
+    background: #fff;
+    color: #7c4dff;
+    padding: 4px 10px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    border: 1px solid #7c4dff;
+}
+.history-loading {
+    color: #7c4dff;
+    text-align: center;
+    margin-top: 40px;
+}
+.history-error {
+    text-align: center;
+    margin: 50px auto;
+    padding: 30px;
+    background: #fdf2f2;
+    border-radius: 15px;
+    color: #e53e3e;
+    max-width: 80%;
+}
+.history-error i {
+    font-size: 3rem;
+    margin-bottom: 20px;
+}
+.history-error p {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+.history-error .error-subtitle {
+    font-size: 1rem;
+    font-weight: normal;
+    color: #666;
+    margin-bottom: 20px;
+}
+.retry-button {
+    background: #7c4dff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.retry-button:hover {
+    background: #651fff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(124, 77, 255, 0.3);
+}
+.history-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.15);
+    z-index: 1999;
+}
+.history-overlay.open {
+    display: block;
+}
+@media (max-width: 768px) {
+    .analysis-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .history-button {
+        position: static;
+        margin: 20px auto;
+    }
+
+    .chart-container {
+        height: 250px;
+    }
+
+    .word-topics, .errors-chart {
+        padding: 15px;
+    }
+
+    .topic-tag {
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+}
+.analysis-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.word-topics, .errors-chart {
+    background: #f8f5ff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(124,77,255,0.04);
+}
+
+.word-topics h4, .errors-chart h4 {
+    color: #7c4dff;
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.word-topics-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.topic-tag {
+    background: #fff;
+    color: #7c4dff;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    border: 1px solid #7c4dff;
+    transition: all 0.2s;
+}
+
+.topic-tag:hover {
+    background: #7c4dff;
+    color: #fff;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.history-item {
+    background: #f8f5ff;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(124,77,255,0.04);
+}
+
+.history-item .date {
+    font-size: 0.85rem;
+    color: #888;
+    margin-bottom: 10px;
+    display: block;
+}
+
+.history-item .original-text,
+.history-item .corrected-text {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.history-item .errors {
+    margin-bottom: 15px;
+}
+
+.history-item .error-item {
+    background: #fff3f3;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 3px solid #ff5252;
+}
+
+.history-item .themes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.history-item .theme-tag {
+    background: #fff;
+    color: #7c4dff;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    border: 1px solid #7c4dff;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const textInput = document.getElementById('textInput');
+    const checkButton = document.getElementById('checkButton');
+    const results = document.getElementById('results');
+    const correctedText = document.getElementById('correctedText');
+    const errorsList = document.getElementById('errorsList');
+    const themesList = document.getElementById('themesList');
+    const historyButton = document.getElementById('historyButton');
+    const historyOffcanvas = document.getElementById('historyOffcanvas');
+    const historyOverlay = document.getElementById('historyOverlay');
+    const closeHistoryBtn = document.getElementById('closeHistoryBtn');
+    const historyList = document.getElementById('historyList');
+    
+    // Демонстрация интерфейса при загрузке страницы
+    setTimeout(() => {
+        results.style.display = 'flex';
+        correctedText.textContent = 'This is a demo of the corrected text. You can see how it works.';
+        
+        // Демонстрационные ошибки
+        errorsList.innerHTML = `
+            <div class="error-item">
+                <div class="error-text">Demo error 1</div>
+                <div class="correction">Исправление: This is a demonstration of error correction</div>
+            </div>
+            <div class="error-item">
+                <div class="error-text">Demo error 2</div>
+                <div class="correction">Исправление: Another example of error correction</div>
+            </div>
+        `;
+        
+        // Демонстрационные темы
+        themesList.innerHTML = `
+            <div class="theme-card">
+                <h4>Демо-тема 1</h4>
+                <p>Это демонстрация карточки темы для изучения</p>
+            </div>
+            <div class="theme-card">
+                <h4>Демо-тема 2</h4>
+                <p>Еще один пример карточки темы для изучения</p>
+            </div>
+        `;
+        
+        // Показываем демо-диаграмму
+        showDemoChart();
+    }, 500);
+
+    // Тестовые данные для истории
+    const demoHistory = [
+        {
+            created_at: '10 мая 2023, 14:32',
+            original_text: 'I have went to the store yestarday and buyed some food.',
+            corrected_text: 'I went to the store yesterday and bought some food.',
+            errors: [
+                {
+                    error_text: 'have went → went',
+                    correction: 'Неправильная форма прошедшего времени'
+                },
+                {
+                    error_text: 'yestarday → yesterday',
+                    correction: 'Ошибка правописания'
+                },
+                {
+                    error_text: 'buyed → bought',
+                    correction: 'Неправильная форма прошедшего времени для неправильного глагола'
+                }
+            ],
+            themes: [
+                { name: 'Прошедшее время' },
+                { name: 'Неправильные глаголы' },
+                { name: 'Правописание' }
+            ]
+        },
+        {
+            created_at: '5 мая 2023, 10:15',
+            original_text: 'She dont like to study english, it is to difficult for her.',
+            corrected_text: 'She doesn\'t like to study English. It is too difficult for her.',
+            errors: [
+                {
+                    error_text: 'dont → doesn\'t',
+                    correction: 'Используйте форму 3-го лица единственного числа'
+                },
+                {
+                    error_text: 'english → English',
+                    correction: 'Названия языков пишутся с заглавной буквы'
+                },
+                {
+                    error_text: 'it is to difficult → It is too difficult',
+                    correction: 'Разделите предложения точкой и используйте "too" вместо "to"'
+                }
+            ],
+            themes: [
+                { name: 'Настоящее простое время' },
+                { name: 'Пунктуация' },
+                { name: 'Правописание' }
+            ]
+        }
+    ];
+    
+    // Демонстрация работы диаграммы
+    function showDemoChart() {
+        // Получаем контекст canvas для графика
+        const ctx = document.getElementById('errorsChart').getContext('2d');
+        
+        // Тестовые данные для диаграммы
+        const errorStats = [
+            { type: 'Грамматика', count: 8 },
+            { type: 'Пунктуация', count: 5 },
+            { type: 'Лексика', count: 3 },
+            { type: 'Орфография', count: 4 },
+            { type: 'Стиль', count: 2 }
+        ];
+        
+        const errorLabels = errorStats.map(item => item.type);
+        const errorData = errorStats.map(item => item.count);
+        
+        // Уничтожаем предыдущий график, если он существует
+        if (window.errorsChart) {
+            window.errorsChart.destroy();
+        }
+        
+        // Общее количество ошибок
+        const totalErrors = errorData.reduce((a, b) => a + b, 0);
+        
+        // Создаем новую диаграмму
+        window.errorsChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: errorLabels,
+                datasets: [{
+                    data: errorData,
+                    backgroundColor: [
+                        '#7c4dff',
+                        '#651fff',
+                        '#6200ea',
+                        '#b388ff',
+                        '#9575cd',
+                        '#d1c4e9'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: {
+                                size: 12
+                            },
+                            color: '#444'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw;
+                                const percentage = Math.round((value * 100) / totalErrors);
+                                return `${context.label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '70%'
+            },
+            plugins: [{
+                id: 'doughnutlabel',
+                beforeDraw: function(chart) {
+                    const width = chart.width;
+                    const height = chart.height;
+                    const ctx = chart.ctx;
+                    
+                    ctx.restore();
+                    const fontSize = (height / 114).toFixed(2);
+                    ctx.font = fontSize + 'em sans-serif';
+                    ctx.textBaseline = 'middle';
+                    
+                    const text = totalErrors.toString();
+                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                    const textY = height / 2 - 10;
+                    
+                    ctx.fillStyle = '#7c4dff';
+                    ctx.font = 'bold ' + (fontSize * 2) + 'em sans-serif';
+                    ctx.fillText(text, textX, textY);
+                    
+                    ctx.fillStyle = '#666';
+                    ctx.font = fontSize + 'em sans-serif';
+                    ctx.fillText('ошибок', Math.round((width - ctx.measureText('ошибок').width) / 2), height / 2 + 20);
+                    
+                    ctx.save();
+                }
+            }]
+        });
+    }
+
+    checkButton.addEventListener('click', async function() {
+        const text = textInput.value.trim();
+        if (!text) {
+            alert('Пожалуйста, введите текст для проверки');
+            return;
+        }
+
+        try {
+            const response = await fetch('/text-check/check/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ text: text })
+            });
+
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                // Показываем результаты
+                results.style.display = 'flex';
+                
+                // Отображаем исправленный текст
+                correctedText.textContent = data.corrected_text;
+                
+                // Отображаем ошибки
+                errorsList.innerHTML = data.errors.map(error => `
+                    <div class="error-item">
+                        <div class="error-text">${error.text}</div>
+                        <div class="correction">Исправление: ${error.correction}</div>
+                    </div>
+                `).join('');
+                
+                // Отображаем темы
+                themesList.innerHTML = data.themes.map(theme => `
+                    <div class="theme-card">
+                        <h4>${theme.name}</h4>
+                        <p>${theme.description}</p>
+                    </div>
+                `).join('');
+                
+                // Показываем демонстрационную диаграмму
+                setTimeout(() => {
+                    showDemoChart();
+                }, 500);
+            } else {
+                alert('Произошла ошибка при проверке текста');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Произошла ошибка при отправке запроса');
+            
+            // В случае ошибки показываем демо-данные для отладки интерфейса
+            results.style.display = 'flex';
+            correctedText.textContent = 'I went to the store yesterday and bought some food.';
+            
+            errorsList.innerHTML = `
+                <div class="error-item">
+                    <div class="error-text">have went → went</div>
+                    <div class="correction">Исправление: Неправильная форма прошедшего времени</div>
+                </div>
+                <div class="error-item">
+                    <div class="error-text">yestarday → yesterday</div>
+                    <div class="correction">Исправление: Ошибка правописания</div>
+                </div>
+                <div class="error-item">
+                    <div class="error-text">buyed → bought</div>
+                    <div class="correction">Исправление: Неправильная форма прошедшего времени для неправильного глагола</div>
+                </div>
+            `;
+            
+            themesList.innerHTML = `
+                <div class="theme-card">
+                    <h4>Прошедшее время</h4>
+                    <p>Повторите правила использования прошедшего времени в английском языке</p>
+                </div>
+                <div class="theme-card">
+                    <h4>Неправильные глаголы</h4>
+                    <p>Обратите внимание на формы неправильных глаголов</p>
+                </div>
+                <div class="theme-card">
+                    <h4>Правописание</h4>
+                    <p>Повторите правила правописания слов с -day</p>
+                </div>
+            `;
+            
+            // Показываем демонстрационную диаграмму
+            setTimeout(() => {
+                showDemoChart();
+            }, 500);
+        }
+    });
+
+    historyButton.addEventListener('click', function() {
+        historyOffcanvas.classList.add('open');
+        historyOverlay.classList.add('open');
+        loadHistory();
+    });
+    closeHistoryBtn.addEventListener('click', closeHistory);
+    historyOverlay.addEventListener('click', closeHistory);
+
+    function closeHistory() {
+        historyOffcanvas.classList.remove('open');
+        historyOverlay.classList.remove('open');
+    }
+
+    function updateAnalysis(errors, themes) {
+        // Обновляем список тем
+        const wordTopicsList = document.getElementById('wordTopicsList');
+        wordTopicsList.innerHTML = themes.map(theme => `
+            <span class="topic-tag">${theme.name}</span>
+        `).join('');
+
+        // Создаем график ошибок
+        const ctx = document.getElementById('errorsChart').getContext('2d');
+        const errorTypes = {};
+        errors.forEach(error => {
+            errorTypes[error.type] = (errorTypes[error.type] || 0) + 1;
+        });
+
+        // Уничтожаем предыдущий график, если он существует
+        if (window.errorsChart) {
+            window.errorsChart.destroy();
+        }
+
+        // Общее количество ошибок        
+        const totalErrors = Object.values(errorTypes).reduce((a, b) => a + b, 0);
+        
+        window.errorsChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(errorTypes),
+                datasets: [{
+                    data: Object.values(errorTypes),
+                    backgroundColor: [
+                        '#7c4dff',
+                        '#651fff',
+                        '#6200ea',
+                        '#b388ff',
+                        '#9575cd',
+                        '#d1c4e9'
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: {
+                                size: 12
+                            },
+                            color: '#444'
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.raw;
+                                const percentage = Math.round((value * 100) / totalErrors);
+                                return `${context.label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    },
+                    doughnutlabel: {
+                        labels: [
+                            {
+                                text: totalErrors,
+                                font: {
+                                    size: '36',
+                                    weight: 'bold'
+                                },
+                                color: '#7c4dff'
+                            },
+                            {
+                                text: 'ошибок',
+                                font: {
+                                    size: '16'
+                                },
+                                color: '#666'
+                            }
+                        ]
+                    }
+                },
+                cutout: '70%'
+            },
+            plugins: [{
+                id: 'doughnutlabel',
+                beforeDraw: function(chart) {
+                    const width = chart.width;
+                    const height = chart.height;
+                    const ctx = chart.ctx;
+                    
+                    ctx.restore();
+                    const fontSize = (height / 114).toFixed(2);
+                    ctx.font = fontSize + 'em sans-serif';
+                    ctx.textBaseline = 'middle';
+                    
+                    const text = totalErrors.toString();
+                    const textX = Math.round((width - ctx.measureText(text).width) / 2);
+                    const textY = height / 2 - 10;
+                    
+                    ctx.fillStyle = '#7c4dff';
+                    ctx.font = 'bold ' + (fontSize * 2) + 'em sans-serif';
+                    ctx.fillText(text, textX, textY);
+                    
+                    ctx.fillStyle = '#666';
+                    ctx.font = fontSize + 'em sans-serif';
+                    ctx.fillText('ошибок', Math.round((width - ctx.measureText('ошибок').width) / 2), height / 2 + 20);
+                    
+                    ctx.save();
+                }
+            }]
+        });
+    }
+
+    async function loadHistory() {
+        historyList.innerHTML = '<div class="history-loading">Загрузка...</div>';
+        
+        try {
+            // Сначала попробуем загрузить с сервера
+            const response = await fetch('/text-check/history/');
+            
+            if (!response.ok) {
+                throw new Error('Ошибка загрузки истории');
+            }
+            
+            const data = await response.json();
+            
+            if (data.status === 'success' && data.history.length > 0) {
+                // Используем данные с сервера
+                renderHistory(data.history);
+            } else {
+                // Если история пуста, используем демо-данные
+                renderHistory(demoHistory);
+            }
+        } catch (e) {
+            console.error('Error loading history:', e);
+            console.log('Используем демо-данные вместо данных с сервера');
+            
+            // В случае ошибки используем демо-данные
+            renderHistory(demoHistory);
+            
+            // Также добавляем демо-диаграмму для наглядности
+            if (!document.getElementById('errorsChart')) {
+                console.log('Создание тестовой диаграммы не удалось - canvas не найден');
+            } else {
+                showDemoChart();
+            }
+        }
+    }
+
+    function renderHistory(historyItems) {
+        if (historyItems.length === 0) {
+            historyList.innerHTML = '<div class="history-loading">Нет текстов за последний месяц</div>';
+            return;
+        }
+        
+        historyList.innerHTML = historyItems.map(item => `
+            <div class="history-item">
+                <span class="date">${item.created_at}</span>
+                <div class="original-text">
+                    ${item.original_text}
+                </div>
+                <span class="divider"></span>
+                <div class="errors">
+                    <strong>Найдено ошибок: ${item.errors.length}</strong>
+                    ${item.errors.map(err => `
+                        <div class="error-item-small">${err.error_text}</div>
+                    `).join('')}
+                </div>
+                <div class="themes">
+                    ${item.themes.map(theme => `
+                        <span class="theme-tag">${theme.name}</span>
+                    `).join('')}
+                </div>
+            </div>
+        `).join('');
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

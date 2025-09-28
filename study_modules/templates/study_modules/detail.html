@@ -1,0 +1,373 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    .module-container {
+        flex: 1;
+        padding: 40px 60px;
+        overflow-y: auto;
+    }
+
+    .module-details {
+        display: flex;
+        gap: 50px;
+        padding: 40px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        min-height: 70vh;
+    }
+
+    .module-preview {
+        flex: 1;
+        max-width: 50%;
+        min-width: 45%;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .module-image {
+        width: 100%;
+        height: 100%;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .module-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center 25%;
+    }
+
+    .module-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        padding-top: 40px;
+    }
+
+    .module-title {
+        text-align: center;
+        margin: 0;
+        font-size: 2.5rem;
+        color: var(--text-color);
+    }
+
+    .module-stats {
+        display: flex;
+        gap: 30px;
+        flex-wrap: wrap;
+    }
+
+    .stat-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1.1rem;
+        color: var(--text-secondary);
+    }
+
+    .module-description {
+        line-height: 1.6;
+    }
+
+    .module-description h2 {
+        margin-bottom: 15px;
+        color: var(--text-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .module-description p {
+        color: var(--text-color);
+        opacity: 0.9;
+    }
+
+    /* Кнопки действий */
+    .action-buttons {
+        margin-top: auto;
+        display: flex;
+        gap: 20px;
+        padding-top: 40px;
+    }
+
+    .save-btn, .start-btn {
+        flex: 1;
+        padding: 20px 30px;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-decoration: none;
+    }
+
+    .save-btn {
+        flex: 1;
+        padding: 20px 30px;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        text-decoration: none;
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        color: white;
+    }
+
+    .save-btn.saved {
+        background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    }
+
+    .save-btn:hover {
+        transform: translateY(-2px);
+    }
+
+    .save-btn:not(.saved):hover {
+        box-shadow: 0 8px 20px rgba(108,117,125,0.3);
+    }
+
+    .save-btn.saved:hover {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    }
+
+    .start-btn {
+        background: linear-gradient(135deg, #8a63ff 0%, #7325ff 100%);
+        color: white;
+    }
+
+    .start-btn:hover {
+        box-shadow: 0 8px 20px rgba(124,77,255,0.4);
+    }
+
+    /* Кнопка "Вернуться назад" */
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(45deg, #7c4dff, #651fff);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-size: 1rem;
+        text-decoration: none;
+        box-shadow: 0 4px 15px rgba(124,77,255,0.3);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        margin-bottom: 30px;
+        border: none;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .back-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 20px rgba(98,0,234,0.4);
+        color: white;
+    }
+
+    .back-button::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+            120deg,
+            transparent,
+            rgba(255,255,255,0.2),
+            transparent
+        );
+        transition: 0.5s;
+    }
+
+    .back-button:hover::before {
+        left: 100%;
+    }
+
+    .back-button .bi {
+        font-size: 1.2em;
+        margin-right: 8px;
+        transition: transform 0.3s;
+    }
+
+    .back-button:hover .bi {
+        transform: translateX(-3px);
+    }
+
+    /* Адаптивность */
+    @media (max-width: 1200px) {
+        .module-preview {
+            max-width: 100%;
+            height: 400px;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .module-container {
+            padding: 20px;
+        }
+
+        .module-details {
+            flex-direction: column;
+            padding: 20px;
+        }
+
+        .module-preview {
+            height: 300px;
+            max-width: 100%;
+        }
+
+        .module-title {
+            font-size: 2rem;
+        }
+
+        .action-buttons {
+            flex-direction: column;
+        }
+
+        .stat-item {
+            font-size: 1rem;
+        }
+    }
+
+    @keyframes saveAnimation {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+
+    .save-animation {
+        animation: saveAnimation 0.3s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="module-container">
+    <a href="/modules/" class="back-button">
+        <i class="bi bi-arrow-left-circle"></i>Вернуться назад
+    </a>
+    
+    <div class="module-details">
+        <div class="module-preview">
+            <div class="module-image">
+                {% if module.image %}
+                    <img src="{{ module.image.url }}" alt="{{ module.title }}">
+                {% else %}
+                    <img src="{% static 'users/img/default_module.jpg' %}" alt="{{ module.title }}">
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="module-info">
+            <h1 class="module-title">{{ module.title }}</h1>
+            <div class="module-stats">
+                <span class="stat-item">
+                    <i class="bi bi-clock"></i>{{ module.lessons.count }} уроков
+                </span>
+                <span class="stat-item">
+                    <i class="bi bi-bar-chart"></i>{{ module.get_level_display }}
+                </span>
+                <span class="stat-item">
+                    <i class="bi bi-people"></i>{{ module.students.count }} студентов
+                </span>
+            </div>
+            <div class="module-description">
+                <h2><i class="bi bi-journal-text"></i>Описание курса</h2>
+                <p>{{ module.description }}</p>
+            </div>
+            <div class="action-buttons">
+                <button class="save-btn {% if user in module.saved_by.all %}saved{% endif %}" onclick="saveModule({{ module.id }})">
+                    <i class="bi bi-{% if user in module.saved_by.all %}bookmark-check{% else %}bookmark{% endif %}"></i>
+                    {% if user in module.saved_by.all %}
+                        Удалить из сохраненных
+                    {% else %}
+                        Сохранить модуль
+                    {% endif %}
+                </button>
+                <a href="{% url 'study_modules:module_detail' module.id %}" class="start-btn">
+                    <i class="bi bi-play-circle"></i>Пройти модуль
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function saveModule(moduleId) {
+    const saveBtn = document.querySelector('.save-btn');
+    
+    fetch(`/modules/${moduleId}/save/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            // Добавляем анимацию
+            saveBtn.classList.add('save-animation');
+            setTimeout(() => saveBtn.classList.remove('save-animation'), 300);
+
+            // Обновляем текст и иконку кнопки
+            saveBtn.innerHTML = `<i class="bi bi-${data.button_icon}"></i>${data.button_text}`;
+            
+            // Обновляем класс кнопки
+            if (data.action === 'saved') {
+                saveBtn.classList.add('saved');
+            } else {
+                saveBtn.classList.remove('saved');
+            }
+
+            // Обновляем счетчик студентов
+            const studentsCount = document.querySelector('.stat-item i.bi-people').parentElement;
+            const currentCount = parseInt(studentsCount.textContent.split(' ')[0]);
+            const newCount = data.action === 'saved' ? currentCount + 1 : currentCount - 1;
+            studentsCount.innerHTML = `<i class="bi bi-people"></i>${newCount} студентов`;
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка:', error);
+        alert('Произошла ошибка при сохранении модуля. Пожалуйста, попробуйте еще раз.');
+    });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %} 

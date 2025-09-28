@@ -1,0 +1,202 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Выбор слов - {{ module.name }}{% endblock %}
+
+{% block content %}
+<div class="match-select-container">
+    <div class="match-select-header">
+        <button class="back-btn" onclick="window.location.href='/cards/module/{{ module.id }}/'">
+            <i class="bi bi-arrow-left"></i>
+            <span>Назад к модулю</span>
+        </button>
+        <h1>Выберите слова для игры</h1>
+    </div>
+    
+    <form method="post" action="{% url 'cards:module_match' module.id %}" class="match-select-form" id="matchForm">
+        {% csrf_token %}
+        <div class="terms-grid">
+            {% for term in terms %}
+            <div class="term-item">
+                <input type="checkbox" name="terms" value="{{ term.translation }}" id="term_{{ forloop.counter }}" class="term-checkbox">
+                <label for="term_{{ forloop.counter }}" class="term-label">
+                    <span class="term-english">{{ term.term }}</span>
+                    <span class="term-translation">{{ term.translation }}</span>
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        <button type="submit" class="start-game-btn" id="startGameBtn">
+            <i class="bi bi-play-fill"></i>
+            <span>Начать игру</span>
+        </button>
+    </form>
+</div>
+
+<script>
+document.getElementById('matchForm').addEventListener('submit', function(e) {
+    const selectedTerms = document.querySelectorAll('input[name="terms"]:checked');
+    if (selectedTerms.length === 0) {
+        e.preventDefault();
+        alert('Пожалуйста, выберите хотя бы одно слово');
+        return;
+    }
+});
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.match-select-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 30px 10px;
+}
+
+.match-select-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin-bottom: 30px;
+}
+
+.match-select-header h1 {
+    margin: 0;
+    color: #7c4dff;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    color: #7c4dff;
+    font-size: 1rem;
+    cursor: pointer;
+    padding: 8px 16px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.back-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+.match-select-form {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.terms-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+}
+
+.term-item {
+    position: relative;
+}
+
+.term-checkbox {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.term-label {
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    background: #f8f5ff;
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.term-checkbox:checked + .term-label {
+    background: #7c4dff;
+    border-color: #7c4dff;
+}
+
+.term-checkbox:checked + .term-label .term-english {
+    color: #fff;
+}
+
+.term-checkbox:checked + .term-label .term-translation {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.term-english {
+    color: #7c4dff;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+
+.term-translation {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.start-game-btn {
+    background: #7c4dff;
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    align-self: center;
+}
+
+.start-game-btn:hover {
+    background: #6a3de8;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .match-select-container {
+        padding: 20px 10px;
+    }
+    
+    .match-select-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .match-select-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .terms-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .term-label {
+        padding: 10px 14px;
+    }
+    
+    .term-english {
+        font-size: 1rem;
+    }
+    
+    .term-translation {
+        font-size: 0.85rem;
+    }
+}
+</style>
+{% endblock %} 
