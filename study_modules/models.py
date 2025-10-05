@@ -358,3 +358,22 @@ class GrammarTask(models.Model):
     
     def __str__(self):
         return f"{self.skill.title} - {self.title}"
+
+
+class UserTaskProgress(models.Model):
+    """Прогресс пользователя по заданиям"""
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, verbose_name='Пользователь')
+    task = models.ForeignKey(GrammarTask, on_delete=models.CASCADE, verbose_name='Задание')
+    is_completed = models.BooleanField(default=False, verbose_name='Завершено')
+    attempts = models.PositiveIntegerField(default=0, verbose_name='Попыток')
+    correct_attempts = models.PositiveIntegerField(default=0, verbose_name='Правильных попыток')
+    last_attempt = models.DateTimeField(auto_now=True, verbose_name='Последняя попытка')
+    best_score = models.FloatField(default=0.0, verbose_name='Лучший результат')
+    
+    class Meta:
+        verbose_name = 'Прогресс по заданию'
+        verbose_name_plural = 'Прогресс по заданиям'
+        unique_together = ('user', 'task')
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.task.title}"

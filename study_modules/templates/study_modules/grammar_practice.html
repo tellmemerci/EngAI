@@ -168,6 +168,24 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function(){
+    // Словарь для сохранения состояния заданий
+    const taskStates = {};
+    
+    // Инициализация заданий на соединение слов
+    document.querySelectorAll('.task-block').forEach(function(taskBlock) {
+        const taskId = taskBlock.getAttribute('data-task-id');
+        const matchingContainer = taskBlock.querySelector('.columns-container');
+        
+        if (matchingContainer) {
+            initMatchingTask(taskId, matchingContainer);
+        }
+        
+        const sentenceBuilder = taskBlock.querySelector('.sentence-builder');
+        if (sentenceBuilder) {
+            initSentenceBuilder(taskId, sentenceBuilder);
+        }
+    });
+    
     // Обработка кнопок проверки для разных типов заданий
     document.querySelectorAll('.check-button').forEach(function(btn){
         btn.addEventListener('click', function(){
@@ -199,6 +217,9 @@ document.addEventListener('DOMContentLoaded', function(){
                 resultDiv.innerHTML = isCorrect
                     ? '<div class="success-alert">✅ Верно! Правильный перевод</div>'
                     : '<div class="error-alert">❌ Неверно! Попробуйте еще раз</div>';
+            } else if (taskBlock.querySelector('.sentence-builder')) {
+                // Задание на составление предложений
+                checkSentenceBuilder(taskId);
             }
         });
     });
@@ -310,6 +331,178 @@ document.addEventListener('DOMContentLoaded', function(){
             modal.style.display = 'none';
         }
     });
+    
+    // Функция инициализации задания на соединение слов
+    function initMatchingTask(taskId, container) {
+        let selectedItems = { left: null, right: null };
+        const connections = new Map();
+        
+        const leftColumn = container.querySelector(`#left-column-${taskId}`);
+        const rightColumn = container.querySelector(`#right-column-${taskId}`);
+        
+        if (!leftColumn || !rightColumn) return;
+        
+        const items = container.querySelectorAll('.item');
+        
+        items.forEach(item => {
+            item.addEventListener('click', function() {
+                if (this.classList.contains('connected')) return;
+                
+                const column = this.parentElement.id;
+                if (column === `left-column-${taskId}`) {
+                    if (selectedItems.left) selectedItems.left.classList.remove('selected');
+                    selectedItems.left = this;
+                } else {
+                    if (selectedItems.right) selectedItems.right.classList.remove('selected');
+                    selectedItems.right = this;
+                }
+                
+                this.classList.add('selected');
+                
+                if (selectedItems.left && selectedItems.right) {
+                    const isCorrect = selectedItems.left.dataset.id === selectedItems.right.dataset.id;
+                    if (isCorrect) {
+                        createConnection(taskId, selectedItems.left, selectedItems.right, container, connections);
+                    } else {
+                        showError(selectedItems.left, selectedItems.right, container);
+                    }
+                    resetSelection(selectedItems);
+                }
+            });
+        });
+    }
+    
+    function createConnection(taskId, leftItem, rightItem, container, connections) {
+        const connectionId = `${leftItem.dataset.id}-${rightItem.dataset.id}`;
+        if (connections.has(connectionId)) return;
+        
+        const line = document.createElement('div');
+        line.className = 'connection-line success';
+        
+        const updatePosition = () => {
+            const startRect = leftItem.getBoundingClientRect();
+            const endRect = rightItem.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            const startX = startRect.right - containerRect.left;
+            const startY = startRect.top + startRect.height/2 - containerRect.top;
+            const endX = endRect.left - containerRect.left;
+            const endY = endRect.top + endRect.height/2 - containerRect.top;
+            
+            const length = Math.sqrt((endX - startX)**2 + (endY - startY)**2);
+            const angle = Math.atan2(endY - startY, endX - startX);
+            
+            line.style.cssText = `
+                width: ${length}px;
+                left: ${startX}px;
+                top: ${startY}px;
+                transform: rotate(${angle}rad);
+            `;
+        };
+        
+        updatePosition();
+        window.addEventListener('scroll', updatePosition);
+        window.addEventListener('resize', updatePosition);
+        container.appendChild(line);
+        
+        leftItem.classList.add('connected');
+        rightItem.classList.add('connected');
+        connections.set(connectionId, { line, updatePosition });
+        
+        line.addEventListener('dblclick', () => {
+            line.remove();
+            leftItem.classList.remove('connected');
+            rightItem.classList.remove('connected');
+            connections.delete(connectionId);
+        });
+    }
+    
+    function showError(leftItem, rightItem, container) {
+        const line = document.createElement('div');
+        line.className = 'connection-line error';
+        
+        const startRect = leftItem.getBoundingClientRect();
+        const endRect = rightItem.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        
+        const startX = startRect.right - containerRect.left;
+        const startY = startRect.top + startRect.height/2 - containerRect.top;
+        const endX = endRect.left - containerRect.left;
+        const endY = endRect.top + endRect.height/2 - containerRect.top;
+        
+        const length = Math.sqrt((endX - startX)**2 + (endY - startY)**2);
+        const angle = Math.atan2(endY - startY, endX - startX);
+        
+        line.style.cssText = `
+            width: ${length}px;
+            left: ${startX}px;
+            top: ${startY}px;
+            transform: rotate(${angle}rad);
+        `;
+        
+        container.appendChild(line);
+        setTimeout(() => line.remove(), 1000);
+    }
+    
+    function resetSelection(selectedItems) {
+        if (selectedItems.left) selectedItems.left.classList.remove('selected');
+        if (selectedItems.right) selectedItems.right.classList.remove('selected');
+        selectedItems.left = null;
+        selectedItems.right = null;
+    }
+    
+    // Функция инициализации задания на составление предложений
+    function initSentenceBuilder(taskId, sentenceBuilder) {
+        const wordsContainer = sentenceBuilder.querySelector(`#wordsContainer${taskId}`);
+        const sentenceArea = sentenceBuilder.querySelector(`#sentenceArea${taskId}`);
+        
+        if (!wordsContainer || !sentenceArea) return;
+        
+        taskStates[taskId] = { selectedWords: [] };
+        
+        wordsContainer.addEventListener('click', (e) => {
+            const word = e.target;
+            if (word.classList.contains('word') && !word.classList.contains('used')) {
+                word.classList.add('used');
+                taskStates[taskId].selectedWords.push(word.textContent.trim());
+                
+                sentenceArea.innerHTML = taskStates[taskId].selectedWords
+                    .map(w => `<div class="word used">${w}</div>`)
+                    .join('');
+            }
+        });
+    }
+    
+    function checkSentenceBuilder(taskId) {
+        const resultDiv = document.getElementById(`resultTask${taskId}`);
+        const correctAnswer = document.querySelector(`[data-task-id="${taskId}"] .check-button`).getAttribute('data-correct-answer');
+        
+        if (!taskStates[taskId]) {
+            resultDiv.innerHTML = '<div class="warning-alert">⚠️ Начните составлять предложение</div>';
+            return;
+        }
+        
+        const userSentence = taskStates[taskId].selectedWords.join(' ');
+        const isCorrect = userSentence.toLowerCase() === correctAnswer.toLowerCase();
+        
+        const wordsContainer = document.querySelector(`#wordsContainer${taskId}`);
+        const words = wordsContainer.querySelectorAll('.word');
+        
+        if (isCorrect) {
+            resultDiv.innerHTML = '<div class="success-alert">✅ Идеально! Правильный порядок слов!</div>';
+            words.forEach(word => word.classList.add('correct'));
+        } else {
+            resultDiv.innerHTML = '<div class="error-alert">❌ Ошибка! Попробуйте еще раз</div>';
+            
+            // Сбрасываем состояние через 1.5 секунды
+            setTimeout(() => {
+                taskStates[taskId].selectedWords = [];
+                words.forEach(word => word.classList.remove('used', 'correct'));
+                document.querySelector(`#sentenceArea${taskId}`).innerHTML = '';
+                resultDiv.innerHTML = '';
+            }, 1500);
+        }
+    }
 });
 </script>
 {% endblock %}

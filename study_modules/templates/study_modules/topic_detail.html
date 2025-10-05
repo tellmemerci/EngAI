@@ -7,16 +7,9 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 <style>
 body { background: #faf5ff; }
-.sidebar { width: 310px; background: linear-gradient(160deg, #7c4dff 0%, #6200ea 100%); color: #fff; padding: 25px 15px; position: fixed; height: 100vh; box-shadow: 3px 0 15px rgba(0,0,0,0.1); }
-.sidebar ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; align-items: center; }
-.sidebar li { padding: 15px 25px; margin: 10px 0; border-radius: 8px; background: rgba(255,255,255,0.1); width: 90%; max-width: 240px; transition: .3s; }
-.sidebar li:hover { background: rgba(255,255,255,0.2); transform: scale(1.02); }
-.sidebar li.active { background: #651fff; box-shadow: 0 2px 8px rgba(101,31,255,0.3); }
-.sidebar a { color: inherit; text-decoration: none; display: flex; align-items: center; }
-.profile { background: rgba(0,0,0,0.15); padding: 15px; border-radius: 8px; text-align: center; margin-top: 20px; border: 1px solid rgba(255,255,255,0.1); width: 90%; align-self: center; }
 .bi { margin-right: 12px; font-size: 1.3em; }
 
-.module-container { margin-left: 310px; padding: 40px 60px; overflow-y: auto; }
+.module-container { max-width: 1200px; margin: 0 auto; padding: 40px 60px; overflow-y: auto; }
 .module-header { text-align: center; color: #2d106a; margin: 0 0 30px; font-size: 2rem; font-weight: 600; }
 .back-button { display: inline-flex; align-items: center; gap: 8px; background: linear-gradient(45deg, #7c4dff, #651fff); color: #fff !important; padding: 12px 24px; border-radius: 25px; text-decoration: none !important; box-shadow: 0 4px 15px rgba(124,77,255,0.3); transition: .3s; margin-bottom: 30px; }
 .back-button:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(98,0,234,0.4); }
@@ -40,25 +33,11 @@ table.sm-table th { background: rgba(124,77,255,.05); color: #651fff; }
 .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
 .btn-primary { background: linear-gradient(45deg,#7c4dff,#651fff); color: #fff; border: 0; padding: 10px 16px; border-radius: 10px; cursor: pointer; }
 .btn-outline { background: transparent; color: #651fff; border: 1px solid #7c4dff; padding: 10px 16px; border-radius: 10px; cursor: pointer; }
-@media (max-width: 768px){ .module-container{ margin-left:0; padding: 20px; } .sidebar{ position: static; height: auto; width: 100%; } }
+@media (max-width: 768px){ .module-container{ padding: 20px; } }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="sidebar">
-    <ul>
-        <li><a href="/modules/"><i class="bi bi-book"></i>Модули</a></li>
-        <li class="active"><a href="#"><i class="bi bi-journal-text"></i>{{ module.title }}</a></li>
-        <li><a href="/text-check/"><i class="bi bi-pencil-square"></i>Проверка текста</a></li>
-        <li><a href="#"><i class="bi bi-mic"></i>Голосовой чат</a></li>
-        <li><a href="#"><i class="bi bi-trophy"></i>Достижения</a></li>
-    </ul>
-    <div class="profile">
-        <h2>Профиль</h2>
-        <p>{{ request.user.get_username }}</p>
-    </div>
-    </div>
-
 <div class="module-container">
     <a href="{% url 'study_modules:unit_detail' module.id unit.id %}" class="back-button"><i class="bi bi-arrow-left-circle"></i>Вернуться назад</a>
     <h1 class="module-header">{{ topic.title }}</h1>

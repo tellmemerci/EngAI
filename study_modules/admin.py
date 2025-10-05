@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import StudyModule, ModuleSection, ModuleSkill, TheoryCard, ModuleAttachment, Unit, Topic, ModuleCardModule, UnitSection, UnitSkill, UnitTheoryCard, UnitAttachment, GrammarTask
+from .models import StudyModule, ModuleSection, ModuleSkill, TheoryCard, ModuleAttachment, Unit, Topic, ModuleCardModule, UnitSection, UnitSkill, UnitTheoryCard, UnitAttachment, GrammarTask, UserTaskProgress
 
 @admin.register(StudyModule)
 class StudyModuleAdmin(admin.ModelAdmin):
@@ -191,3 +191,12 @@ class GrammarTaskAdmin(admin.ModelAdmin):
     search_fields = ('title', 'description', 'skill__title')
     ordering = ('skill', 'order')
     readonly_fields = ('skill',)
+
+
+@admin.register(UserTaskProgress)
+class UserTaskProgressAdmin(admin.ModelAdmin):
+    list_display = ('user', 'task', 'is_completed', 'attempts', 'correct_attempts', 'best_score', 'last_attempt')
+    list_filter = ('is_completed', 'task__task_type', 'task__skill__unit__module')
+    search_fields = ('user__username', 'task__title')
+    ordering = ('-last_attempt',)
+    readonly_fields = ('last_attempt',)

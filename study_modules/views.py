@@ -789,10 +789,13 @@ def add_grammar_task(request, module_id, unit_id, skill_id):
             
             # Обрабатываем простые поля и создаем JSON
             task_type = request.POST.get('task_type')
+            print(f"Task type: {task_type}")
+            print(f"POST data: {request.POST}")
             
             if task_type == 'matching':
                 left_words = request.POST.get('left_words', '').strip().split('\n')
                 right_words = request.POST.get('right_words', '').strip().split('\n')
+                print(f"Matching - Left: {left_words}, Right: {right_words}")
                 
                 left_items = [{'id': str(i+1), 'text': word.strip()} for i, word in enumerate(left_words) if word.strip()]
                 right_items = [{'id': str(i+1), 'text': word.strip()} for i, word in enumerate(right_words) if word.strip()]
@@ -806,6 +809,7 @@ def add_grammar_task(request, module_id, unit_id, skill_id):
             elif task_type == 'sentence_rewrite':
                 example = request.POST.get('sentence_example', '').strip()
                 answer = request.POST.get('sentence_answer', '').strip()
+                print(f"Sentence rewrite - Example: {example}, Answer: {answer}")
                 
                 task.content = {'example': example}
                 task.correct_answer = {'answer': answer}
@@ -813,6 +817,7 @@ def add_grammar_task(request, module_id, unit_id, skill_id):
             elif task_type == 'translation_choice':
                 sentence = request.POST.get('english_sentence', '').strip()
                 options_text = request.POST.get('translation_options', '').strip()
+                print(f"Translation - Sentence: {sentence}, Options text: {options_text}")
                 
                 options = []
                 for i, option_text in enumerate(options_text.split('\n')):
@@ -833,6 +838,7 @@ def add_grammar_task(request, module_id, unit_id, skill_id):
             elif task_type == 'sentence_builder':
                 words_text = request.POST.get('sentence_words', '').strip()
                 correct_sentence = request.POST.get('correct_sentence', '').strip()
+                print(f"Sentence builder - Words: {words_text}, Correct: {correct_sentence}")
                 
                 words = [word.strip() for word in words_text.split(',') if word.strip()]
                 
@@ -841,6 +847,9 @@ def add_grammar_task(request, module_id, unit_id, skill_id):
             
             # Задание всегда активно
             task.is_active = True
+            
+            print(f"Final task content: {task.content}")
+            print(f"Final task correct_answer: {task.correct_answer}")
             
             task.save()
             messages.success(request, 'Задание успешно добавлено!')

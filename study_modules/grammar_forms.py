@@ -5,7 +5,7 @@ from .models import GrammarTask
 class GrammarTaskForm(forms.ModelForm):
     class Meta:
         model = GrammarTask
-        fields = ['task_type', 'title', 'description', 'instruction', 'content', 'correct_answer', 'order', 'is_active']
+        fields = ['task_type', 'title', 'description', 'instruction', 'order']
         widgets = {
             'task_type': forms.Select(attrs={
                 'class': 'form-control'
