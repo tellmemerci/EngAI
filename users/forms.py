@@ -290,3 +290,91 @@ class PasswordChangeForm(forms.Form):
         if commit:
             user.save()
         return user
+
+
+class ProfileCompletionForm(forms.ModelForm):
+    """
+    Форма для завершения профиля после OAuth регистрации
+    """
+    first_name = forms.CharField(
+        max_length=30,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Введите ваше имя',
+            'class': 'form-control'
+        }),
+        label='Имя'
+    )
+    last_name = forms.CharField(
+        max_length=30,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Введите вашу фамилию',
+            'class': 'form-control'
+        }),
+        label='Фамилия'
+    )
+    city = forms.CharField(
+        max_length=100,
+        required=True,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Город проживания',
+            'class': 'form-control'
+        }),
+        label='Город'
+    )
+    current_language_level = forms.ChoiceField(
+        choices=[
+            ('A1', 'А1 — Начальный'),
+            ('A2', 'А2 — Элементарный'),
+            ('B1', 'B1 — Средний'),
+            ('B2', 'B2 — Выше среднего'),
+            ('C1', 'C1 — Продвинутый'),
+            ('C2', 'C2 — Свободный'),
+        ],
+        required=True,
+        widget=forms.Select(attrs={
+            'class': 'form-control',
+            'onchange': 'updateDesiredLevels(this.value)'
+        }),
+        label='Текущий уровень английского'
+    )
+    desired_language_level = forms.ChoiceField(
+        choices=[
+            ('A2', 'А2 — Элементарный'),
+            ('B1', 'B1 — Средний'),
+            ('B2', 'B2 — Выше среднего'),
+            ('C1', 'C1 — Продвинутый'),
+            ('C2', 'C2 — Свободный'),
+        ],
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Желаемый уровень'
+    )
+    phone_number = forms.CharField(
+        max_length=20,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': 'Номер телефона (необязательно)',
+            'class': 'form-control'
+        }),
+        label='Номер телефона'
+    )
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'city', 'current_language_level', 'desired_language_level', 'phone_number']
+
+    def clean_desired_language_level(self):
+        current_level = self.cleaned_data.get('current_language_level')
+        desired_level = self.cleaned_data.get('desired_language_level')
+        
+        if current_level and desired_level:
+            levels = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2']
+            current_index = levels.index(current_level)
+            desired_index = levels.index(desired_level)
+            
+            if desired_index <= current_index:
+                raise forms.ValidationError('Желаемый уровень должен быть выше текущего уровня.')
+        
+        return desired_level

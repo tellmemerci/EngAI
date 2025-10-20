@@ -1,6 +1,7 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from django.contrib.auth.hashers import make_password, check_password
 import os
 
 def module_image_path(instance, filename):
@@ -48,6 +49,13 @@ class StudyModule(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
     is_published = models.BooleanField(default=False, verbose_name='Опубликован')
+    access_password = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name='Пароль доступа',
+        help_text='Пароль для доступа к закрытому модулю'
+    )
 
     saved_by = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
@@ -71,6 +79,23 @@ class StudyModule(models.Model):
         if self.module_type == 'locked':
             return False
         return self.module_type == 'free' or self.is_published
+    
+    def set_password(self, raw_password):
+        """Устанавливает пароль для модуля"""
+        if raw_password:
+            self.access_password = make_password(raw_password)
+        else:
+            self.access_password = None
+    
+    def check_password(self, raw_password):
+        """Проверяет пароль модуля"""
+        if not self.access_password:
+            return False
+        return check_password(raw_password, self.access_password)
+    
+    def has_password(self):
+        """Проверяет, установлен ли пароль для модуля"""
+        return bool(self.access_password)
 
     def save(self, *args, **kwargs):
         """Переопределяем сохранение для удаления старого изображения"""
@@ -377,3 +402,96 @@ class UserTaskProgress(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.task.title}"
+
+
+class ModuleAccessRequest(models.Model):
+    """Заявки пользователей на доступ к закрытым модулям"""
+    REQUEST_STATUS = (
+        ('pending', 'На рассмотрении'),
+        ('approved', 'Одобрена'),
+        ('rejected', 'Отклонена'),
+    )
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='module_access_requests',
+        verbose_name='Пользователь'
+    )
+    module = models.ForeignKey(
+        StudyModule,
+        on_delete=models.CASCADE,
+        related_name='access_requests',
+        verbose_name='Модуль'
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=REQUEST_STATUS,
+        default='pending',
+        verbose_name='Статус заявки'
+    )
+    message = models.TextField(
+        blank=True,
+        verbose_name='Сообщение от пользователя',
+        help_text='Описание почему нужен доступ'
+    )
+    requested_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата подачи заявки')
+    reviewed_at = models.DateTimeField(null=True, blank=True, verbose_name='Дата рассмотрения')
+    reviewer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_access_requests',
+        verbose_name='Рассмотревший'
+    )
+    reviewer_message = models.TextField(
+        blank=True,
+        verbose_name='Комментарий рассмотревшего'
+    )
+    
+    class Meta:
+        verbose_name = 'Заявка на доступ к модулю'
+        verbose_name_plural = 'Заявки на доступ к модулям'
+        ordering = ['-requested_at']
+        unique_together = ('user', 'module')
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.module.title} ({self.get_status_display()})"
+
+
+class UserModuleAccess(models.Model):
+    """Отслеживание доступов пользователей к закрытым модулям"""
+    ACCESS_TYPES = (
+        ('request', 'Через заявку'),
+        ('password', 'Через пароль'),
+        ('author', 'Автор модуля'),
+    )
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='module_accesses',
+        verbose_name='Пользователь'
+    )
+    module = models.ForeignKey(
+        StudyModule,
+        on_delete=models.CASCADE,
+        related_name='user_accesses',
+        verbose_name='Модуль'
+    )
+    access_type = models.CharField(
+        max_length=20,
+        choices=ACCESS_TYPES,
+        verbose_name='Тип доступа'
+    )
+    granted_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата получения доступа')
+    
+    class Meta:
+        verbose_name = 'Доступ пользователя к модулю'
+        verbose_name_plural = 'Доступы пользователей к модулям'
+        ordering = ['-granted_at']
+        unique_together = ('user', 'module')
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.module.title} ({self.get_access_type_display()})"

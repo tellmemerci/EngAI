@@ -45,14 +45,16 @@
         border-radius: 12px;
         padding: 6px;
         box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.05);
+        flex-wrap: wrap;
     }
 
     .tab-btn {
         flex: 1;
-        max-width: 200px;
+        max-width: 180px;
+        min-width: 140px;
         background: transparent;
         border: none;
-        padding: 12px 20px;
+        padding: 10px 15px;
         border-radius: 8px;
         font-weight: 600;
         cursor: pointer;
@@ -60,7 +62,8 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 6px;
+        font-size: 0.9rem;
     }
 
     .tab-btn.active {
@@ -243,21 +246,24 @@
     .user-actions {
         display: flex;
         gap: 8px;
+        flex-wrap: wrap;
     }
 
     .btn-action {
         flex: 1;
-        padding: 8px 16px;
+        min-width: 60px;
+        padding: 8px 12px;
         border: none;
         border-radius: 8px;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 4px;
+        white-space: nowrap;
     }
 
     .btn-add {
@@ -513,6 +519,47 @@
         to { transform: rotate(360deg); }
     }
 
+    /* Стили для групп */
+    .groups-section {
+        margin-bottom: 40px;
+    }
+    
+    .groups-section h3 {
+        margin-bottom: 20px;
+        color: #374151;
+        font-size: 1.3rem;
+        font-weight: 600;
+        padding-bottom: 10px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    
+    .group-create-form {
+        background: #f8fafc;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .group-create-form .search-input {
+        margin-bottom: 10px;
+    }
+    
+    .group-card-special {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .group-card-special .user-details h3,
+    .group-card-special .user-details p {
+        color: white;
+    }
+    
+    .group-card-special .user-level {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+
     /* Адаптивность */
     @media (max-width: 768px) {
         .friends-container {
@@ -576,6 +623,7 @@
 {% endblock %}
 
 {% block content %}
+{% csrf_token %}
 <div class="friends-container">
     <!-- Заголовок -->
     <div class="friends-header">
@@ -600,6 +648,10 @@
             <i class="bi bi-person-plus"></i>
             Заявки ({{ pending_requests.count }})
         </button>
+        <button class="tab-btn {% if active_tab == 'groups' %}active{% endif %}" data-tab="groups">
+            <i class="bi bi-people"></i>
+            Группы ({{ user_groups.count }})
+        </button>
     </div>
 
     <!-- Мои друзья -->
@@ -607,7 +659,7 @@
         {% if friends %}
             <div class="users-grid">
                 {% for friend in friends %}
-                    <div class="user-card">
+                    <div class="user-card" data-friend-id="{{ friend.id }}" data-friend-name="{{ friend.get_full_name|default:friend.email }}" data-friend-email="{{ friend.email }}">
                         <div class="user-info">
                             <div class="user-avatar">
                                 {{ friend.get_full_name.0|upper|default:friend.email.0|upper }}
@@ -758,6 +810,141 @@
             </div>
         {% endif %}
     </div>
+
+    <!-- Группы -->
+    <div class="tab-content {% if active_tab == 'groups' %}active{% endif %}" id="groups-tab">
+        <div class="groups-section">
+            <div class="group-create-form">
+                <form class="search-form" id="create-group-form">
+                    <input type="text" class="search-input" id="group-name" placeholder="Название новой группы" maxlength="100">
+                    <button type="submit" class="search-btn">
+                        <i class="bi bi-plus-circle"></i>
+                        Создать группу
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        
+        <div class="groups-section">
+            <h3>Мои группы</h3>
+        {% if user_groups %}
+            <div class="users-grid">
+                {% for group in user_groups %}
+                    <div class="user-card">
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                {{ group.name.0|upper }}
+                            </div>
+                            <div class="user-details">
+                                <h3>{{ group.name }}</h3>
+                                <p>{{ group.description|default:"Без описания" }}</p>
+                                <span class="user-level">Участников: {{ group.get_members_count }}</span>
+                            </div>
+                        </div>
+                        <div class="user-actions">
+                            <button class="btn-action btn-add" onclick="window.location.href='{% url 'messages' %}'">
+                                <i class="bi bi-chat"></i>
+                                Чат
+                            </button>
+                            {% if group.creator == request.user %}
+                                <button class="btn-action btn-add" onclick="openInviteModal({{ group.id }})">
+                                    <i class="bi bi-person-plus"></i>
+                                    Пригласить
+                                </button>
+                                <button class="btn-action btn-decline" onclick="openEditGroupModal({{ group.id }}, '{{ group.name|escapejs }}')">
+                                    <i class="bi bi-pencil"></i>
+                                    Ред.
+                                </button>
+                                <button class="btn-action btn-remove" onclick="openDeleteGroupModal({{ group.id }}, '{{ group.name|escapejs }}')">
+                                    <i class="bi bi-trash"></i>
+                                    Удал.
+                                </button>
+                            {% else %}
+                                <button class="btn-action btn-add" onclick="openInviteModal({{ group.id }})">
+                                    <i class="bi bi-person-plus"></i>
+                                    Пригласить
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <h3>У вас нет групп</h3>
+                <p>Создайте свою группу и пригласите друзей</p>
+            </div>
+        {% endif %}
+        </div>
+
+        <div class="groups-section">
+            <h3>Группы друзей</h3>
+        {% if friends_groups %}
+            <div class="users-grid">
+                {% for group in friends_groups %}
+                    <div class="user-card">
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                {{ group.name.0|upper }}
+                            </div>
+                            <div class="user-details">
+                                <h3>{{ group.name }}</h3>
+                                <p>Создатель: {{ group.creator.get_full_name|default:group.creator.email }}</p>
+                                <span class="user-level">Участников: {{ group.get_members_count }}</span>
+                            </div>
+                        </div>
+                        <div class="user-actions">
+                            <button class="btn-action btn-add" onclick="joinGroup({{ group.id }})">
+                                <i class="bi bi-person-plus"></i>
+                                Подать заявку
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="bi bi-people"></i>
+                <h3>Пока нет доступных групп</h3>
+                <p>Попросите друзей создать группу</p>
+            </div>
+        {% endif %}
+        </div>
+
+        {% if group_requests %}
+        <div class="groups-section">
+            <h3>Заявки в мои группы</h3>
+            <div class="users-grid">
+                {% for membership in group_requests %}
+                    <div class="user-card" id="membership-{{ membership.id }}">
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                {{ membership.user.get_full_name.0|upper|default:membership.user.email.0|upper }}
+                            </div>
+                            <div class="user-details">
+                                <h3>{{ membership.user.get_full_name|default:membership.user.email }}</h3>
+                                <p>Группа: {{ membership.group.name }}</p>
+                                <span class="user-level">Статус: {{ membership.get_status_display }}</span>
+                            </div>
+                        </div>
+                        <div class="user-actions">
+                            <button class="btn-action btn-accept" onclick="respondGroupRequest({{ membership.id }}, 'accept')">
+                                <i class="bi bi-check"></i>
+                                Принять
+                            </button>
+                            <button class="btn-action btn-decline" onclick="respondGroupRequest({{ membership.id }}, 'decline')">
+                                <i class="bi bi-x"></i>
+                                Отклонить
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Модальное окно подтверждения удаления друга -->
@@ -794,6 +981,83 @@
     </div>
 </div>
 
+<!-- Модальное окно редактирования группы -->
+<div class="modal-overlay" id="editGroupModal">
+    <div class="confirmation-modal">
+        <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <i class="bi bi-pencil"></i>
+            <h3>Редактировать группу</h3>
+        </div>
+        <div class="modal-body">
+            <input type="text" id="editGroupName" class="search-input" placeholder="Новое название группы" maxlength="100">
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-cancel" onclick="closeEditGroupModal()">
+                    <i class="bi bi-x-circle"></i>
+                    Отменить
+                </button>
+                <button class="modal-btn modal-btn-confirm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);" id="confirmEditBtn" onclick="confirmEditGroup()">
+                    <i class="bi bi-check"></i>
+                    Сохранить
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно удаления группы -->
+<div class="modal-overlay" id="deleteGroupModal">
+    <div class="confirmation-modal">
+        <div class="modal-header">
+            <i class="bi bi-exclamation-triangle"></i>
+            <h3>Удалить группу?</h3>
+        </div>
+        <div class="modal-body">
+            <div class="friend-preview">
+                <div class="user-avatar" id="modalGroupAvatar">G</div>
+                <div class="friend-info">
+                    <h4 id="modalGroupName">Название группы</h4>
+                </div>
+            </div>
+            <p>
+                Вы действительно хотите удалить эту группу?
+                <br>
+                <strong>Это действие нельзя будет отменить.</strong>
+            </p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-cancel" onclick="closeDeleteGroupModal()">
+                    <i class="bi bi-x-circle"></i>
+                    Отменить
+                </button>
+                <button class="modal-btn modal-btn-confirm" id="confirmDeleteBtn" onclick="confirmDeleteGroup()">
+                    <i class="bi bi-trash"></i>
+                    Удалить группу
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно приглашения друзей -->
+<div class="modal-overlay" id="inviteModal">
+    <div class="confirmation-modal" style="max-width: 600px;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+            <i class="bi bi-person-plus"></i>
+            <h3>Пригласить друзей в группу</h3>
+        </div>
+        <div class="modal-body">
+            <div id="friendsList" class="users-grid" style="max-height: 300px; overflow-y: auto;">
+                <!-- Список друзей будет загружен динамически -->
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn-cancel" onclick="closeInviteModal()">
+                    <i class="bi bi-x-circle"></i>
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Уведомления -->
 <div id="notification" class="notification"></div>
 {% endblock %}
@@ -823,6 +1087,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('search-input');
     
+    // Создание группы
+    const createGroupForm = document.getElementById('create-group-form');
+    if (createGroupForm) {
+        createGroupForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            createGroup();
+        });
+    }
+    
     searchForm.addEventListener('submit', function(e) {
         e.preventDefault();
         searchFriends();
@@ -849,10 +1122,39 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
+    // Обработчики для модальных окон групп
+    const editModal = document.getElementById('editGroupModal');
+    const deleteModal = document.getElementById('deleteGroupModal');
+    const inviteModal = document.getElementById('inviteModal');
+    
+    // Закрытие по клику на оверлей
+    [editModal, deleteModal, inviteModal].forEach(modal => {
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    if (modal === editModal) closeEditGroupModal();
+                    if (modal === deleteModal) closeDeleteGroupModal();
+                    if (modal === inviteModal) closeInviteModal();
+                }
+            });
+        }
+    });
+    
     // Закрытие по ESC
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modal.classList.contains('show')) {
-            closeConfirmationModal();
+        if (e.key === 'Escape') {
+            if (modal.classList.contains('show')) {
+                closeConfirmationModal();
+            }
+            if (editModal.classList.contains('show')) {
+                closeEditGroupModal();
+            }
+            if (deleteModal.classList.contains('show')) {
+                closeDeleteGroupModal();
+            }
+            if (inviteModal.classList.contains('show')) {
+                closeInviteModal();
+            }
         }
     });
 });
@@ -960,16 +1262,31 @@ function displaySearchResults(results) {
 
 // Отправка заявки в друзья
 function sendFriendRequest(userId) {
+    console.log('Отправляем заявку в друзья пользователю с ID:', userId);
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        console.error('CSRF токен не найден');
+        showNotification('Ошибка: CSRF токен не найден', 'error');
+        return;
+    }
+    
+    console.log('CSRF токен найден:', csrfToken.value);
+    
     fetch('/friends/send-request/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            'X-CSRFToken': csrfToken.value
         },
         body: `user_id=${userId}`
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Ответ сервера:', response.status, response.statusText);
+        return response.json();
+    })
     .then(data => {
+        console.log('Данные от сервера:', data);
         showNotification(data.message, data.success ? 'success' : 'error');
         if (data.success) {
             // Обновляем поиск
@@ -977,23 +1294,36 @@ function sendFriendRequest(userId) {
         }
     })
     .catch(error => {
-        console.error('Ошибка:', error);
-        showNotification('Произошла ошибка', 'error');
+        console.error('Ошибка при отправке заявки:', error);
+        showNotification('Произошла ошибка при отправке заявки', 'error');
     });
 }
 
 // Ответ на заявку в друзья
 function respondFriendRequest(requestId, action) {
+    console.log('Отвечаем на заявку в друзья:', requestId, action);
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        console.error('CSRF токен не найден');
+        showNotification('Ошибка: CSRF токен не найден', 'error');
+        return;
+    }
+    
     fetch('/friends/respond/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            'X-CSRFToken': csrfToken.value
         },
         body: `request_id=${requestId}&action=${action}`
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Ответ сервера на ответ заявки:', response.status, response.statusText);
+        return response.json();
+    })
     .then(data => {
+        console.log('Данные от сервера:', data);
         showNotification(data.message, data.success ? 'success' : 'error');
         if (data.success) {
             // Удаляем карточку заявки
@@ -1006,8 +1336,8 @@ function respondFriendRequest(requestId, action) {
         }
     })
     .catch(error => {
-        console.error('Ошибка:', error);
-        showNotification('Произошла ошибка', 'error');
+        console.error('Ошибка при ответе на заявку:', error);
+        showNotification('Произошла ошибка при ответе на заявку', 'error');
     });
 }
 
@@ -1048,10 +1378,24 @@ function closeConfirmationModal() {
 
 // Подтверждение удаления друга
 function confirmRemoveFriend() {
-    if (!friendToRemove) return;
+    if (!friendToRemove) {
+        console.error('Не указан ID друга для удаления');
+        return;
+    }
+    
+    console.log('Удаляем друга с ID:', friendToRemove);
     
     const confirmBtn = document.getElementById('confirmRemoveBtn');
     const originalContent = confirmBtn.innerHTML;
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        console.error('CSRF токен не найден');
+        showNotification('Ошибка: CSRF токен не найден', 'error');
+        return;
+    }
+    
+    console.log('CSRF токен для удаления найден:', csrfToken.value);
     
     // Показываем индикатор загрузки
     confirmBtn.classList.add('loading');
@@ -1061,12 +1405,16 @@ function confirmRemoveFriend() {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            'X-CSRFToken': csrfToken.value
         },
         body: `friend_id=${friendToRemove}`
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Ответ сервера на удаление:', response.status, response.statusText);
+        return response.json();
+    })
     .then(data => {
+        console.log('Данные от сервера при удалении:', data);
         confirmBtn.classList.remove('loading');
         confirmBtn.innerHTML = originalContent;
         
@@ -1085,8 +1433,8 @@ function confirmRemoveFriend() {
     .catch(error => {
         confirmBtn.classList.remove('loading');
         confirmBtn.innerHTML = originalContent;
-        console.error('Ошибка:', error);
-        showNotification('Произошла ошибка', 'error');
+        console.error('Ошибка при удалении друга:', error);
+        showNotification('Произошла ошибка при удалении друга', 'error');
     });
 }
 
@@ -1115,7 +1463,385 @@ function updateRequestsCount() {
 
 // CSRF токен для AJAX запросов
 function getCSRFToken() {
-    return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    const token = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    console.log('CSRF токен:', token ? 'найден' : 'не найден');
+    return token;
+}
+
+// ==============================================
+// ФУНКЦИИ ДЛЯ РАБОТЫ С УЧЕБНЫМИ ГРУППАМИ
+// ==============================================
+
+// Создание новой группы
+function createGroup() {
+    console.log('Начинаем создание группы');
+    
+    const name = document.getElementById('group-name').value.trim();
+    
+    if (!name) {
+        showNotification('Название группы обязательно', 'error');
+        return;
+    }
+    
+    if (name.length > 100) {
+        showNotification('Название группы слишком длинное', 'error');
+        return;
+    }
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        console.error('CSRF токен не найден');
+        showNotification('Ошибка: CSRF токен не найден', 'error');
+        return;
+    }
+    
+    fetch('/groups/create/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken.value
+        },
+        body: `name=${encodeURIComponent(name)}`
+    })
+    .then(response => {
+        console.log('Ответ сервера на создание группы:', response.status, response.statusText);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Данные от сервера:', data);
+        showNotification(data.message, data.success ? 'success' : 'error');
+        
+        if (data.success) {
+            // Очищаем форму
+            document.getElementById('group-name').value = '';
+            
+            // Перезагружаем страницу через небольшую задержку
+            setTimeout(() => {
+                location.reload();
+            }, 1500);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка при создании группы:', error);
+        showNotification('Произошла ошибка при создании группы', 'error');
+    });
+}
+
+// Подача заявки на вступление в группу
+function joinGroup(groupId) {
+    console.log('Подаем заявку в группу:', groupId);
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        console.error('CSRF токен не найден');
+        showNotification('Ошибка: CSRF токен не найден', 'error');
+        return;
+    }
+    
+    fetch('/groups/join/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken.value
+        },
+        body: `group_id=${groupId}`
+    })
+    .then(response => {
+        console.log('Ответ сервера на заявку в группу:', response.status, response.statusText);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Данные от сервера:', data);
+        showNotification(data.message, data.success ? 'success' : 'error');
+        
+        if (data.success) {
+            // Обновляем страницу
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка при отправке заявки:', error);
+        showNotification('Произошла ошибка при отправке заявки', 'error');
+    });
+}
+
+// Ответ на заявку в группу
+function respondGroupRequest(membershipId, action) {
+    console.log('Отвечаем на заявку в группу:', membershipId, action);
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (!csrfToken) {
+        console.error('CSRF токен не найден');
+        showNotification('Ошибка: CSRF токен не найден', 'error');
+        return;
+    }
+    
+    fetch('/groups/respond/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken.value
+        },
+        body: `membership_id=${membershipId}&action=${action}`
+    })
+    .then(response => {
+        console.log('Ответ сервера на ответ заявки в группу:', response.status, response.statusText);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Данные от сервера:', data);
+        showNotification(data.message, data.success ? 'success' : 'error');
+        
+        if (data.success) {
+            // Удаляем карточку заявки
+            const membershipCard = document.getElementById(`membership-${membershipId}`);
+            if (membershipCard) {
+                membershipCard.remove();
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка при ответе на заявку в группу:', error);
+        showNotification('Произошла ошибка при ответе на заявку', 'error');
+    });
+}
+
+// ==============================================
+// ФУНКЦИИ ДЛЯ МОДАЛЬНЫХ ОКОН ГРУПП
+// ==============================================
+
+// Переменные для сохранения ID
+let currentGroupId = null;
+
+// Открытие модального окна редактирования
+function openEditGroupModal(groupId, groupName) {
+    currentGroupId = groupId;
+    document.getElementById('editGroupName').value = groupName;
+    
+    const modal = document.getElementById('editGroupModal');
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+// Закрытие модального окна редактирования
+function closeEditGroupModal() {
+    const modal = document.getElementById('editGroupModal');
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+    currentGroupId = null;
+}
+
+// Подтверждение редактирования группы
+function confirmEditGroup() {
+    if (!currentGroupId) return;
+    
+    const newName = document.getElementById('editGroupName').value.trim();
+    
+    if (!newName) {
+        showNotification('Название группы обязательно', 'error');
+        return;
+    }
+    
+    const confirmBtn = document.getElementById('confirmEditBtn');
+    const originalContent = confirmBtn.innerHTML;
+    
+    confirmBtn.classList.add('loading');
+    confirmBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Сохраняю...';
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    
+    fetch('/groups/edit/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken.value
+        },
+        body: `group_id=${currentGroupId}&name=${encodeURIComponent(newName)}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        confirmBtn.classList.remove('loading');
+        confirmBtn.innerHTML = originalContent;
+        
+        showNotification(data.message, data.success ? 'success' : 'error');
+        
+        if (data.success) {
+            closeEditGroupModal();
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+    })
+    .catch(error => {
+        confirmBtn.classList.remove('loading');
+        confirmBtn.innerHTML = originalContent;
+        console.error('Ошибка при редактировании группы:', error);
+        showNotification('Произошла ошибка', 'error');
+    });
+}
+
+// Открытие модального окна удаления
+function openDeleteGroupModal(groupId, groupName) {
+    currentGroupId = groupId;
+    document.getElementById('modalGroupName').textContent = groupName;
+    document.getElementById('modalGroupAvatar').textContent = groupName.charAt(0).toUpperCase();
+    
+    const modal = document.getElementById('deleteGroupModal');
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+// Закрытие модального окна удаления
+function closeDeleteGroupModal() {
+    const modal = document.getElementById('deleteGroupModal');
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+    currentGroupId = null;
+}
+
+// Подтверждение удаления группы
+function confirmDeleteGroup() {
+    if (!currentGroupId) return;
+    
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    const originalContent = confirmBtn.innerHTML;
+    
+    confirmBtn.classList.add('loading');
+    confirmBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Удаляю...';
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    
+    fetch('/groups/delete/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken.value
+        },
+        body: `group_id=${currentGroupId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        confirmBtn.classList.remove('loading');
+        confirmBtn.innerHTML = originalContent;
+        
+        showNotification(data.message, data.success ? 'success' : 'error');
+        
+        if (data.success) {
+            closeDeleteGroupModal();
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        }
+    })
+    .catch(error => {
+        confirmBtn.classList.remove('loading');
+        confirmBtn.innerHTML = originalContent;
+        console.error('Ошибка при удалении группы:', error);
+        showNotification('Произошла ошибка', 'error');
+    });
+}
+
+// Открытие модального окна приглашения
+function openInviteModal(groupId) {
+    currentGroupId = groupId;
+    
+    // Загружаем список друзей
+    loadFriendsList();
+    
+    const modal = document.getElementById('inviteModal');
+    modal.classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+// Закрытие модального окна приглашения
+function closeInviteModal() {
+    const modal = document.getElementById('inviteModal');
+    modal.classList.remove('show');
+    document.body.style.overflow = '';
+    currentGroupId = null;
+}
+
+// Загрузка списка друзей
+function loadFriendsList() {
+    const friendsList = document.getElementById('friendsList');
+    friendsList.innerHTML = '<p>Загружаем список друзей...</p>';
+    
+    // Используем уже имеющиеся данные о друзьях с страницы
+    const friends = [];
+    document.querySelectorAll('#friends-tab .user-card[data-friend-id]').forEach(card => {
+        const friendId = card.dataset.friendId;
+        const friendName = card.dataset.friendName;
+        const friendEmail = card.dataset.friendEmail;
+        const avatarEl = card.querySelector('.user-avatar');
+        
+        if (friendId && friendName && avatarEl) {
+            friends.push({
+                id: friendId,
+                name: friendName,
+                email: friendEmail,
+                avatar: avatarEl.textContent
+            });
+        }
+    });
+    
+    if (friends.length === 0) {
+        friendsList.innerHTML = '<p>У вас нет друзей для приглашения</p>';
+        return;
+    }
+    
+    let friendsHtml = '';
+    friends.forEach(friend => {
+        friendsHtml += `
+            <div class="user-card" style="margin-bottom: 10px;">
+                <div class="user-info">
+                    <div class="user-avatar">${friend.avatar}</div>
+                    <div class="user-details">
+                        <h3 style="margin-bottom: 5px;">${friend.name}</h3>
+                        <p style="margin: 0;">${friend.email}</p>
+                    </div>
+                </div>
+                <div class="user-actions">
+                    <button class="btn-action btn-add" onclick="inviteFriendToGroup(${friend.id}, '${friend.name.replace(/'/g, "\\'").replace(/"/g, '\\"')}')">
+                        <i class="bi bi-person-plus"></i>
+                        Пригласить
+                    </button>
+                </div>
+            </div>
+        `;
+    });
+    
+    friendsList.innerHTML = friendsHtml;
+}
+
+// Приглашение друга в группу
+function inviteFriendToGroup(friendId, friendName) {
+    if (!currentGroupId) return;
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+    
+    fetch('/groups/invite/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken.value
+        },
+        body: `group_id=${currentGroupId}&friend_id=${friendId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        showNotification(data.message, data.success ? 'success' : 'error');
+        
+        if (data.success) {
+            // Обновляем список (убираем приглашенного друга)
+            loadFriendsList();
+        }
+    })
+    .catch(error => {
+        console.error('Ошибка при приглашении:', error);
+        showNotification('Произошла ошибка', 'error');
+    });
 }
 </script>
 {% endblock %}

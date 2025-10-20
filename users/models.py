@@ -47,6 +47,7 @@ class User(AbstractUser):
     )
     phone_number = models.CharField('Номер телефона', max_length=20, blank=True)
     city = models.CharField('Город проживания', max_length=100, blank=True)
+    profile_completed = models.BooleanField('Профиль завершен', default=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -55,6 +56,39 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.email
+    
+    def is_profile_complete(self):
+        """Проверяет, заполнен ли профиль пользователя"""
+        # Сначала проверяем флаг, затем поля
+        if self.profile_completed:
+            return True
+            
+        # Если флаг не установлен, проверяем поля
+        fields_complete = (
+            self.first_name and 
+            self.last_name and 
+            self.city and 
+            self.current_language_level and 
+            self.desired_language_level
+        )
+        
+        # Если поля заполнены, автоматически обновляем флаг
+        if fields_complete and not self.profile_completed:
+            self.profile_completed = True
+            self.save()
+            
+        return fields_complete
+    
+    def get_display_name(self):
+        """Получает отображаемое имя пользователя"""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        elif self.first_name:
+            return self.first_name
+        elif self.last_name:
+            return self.last_name
+        else:
+            return self.email.split('@')[0]  # Используем часть email до @
 
 
 class UserLog(models.Model):
@@ -192,6 +226,122 @@ class Chat(models.Model):
     
     def __str__(self):
         return f"Chat: {self.user1.get_full_name() or self.user1.email} - {self.user2.get_full_name() or self.user2.email}"
+
+
+class StudyGroup(models.Model):
+    """Модель для учебных групп"""
+    name = models.CharField(max_length=100, verbose_name="Название группы")
+    description = models.TextField(blank=True, null=True, verbose_name="Описание")
+    creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_groups', verbose_name="Создатель")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True, verbose_name="Активна")
+    max_members = models.IntegerField(default=20, verbose_name="Максимум участников")
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = 'Учебная группа'
+        verbose_name_plural = 'Учебные группы'
+    
+    def __str__(self):
+        return f"{self.name} (создал: {self.creator.get_full_name() or self.creator.email})"
+    
+    def get_members_count(self):
+        """Получить количество участников в группе"""
+        return self.memberships.filter(status='accepted').count()
+    
+    def get_pending_requests_count(self):
+        """Получить количество ожидающих заявок"""
+        return self.memberships.filter(status='pending').count()
+    
+    def can_join(self):
+        """Проверить, можно ли присоединиться к группе"""
+        return self.is_active and self.get_members_count() < self.max_members
+    
+    def is_member(self, user):
+        """Проверить, является ли пользователь участником группы"""
+        return self.memberships.filter(user=user, status='accepted').exists()
+    
+    def is_creator(self, user):
+        """Проверить, является ли пользователь создателем группы"""
+        return self.creator == user
+
+
+class StudyGroupMembership(models.Model):
+    """Модель для членства в учебных группах"""
+    STATUS_CHOICES = [
+        ('pending', 'Ожидает подтверждения'),
+        ('accepted', 'Принято'),
+        ('declined', 'Отклонено'),
+    ]
+    
+    ROLE_CHOICES = [
+        ('member', 'Участник'),
+        ('admin', 'Администратор'),
+        ('creator', 'Создатель'),
+    ]
+    
+    group = models.ForeignKey(StudyGroup, on_delete=models.CASCADE, related_name='memberships')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='group_memberships')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='member')
+    joined_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = ('group', 'user')
+        ordering = ['-joined_at']
+        verbose_name = 'Членство в группе'
+        verbose_name_plural = 'Членства в группах'
+    
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.email} - {self.group.name} ({self.get_status_display()})"
+
+
+class GroupChat(models.Model):
+    """Модель для группового чата"""
+    group = models.OneToOneField(StudyGroup, on_delete=models.CASCADE, related_name='chat')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Групповой чат'
+        verbose_name_plural = 'Групповые чаты'
+    
+    def __str__(self):
+        return f"Чат группы: {self.group.name}"
+    
+    def get_last_message(self):
+        """Получить последнее сообщение в группе"""
+        return self.messages.order_by('-created_at').first()
+
+
+class GroupMessage(models.Model):
+    """Модель для сообщений в групповом чате"""
+    MESSAGE_TYPES = [
+        ('text', 'Текст'),
+        ('image', 'Изображение'),
+        ('file', 'Файл'),
+        ('system', 'Системное'),
+    ]
+    
+    chat = models.ForeignKey(GroupChat, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='group_messages')
+    message_type = models.CharField(max_length=10, choices=MESSAGE_TYPES, default='text')
+    content = models.TextField(blank=True, null=True)  # Для текстовых сообщений
+    file = models.FileField(upload_to='group_chat_files/', blank=True, null=True)  # Для файлов
+    file_name = models.CharField(max_length=255, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_edited = models.BooleanField(default=False)
+    edited_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['created_at']
+        verbose_name = 'Сообщение в группе'
+        verbose_name_plural = 'Сообщения в группе'
+    
+    def __str__(self):
+        return f"{self.sender.get_full_name() or self.sender.email}: {self.content[:50]}..."
 
 
 def chat_file_upload_path(instance, filename):

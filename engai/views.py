@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from django.http import HttpResponseNotFound, HttpResponseServerError
+from django.contrib.auth.decorators import login_required
 
 
 def custom_404_view(request, exception):
@@ -22,3 +23,15 @@ def page_not_found_view(request):
     Может использоваться для тестирования в режиме DEBUG=True
     """
     return render(request, '404.html')
+
+
+@login_required
+def dashboard_view(request):
+    """
+    Главная страница dashboard с обзором обучения
+    """
+    context = {
+        'user': request.user,
+        'page_title': 'Главная - EngAI'
+    }
+    return render(request, 'dashboard.html', context)

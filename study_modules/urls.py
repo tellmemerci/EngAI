@@ -36,4 +36,11 @@ urlpatterns = [
     path('<int:module_id>/unit/<int:unit_id>/skill/<int:skill_id>/add-task/', views.add_grammar_task, name='add_grammar_task'),
     path('<int:module_id>/unit/<int:unit_id>/skill/<int:skill_id>/task/<int:task_id>/edit/', views.edit_grammar_task, name='edit_grammar_task'),
     path('<int:module_id>/unit/<int:unit_id>/skill/<int:skill_id>/task/<int:task_id>/delete/', views.delete_grammar_task, name='delete_grammar_task'),
+    # Маршруты для системы доступа
+    path('<int:module_id>/access/', views.module_access_view, name='module_access'),
+    path('<int:module_id>/request-access/', views.request_module_access, name='request_access'),
+    path('<int:module_id>/enter-password/', views.enter_module_password, name='enter_password'),
+    path('<int:module_id>/manage-access/', views.manage_module_access, name='manage_access'),
+    path('<int:module_id>/set-password/', views.set_module_password, name='set_password'),
+    path('<int:module_id>/request/<int:request_id>/review/', views.review_access_request, name='review_request'),
 ] 

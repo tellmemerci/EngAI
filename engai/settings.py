@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'notifications',  # Добавляем приложение уведомлений
     'channels',
     'text_check',
+    'deadlines',  # Добавляем приложение дедлайнов
 ]
 
 MIDDLEWARE = [
@@ -60,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',  # Добавляем middleware
+    'users.middleware.ProfileCompletionMiddleware',  # Проверка заполненности профиля
 ]
 
 ROOT_URLCONF = 'engai.urls'
@@ -75,6 +77,8 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'social_django.context_processors.backends',  # Добавляем для social_django
+                'social_django.context_processors.login_redirect',  # Добавляем для social_django
             ],
         },
     },
@@ -130,7 +134,8 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
-    BASE_DIR / 'users/static',
+    BASE_DIR / 'static',  # Общие статические файлы
+    BASE_DIR / 'users/static',  # Статические файлы приложения users
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
@@ -157,12 +162,32 @@ SITE_ID = 1
 # Настройки аутентификации
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.google.GoogleOAuth2',  # Бэкенд для Google
+    'social_core.backends.github.GithubOAuth2',  # Бэкенд для GitHub
+    'social_core.backends.apple.AppleIdAuth',  # Бэкенд для Apple
     'django.contrib.auth.backends.ModelBackend',  # Стандартный бэкенд Django
 )
 
 # Настройки для Google OAuth2
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'ваш_client_id'  # Замените на ваш Client ID
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'ваш_client_secret'  # Замените на ваш Client Secret
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = 'ваш_google_client_id'  # Замените на ваш Google Client ID
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = 'ваш_google_client_secret'  # Замените на ваш Google Client Secret
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
+    'openid',
+    'email',
+    'profile',
+]
+
+# Настройки для GitHub OAuth2
+SOCIAL_AUTH_GITHUB_KEY = 'Ov23liUvozZ5Be8eQGYF'  # GitHub Client ID
+SOCIAL_AUTH_GITHUB_SECRET = 'c4cdd29c73620bbd2b4c96c3e42c111f3eefcb60'  # GitHub Client Secret
+SOCIAL_AUTH_GITHUB_SCOPE = ['user:email']
+
+# Настройки для Apple Sign In
+SOCIAL_AUTH_APPLE_ID_CLIENT = 'ваш_apple_service_id'  # Service ID из Apple Developer
+SOCIAL_AUTH_APPLE_ID_TEAM = 'ваш_apple_team_id'  # Team ID из Apple Developer
+SOCIAL_AUTH_APPLE_ID_KEY = 'ваш_apple_key_id'  # Key ID из Apple Developer
+SOCIAL_AUTH_APPLE_ID_SECRET = 'ваш_apple_private_key'  # Private Key (.p8 файл)
+SOCIAL_AUTH_APPLE_ID_SCOPE = ['email', 'name']
+SOCIAL_AUTH_APPLE_ID_EMAIL_AS_USERNAME = True
 
 # Настройки для социальной аутентификации
 SOCIAL_AUTH_URL_NAMESPACE = 'social'
@@ -176,11 +201,13 @@ SOCIAL_AUTH_PIPELINE = (
     'social_core.pipeline.social_auth.social_uid',
     'social_core.pipeline.social_auth.auth_allowed',
     'social_core.pipeline.social_auth.social_user',
+    'users.pipeline.associate_by_email',  # Кастомная функция для связывания по email
     'social_core.pipeline.user.get_username',
     'social_core.pipeline.user.create_user',
     'social_core.pipeline.social_auth.associate_user',
     'social_core.pipeline.social_auth.load_extra_data',
     'social_core.pipeline.user.user_details',
+    'users.pipeline.create_user_profile',  # Кастомная функция для заполнения профиля
 )
 
 # Channels

@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import RegistrationForm, PasswordChangeForm, ProfileEditForm
 from .utils import log_user_action, generate_sms_code, send_sms_code
 from django.core.exceptions import ValidationError
-from .models import User, Friendship, Chat, Message
+from .models import User, Friendship, Chat, Message, StudyGroup, StudyGroupMembership, GroupChat, GroupMessage
 from django.core.mail import send_mail
 import random
 from django.http import JsonResponse
@@ -162,6 +162,73 @@ def change_password_view(request):
         
         return render(request, 'users/password_reset.html')
 
+def privacy_policy_view(request):
+    return render(request, 'users/privacy_policy.html')
+
+
+def complete_profile_view(request):
+    """
+    Представление для завершения профиля после OAuth регистрации
+    """
+    if not request.user.is_authenticated:
+        return redirect('login')
+    
+    # Если профиль уже заполнен, перенаправляем на главную
+    if request.user.is_profile_complete():
+        # Обновляем флаг завершенности профиля
+        request.user.profile_completed = True
+        request.user.save()
+        return redirect('home')
+    
+    # Определяем провайдера аутентификации
+    provider_name = 'социальную сеть'
+    
+    # Отладочная информация
+    print(f"Debug: User {request.user.email}, is_profile_complete: {request.user.is_profile_complete()}")
+    print(f"Debug: User fields - first_name: '{request.user.first_name}', last_name: '{request.user.last_name}', city: '{request.user.city}'")
+    
+    try:
+        social_auths = request.user.social_auth.all()
+        print(f"Debug: User has {len(social_auths)} social auth(s)")
+        
+        if social_auths:
+            for social_auth in social_auths:
+                print(f"Debug: Social auth provider: {social_auth.provider}")
+                if social_auth.provider == 'google-oauth2':
+                    provider_name = 'Google'
+                elif social_auth.provider == 'github':
+                    provider_name = 'GitHub'
+                elif social_auth.provider == 'apple-id':
+                    provider_name = 'Apple'
+        else:
+            print("Debug: No social auths found")
+    except Exception as e:
+        print(f"Debug: Error getting social auths: {e}")
+    
+    if request.method == 'POST':
+        from .forms import ProfileCompletionForm
+        form = ProfileCompletionForm(request.POST, instance=request.user)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.profile_completed = True
+            user.save()
+            
+            # Отладочная информация после сохранения
+            print(f"Debug: After save - profile_completed: {user.profile_completed}, is_profile_complete: {user.is_profile_complete()}")
+            
+            log_user_action(user, 'profile_completion', request)
+            messages.success(request, 'Профиль успешно завершен! Добро пожаловать в EngAI!')
+            return redirect('home')
+    else:
+        from .forms import ProfileCompletionForm
+        # Предзаполняем форму данными пользователя
+        form = ProfileCompletionForm(instance=request.user)
+    
+    return render(request, 'users/complete_profile.html', {
+        'form': form,
+        'provider_name': provider_name
+    })
+
 def register(request):
     if request.method == 'POST':
         # Получаем данные из формы
@@ -260,10 +327,34 @@ def friends_view(request):
     friends = Friendship.get_friends(request.user)
     pending_requests = Friendship.get_pending_requests(request.user)
     
+    # Получаем данные о группах
+    user_groups = StudyGroup.objects.filter(
+        Q(creator=request.user) |
+        Q(memberships__user=request.user, memberships__status='accepted')
+    ).distinct()
+    
+    # Группы, созданные друзьями (доступные для присоединения)
+    friends_groups = StudyGroup.objects.filter(
+        creator__in=friends,
+        is_active=True
+    ).exclude(
+        Q(creator=request.user) |
+        Q(memberships__user=request.user)
+    ).distinct()
+    
+    # Заявки в группы (для создателей групп)
+    group_requests = StudyGroupMembership.objects.filter(
+        group__creator=request.user,
+        status='pending'
+    )
+    
     context = {
         'friends': friends,
         'pending_requests': pending_requests,
-        'active_tab': request.GET.get('tab', 'friends')  # friends, search, requests
+        'user_groups': user_groups,
+        'friends_groups': friends_groups,
+        'group_requests': group_requests,
+        'active_tab': request.GET.get('tab', 'friends')  # friends, search, requests, groups
     }
     return render(request, 'users/friends.html', context)
 
@@ -327,20 +418,41 @@ def search_friends(request):
 @require_POST
 def send_friend_request(request):
     """Отправка заявки в друзья"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     user_id = request.POST.get('user_id')
+    logger.info(f"Получен запрос на добавление в друзья от {request.user.id} к {user_id}")
+    
+    if not user_id:
+        logger.error("Не указан user_id в запросе")
+        return JsonResponse({
+            'success': False,
+            'message': 'Не указан ID пользователя'
+        })
     
     try:
         to_user = User.objects.get(id=user_id)
+        logger.info(f"Найден пользователь {to_user.email} для добавления в друзья")
+        
         friendship, message = Friendship.send_friend_request(request.user, to_user)
+        logger.info(f"Результат добавления в друзья: {friendship is not None}, сообщение: {message}")
         
         return JsonResponse({
             'success': friendship is not None,
             'message': message
         })
     except User.DoesNotExist:
+        logger.error(f"Пользователь с ID {user_id} не найден")
         return JsonResponse({
             'success': False,
             'message': 'Пользователь не найден'
+        })
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка при добавлении в друзья: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при отправке заявки'
         })
 
 
@@ -388,10 +500,22 @@ def respond_friend_request(request):
 @require_POST
 def remove_friend(request):
     """Удаление из друзей"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
     friend_id = request.POST.get('friend_id')
+    logger.info(f"Получен запрос на удаление из друзей от {request.user.id} пользователя {friend_id}")
+    
+    if not friend_id:
+        logger.error("Не указан friend_id в запросе")
+        return JsonResponse({
+            'success': False,
+            'message': 'Не указан ID друга'
+        })
     
     try:
         friend = User.objects.get(id=friend_id)
+        logger.info(f"Найден пользователь {friend.email} для удаления из друзей")
         
         # Находим связь дружбы
         friendship = Friendship.objects.filter(
@@ -401,21 +525,31 @@ def remove_friend(request):
         ).first()
         
         if friendship:
+            logger.info(f"Найдена связь дружбы ID: {friendship.id}")
             friendship.delete()
+            logger.info(f"Дружба успешно удалена")
             return JsonResponse({
                 'success': True,
-                'message': f'{friend.get_full_name()} удален из друзей'
+                'message': f'{friend.get_full_name() or friend.email} удален из друзей'
             })
         else:
+            logger.warning(f"Дружба между {request.user.id} и {friend_id} не найдена")
             return JsonResponse({
                 'success': False,
                 'message': 'Дружба не найдена'
             })
             
     except User.DoesNotExist:
+        logger.error(f"Пользователь с ID {friend_id} не найден")
         return JsonResponse({
             'success': False,
             'message': 'Пользователь не найден'
+        })
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка при удалении из друзей: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при удалении друга'
         })
 
 
@@ -659,3 +793,451 @@ def get_messages(request, chat_id):
             'success': False,
             'message': 'Чат не найден'
         })
+
+
+# ==============================================
+# ФУНКЦИИ ДЛЯ РАБОТЫ С УЧЕБНЫМИ ГРУППАМИ
+# ==============================================
+
+@login_required
+@require_POST
+def create_group(request):
+    """Создание новой учебной группы"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    name = request.POST.get('name', '').strip()
+    
+    logger.info(f"Получен запрос на создание группы от {request.user.id}: {name}")
+    
+    if not name:
+        return JsonResponse({
+            'success': False,
+            'message': 'Название группы обязательно'
+        })
+    
+    if len(name) > 100:
+        return JsonResponse({
+            'success': False,
+            'message': 'Название группы слишком длинное'
+        })
+    
+    try:
+        # Проверяем, что у пользователя не слишком много групп
+        user_groups_count = StudyGroup.objects.filter(creator=request.user, is_active=True).count()
+        if user_groups_count >= 10:
+            return JsonResponse({
+                'success': False,
+                'message': 'Вы можете создать не более 10 активных групп'
+            })
+        
+        # Создаем группу
+        group = StudyGroup.objects.create(
+            name=name,
+            description='',  # Пока без описания
+            creator=request.user,
+            max_members=30  # Фиксированное значение
+        )
+        
+        # Создаем членство для создателя
+        StudyGroupMembership.objects.create(
+            group=group,
+            user=request.user,
+            status='accepted',
+            role='creator'
+        )
+        
+        # Создаем чат для группы
+        GroupChat.objects.create(group=group)
+        
+        logger.info(f"Группа {name} успешно создана ID: {group.id}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Группа "{name}" создана успешно!',
+            'group_id': group.id
+        })
+        
+    except Exception as e:
+        logger.error(f"Ошибка при создании группы: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при создании группы'
+        })
+
+
+@login_required
+@require_POST
+def join_group(request):
+    """Отправка заявки на вступление в группу"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    group_id = request.POST.get('group_id')
+    
+    if not group_id:
+        return JsonResponse({
+            'success': False,
+            'message': 'Не указан ID группы'
+        })
+    
+    try:
+        group = StudyGroup.objects.get(id=group_id, is_active=True)
+        
+        # Проверяем, что создатель группы является другом
+        if not Friendship.are_friends(request.user, group.creator):
+            return JsonResponse({
+                'success': False,
+                'message': 'Вы можете присоединяться только к группам своих друзей'
+            })
+        
+        # Проверяем, есть ли свободные места
+        if not group.can_join():
+            return JsonResponse({
+                'success': False,
+                'message': 'В группе нет свободных мест'
+            })
+        
+        # Проверяем существующее членство
+        existing_membership = StudyGroupMembership.objects.filter(
+            group=group,
+            user=request.user
+        ).first()
+        
+        if existing_membership:
+            if existing_membership.status == 'accepted':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Вы уже являетесь участником этой группы'
+                })
+            elif existing_membership.status == 'pending':
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Ваша заявка уже отправлена'
+                })
+            else:
+                existing_membership.status = 'pending'
+                existing_membership.save()
+                return JsonResponse({
+                    'success': True,
+                    'message': f'Заявка в группу "{group.name}" отправлена'
+                })
+        
+        # Создаем новую заявку
+        StudyGroupMembership.objects.create(
+            group=group,
+            user=request.user,
+            status='pending'
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Заявка в группу "{group.name}" отправлена'
+        })
+        
+    except StudyGroup.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Группа не найдена'
+        })
+    except Exception as e:
+        logger.error(f"Ошибка: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка'
+        })
+
+
+@login_required
+@require_POST
+def edit_group(request):
+    """Редактирование названия группы"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    group_id = request.POST.get('group_id')
+    new_name = request.POST.get('name', '').strip()
+    
+    if not group_id or not new_name:
+        return JsonResponse({
+            'success': False,
+            'message': 'Необходимые параметры не указаны'
+        })
+    
+    if len(new_name) > 100:
+        return JsonResponse({
+            'success': False,
+            'message': 'Название группы слишком длинное'
+        })
+    
+    try:
+        group = StudyGroup.objects.get(
+            id=group_id,
+            creator=request.user,  # Только создатель может редактировать
+            is_active=True
+        )
+        
+        old_name = group.name
+        group.name = new_name
+        group.save()
+        
+        logger.info(f"Название группы изменено с '{old_name}' на '{new_name}'")
+        
+        # Добавляем системное сообщение в чат
+        try:
+            group_chat = GroupChat.objects.get(group=group)
+            GroupMessage.objects.create(
+                chat=group_chat,
+                sender=request.user,
+                message_type='system',
+                content=f'Название группы изменено на "{new_name}"'
+            )
+        except GroupChat.DoesNotExist:
+            pass
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Название группы изменено на "{new_name}"'
+        })
+        
+    except StudyGroup.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Группа не найдена или у вас нет прав на редактирование'
+        })
+    except Exception as e:
+        logger.error(f"Ошибка при редактировании группы: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при редактировании'
+        })
+
+
+@login_required
+@require_POST
+def delete_group(request):
+    """Удаление группы"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    group_id = request.POST.get('group_id')
+    
+    if not group_id:
+        return JsonResponse({
+            'success': False,
+            'message': 'Не указан ID группы'
+        })
+    
+    try:
+        group = StudyGroup.objects.get(
+            id=group_id,
+            creator=request.user,  # Только создатель может удалять
+            is_active=True
+        )
+        
+        group_name = group.name
+        
+        # Мягкое удаление - просто отмечаем как неактивную
+        group.is_active = False
+        group.save()
+        
+        logger.info(f"Группа '{group_name}' удалена пользователем {request.user.id}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Группа "{group_name}" удалена'
+        })
+        
+    except StudyGroup.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Группа не найдена или у вас нет прав на удаление'
+        })
+    except Exception as e:
+        logger.error(f"Ошибка при удалении группы: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при удалении'
+        })
+
+
+@login_required
+@require_POST
+def respond_group_request(request):
+    """Ответ на заявку в группу (принять/отклонить)"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    request_id = request.POST.get('request_id')
+    action = request.POST.get('action')  # 'accept' или 'decline'
+    
+    if not request_id or action not in ['accept', 'decline']:
+        return JsonResponse({
+            'success': False,
+            'message': 'Неверные параметры запроса'
+        })
+    
+    try:
+        # Получаем заявку, где текущий пользователь является создателем группы
+        membership = StudyGroupMembership.objects.get(
+            id=request_id,
+            group__creator=request.user,
+            status='pending'
+        )
+        
+        group = membership.group
+        applicant = membership.user
+        
+        if action == 'accept':
+            # Проверяем, есть ли место в группе
+            if not group.can_join():
+                return JsonResponse({
+                    'success': False,
+                    'message': 'В группе нет свободных мест'
+                })
+            
+            membership.status = 'accepted'
+            membership.role = 'member'
+            membership.save()
+            
+            # Добавляем системное сообщение в групповой чат
+            try:
+                group_chat = GroupChat.objects.get(group=group)
+                GroupMessage.objects.create(
+                    chat=group_chat,
+                    sender=request.user,
+                    message_type='system',
+                    content=f'{applicant.get_full_name() or applicant.email} присоединился к группе'
+                )
+            except GroupChat.DoesNotExist:
+                pass
+            
+            message = f'{applicant.get_full_name() or applicant.email} принят в группу'
+            
+        elif action == 'decline':
+            membership.status = 'declined'
+            membership.save()
+            
+            message = f'Заявка от {applicant.get_full_name() or applicant.email} отклонена'
+        
+        logger.info(f"Заявка в группу '{group.name}' от {applicant.email} {action}ed")
+        
+        return JsonResponse({
+            'success': True,
+            'message': message
+        })
+        
+    except StudyGroupMembership.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Заявка не найдена или у вас нет прав на её обработку'
+        })
+    except Exception as e:
+        logger.error(f"Ошибка при обработке заявки в группу: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при обработке заявки'
+        })
+
+
+@login_required
+@require_POST
+def invite_to_group(request):
+    """Приглашение друга в группу"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    group_id = request.POST.get('group_id')
+    friend_id = request.POST.get('friend_id')
+    
+    if not group_id or not friend_id:
+        return JsonResponse({
+            'success': False,
+            'message': 'Необходимые параметры не указаны'
+        })
+    
+    try:
+        # Проверяем, что группа существует и пользователь является создателем или участником
+        group = StudyGroup.objects.get(id=group_id, is_active=True)
+        
+        # Проверяем, что пользователь может приглашать (создатель или участник)
+        if not (group.is_creator(request.user) or group.is_member(request.user)):
+            return JsonResponse({
+                'success': False,
+                'message': 'У вас нет прав на приглашение в эту группу'
+            })
+        
+        # Проверяем, что пользователь существует и является другом
+        friend = User.objects.get(id=friend_id)
+        
+        if not Friendship.are_friends(request.user, friend):
+            return JsonResponse({
+                'success': False,
+                'message': 'Можно приглашать только друзей'
+            })
+        
+        # Проверяем, есть ли место в группе
+        if not group.can_join():
+            return JsonResponse({
+                'success': False,
+                'message': 'В группе нет свободных мест'
+            })
+        
+        # Проверяем, нет ли уже членства или заявки
+        existing_membership = StudyGroupMembership.objects.filter(
+            group=group,
+            user=friend
+        ).first()
+        
+        if existing_membership:
+            if existing_membership.status == 'accepted':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'{friend.get_full_name() or friend.email} уже в группе'
+                })
+            elif existing_membership.status == 'pending':
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Заявка от {friend.get_full_name() or friend.email} уже отправлена'
+                })
+            else:  # declined
+                # Обновляем статус на pending (повторное приглашение)
+                existing_membership.status = 'pending'
+                existing_membership.save()
+                return JsonResponse({
+                    'success': True,
+                    'message': f'{friend.get_full_name() or friend.email} приглашен в группу повторно'
+                })
+        
+        # Создаем новое приглашение
+        StudyGroupMembership.objects.create(
+            group=group,
+            user=friend,
+            status='pending'
+        )
+        
+        logger.info(f"Приглашение в группу '{group.name}' отправлено пользователю {friend.email}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{friend.get_full_name() or friend.email} приглашен в группу'
+        })
+        
+    except StudyGroup.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Группа не найдена'
+        })
+    except User.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Пользователь не найден'
+        })
+    except Exception as e:
+        logger.error(f"Ошибка при приглашении: {e}")
+        return JsonResponse({
+            'success': False,
+            'message': 'Произошла ошибка при отправке приглашения'
+        })
+
+

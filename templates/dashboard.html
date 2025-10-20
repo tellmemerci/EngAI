@@ -1,0 +1,311 @@
+{% extends 'users/base.html' %}
+{% load static %}
+{% csrf_token %}
+
+{% block title %}Мой план - EngAI{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <!-- Левая часть -->
+    <div class="dashboard-left">
+        <!-- Приветствие -->
+        <div class="welcome-section">
+            <h1 class="welcome-title">Добро пожаловать в EngAI!</h1>
+            <p class="welcome-subtitle">Изучайте английский язык с персональным ИИ-помощником</p>
+        </div>
+
+        <!-- Кнопка обучения -->
+        <div class="learning-section">
+            <button class="learning-btn" onclick="startLearning()">
+                <div class="learning-btn-icon">
+                    <span>🎓</span>
+                </div>
+                <div class="learning-btn-content">
+                    <h3>Начать обучение</h3>
+                    <p>Продолжить изучение английского</p>
+                </div>
+                <div class="learning-btn-arrow">
+                    <span>→</span>
+                </div>
+            </button>
+        </div>
+
+        <!-- Картинка/иллюстрация -->
+        <div class="illustration-section">
+            <div class="illustration-card">
+                <div class="learning-illustration">
+                    <img src="{% static 'images/learning-illustration.svg' %}" alt="Обучение" class="illustration-image">
+                </div>
+                <h4>Персонализированное обучение</h4>
+                <p>Адаптивная программа, которая подстраивается под ваш уровень знаний и темп обучения</p>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">15</div>
+                    <div class="stat-label">Уроков пройдено</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">87%</div>
+                    <div class="stat-label">Точность</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Дней подряд</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая часть -->
+    <div class="dashboard-right">
+        <!-- Мой учитель -->
+        <div class="teacher-section">
+            <div class="section-header">
+                <h2>Мой учитель</h2>
+                <span class="coming-soon">скоро добавим функционал</span>
+            </div>
+            <div class="teacher-card">
+                <div class="teacher-avatar">
+                    <img src="{% static 'images/ai-teacher-avatar.svg' %}" alt="EngAI Assistant" class="teacher-avatar-image">
+                </div>
+                <div class="teacher-info">
+                    <h3>EngAI Assistant</h3>
+                    <p class="teacher-description">Ваш персональный ИИ-помощник для изучения английского языка</p>
+                    <div class="teacher-features">
+                        <div class="feature-tag">Адаптивное обучение</div>
+                        <div class="feature-tag">24/7 поддержка</div>
+                        <div class="feature-tag">Персонализация</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Календарь -->
+        <div class="calendar-section">
+            <div class="section-header">
+                <h2>Календарь</h2>
+                <span class="coming-soon">скоро добавим дедлайны по датам</span>
+            </div>
+            <div class="calendar-container">
+                <div class="calendar-header">
+                    <button class="calendar-nav" id="prevMonth">‹</button>
+                    <div class="calendar-month-year" id="monthYear">Октябрь 2025</div>
+                    <button class="calendar-nav" id="nextMonth">›</button>
+                </div>
+                <div class="calendar-weekdays">
+                    <div class="weekday">Пн</div>
+                    <div class="weekday">Вт</div>
+                    <div class="weekday">Ср</div>
+                    <div class="weekday">Чт</div>
+                    <div class="weekday">Пт</div>
+                    <div class="weekday">Сб</div>
+                    <div class="weekday">Вс</div>
+                </div>
+                <div class="calendar-days" id="calendarDays">
+                    <!-- Дни будут генерироваться JavaScript -->
+                </div>
+            </div>
+            
+            <!-- Панель управления дедлайнами -->
+            <div class="deadline-panel" id="deadlinePanel">
+                <div class="selected-date">
+                    <h3 id="selectedDateTitle">Выберите дату</h3>
+                    <div class="date-info" id="dateInfo">
+                        <span class="weekday" id="selectedWeekday"></span>
+                        <span class="date-number" id="selectedDate"></span>
+                    </div>
+                </div>
+                
+                <div class="deadlines-list" id="deadlinesList">
+                    <p class="no-deadlines">Нет дедлайнов на эту дату</p>
+                </div>
+                
+                <button class="create-deadline-btn" id="createDeadlineBtn">
+                    <span class="btn-icon">+</span>
+                    <span class="btn-text">Создать дедлайн</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- Модальное окно для создания дедлайна -->
+<div class="deadline-modal" id="deadlineModal">
+    <div class="modal-overlay" id="modalOverlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Создать дедлайн</h2>
+            <button class="modal-close" id="modalClose">&times;</button>
+        </div>
+        
+        <form class="deadline-form" id="deadlineForm">
+            <div class="form-group">
+                <label for="deadlineTitle">Название дедлайна</label>
+                <input type="text" id="deadlineTitle" name="title" placeholder="Например: Написать эссе" required>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="deadlineDate">Дата</label>
+                    <input type="date" id="deadlineDate" name="date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="deadlineTime">Время</label>
+                    <input type="time" id="deadlineTime" name="time" value="23:59">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="deadlineDescription">Описание (необязательно)</label>
+                <textarea id="deadlineDescription" name="description" placeholder="Дополнительная информация..."></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="deadlinePriority">Важность</label>
+                    <select id="deadlinePriority" name="priority">
+                        <option value="low">Низкая</option>
+                        <option value="medium" selected>Средняя</option>
+                        <option value="high">Высокая</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Цвет</label>
+                    <div class="color-picker">
+                        <input type="radio" id="color-blue" name="color" value="#2196f3" checked>
+                        <label for="color-blue" class="color-option" style="background: #2196f3;"></label>
+                        
+                        <input type="radio" id="color-green" name="color" value="#4caf50">
+                        <label for="color-green" class="color-option" style="background: #4caf50;"></label>
+                        
+                        <input type="radio" id="color-orange" name="color" value="#ff9800">
+                        <label for="color-orange" class="color-option" style="background: #ff9800;"></label>
+                        
+                        <input type="radio" id="color-red" name="color" value="#f44336">
+                        <label for="color-red" class="color-option" style="background: #f44336;"></label>
+                        
+                        <input type="radio" id="color-purple" name="color" value="#9c27b0">
+                        <label for="color-purple" class="color-option" style="background: #9c27b0;"></label>
+                        
+                        <input type="radio" id="color-indigo" name="color" value="#3f51b5">
+                        <label for="color-indigo" class="color-option" style="background: #3f51b5;"></label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" id="cancelBtn">Отмена</button>
+                <button type="submit" class="btn-save">Сохранить</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно для редактирования дедлайна -->
+<div class="deadline-modal" id="editDeadlineModal">
+    <div class="modal-overlay" id="editModalOverlay"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Редактировать дедлайн</h2>
+            <button class="modal-close" id="editModalClose">&times;</button>
+        </div>
+        
+        <form class="deadline-form" id="editDeadlineForm">
+            <div class="form-group">
+                <label for="editDeadlineTitle">Название дедлайна</label>
+                <input type="text" id="editDeadlineTitle" name="title" placeholder="Например: Написать эссе" required>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editDeadlineDate">Дата</label>
+                    <input type="date" id="editDeadlineDate" name="date" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editDeadlineTime">Время</label>
+                    <input type="time" id="editDeadlineTime" name="time" value="23:59">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="editDeadlineDescription">Описание (необязательно)</label>
+                <textarea id="editDeadlineDescription" name="description" placeholder="Дополнительная информация..."></textarea>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="editDeadlinePriority">Важность</label>
+                    <select id="editDeadlinePriority" name="priority">
+                        <option value="low">Низкая</option>
+                        <option value="medium" selected>Средняя</option>
+                        <option value="high">Высокая</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Цвет</label>
+                    <div class="color-picker">
+                        <input type="radio" id="edit-color-blue" name="color" value="#2196f3" checked>
+                        <label for="edit-color-blue" class="color-option" style="background: #2196f3;"></label>
+                        
+                        <input type="radio" id="edit-color-green" name="color" value="#4caf50">
+                        <label for="edit-color-green" class="color-option" style="background: #4caf50;"></label>
+                        
+                        <input type="radio" id="edit-color-orange" name="color" value="#ff9800">
+                        <label for="edit-color-orange" class="color-option" style="background: #ff9800;"></label>
+                        
+                        <input type="radio" id="edit-color-red" name="color" value="#f44336">
+                        <label for="edit-color-red" class="color-option" style="background: #f44336;"></label>
+                        
+                        <input type="radio" id="edit-color-purple" name="color" value="#9c27b0">
+                        <label for="edit-color-purple" class="color-option" style="background: #9c27b0;"></label>
+                        
+                        <input type="radio" id="edit-color-indigo" name="color" value="#3f51b5">
+                        <label for="edit-color-indigo" class="color-option" style="background: #3f51b5;"></label>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" id="editCancelBtn">Отмена</button>
+                <button type="submit" class="btn-save">Сохранить изменения</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Модальное окно подтверждения удаления -->
+<div class="deadline-modal" id="deleteConfirmModal">
+    <div class="modal-overlay" id="deleteModalOverlay"></div>
+    <div class="modal-content delete-modal">
+        <div class="modal-header">
+            <h2>Удалить дедлайн?</h2>
+            <button class="modal-close" id="deleteModalClose">&times;</button>
+        </div>
+        
+        <div class="delete-content">
+            <p>Вы уверены, что хотите удалить этот дедлайн?</p>
+            <p class="delete-deadline-title" id="deleteDeadlineTitle"></p>
+            <p class="delete-warning">Это действие нельзя отменить.</p>
+        </div>
+        
+        <div class="form-actions">
+            <button type="button" class="btn-cancel" id="deleteCancelBtn">Отмена</button>
+            <button type="button" class="btn-delete" id="confirmDeleteBtn">Удалить</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/dashboard.js' %}"></script>
+{% endblock %}

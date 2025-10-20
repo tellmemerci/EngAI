@@ -24,12 +24,14 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('notifications.api_urls')),  # API endpoints
     path('notifications/', include('notifications.urls')),  # Страница уведомлений
+    path('dashboard/', views.dashboard_view, name='dashboard'),  # Главная страница dashboard
     path('', include('users.urls')),
     path('dictionary/', include('dictionary.urls')),
     path('cards/', include('cards.urls')),
     path('modules/', include('study_modules.urls')),
-    path('social-auth/', include('social_django.urls', namespace='social')),
+    path('', include('social_django.urls', namespace='social')),
     path('text-check/', include('text_check.urls')),
+    path('deadlines/', include('deadlines.urls')),  # API для дедлайнов
     # Для тестирования страницы 404 в режиме DEBUG=True
     path('404-test/', views.page_not_found_view, name='404_test'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

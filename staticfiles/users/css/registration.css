@@ -1,11 +1,11 @@
 body {
   font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #faf5ff;
+  background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
   margin: 0;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 100px;
+  padding: 40px 20px;
   min-height: 100vh;
 }
 
@@ -13,16 +13,17 @@ body {
   display: flex;
   justify-content: center;
   width: 100%;
+  max-width: 600px;
 }
 
 .registration-container {
   background: white;
-  padding: 80px 50px 50px;
-  border-radius: 20px;
-  box-shadow: 0 0 25px rgba(124, 77, 255, 0.5);
-  max-width: 600px;
+  padding: 80px 40px 40px;
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(124, 77, 255, 0.15), 0 8px 20px rgba(0, 0, 0, 0.08);
   width: 100%;
   position: relative;
+  backdrop-filter: blur(10px);
 }
 
 .avatar-top {
@@ -75,43 +76,83 @@ body {
   margin: 0 8px;
 }
 
+/* Стили для групп полей */
+.field-group {
+  margin-bottom: 20px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+  letter-spacing: 0.3px;
+}
+
 .registration-form input,
 .registration-form select {
   width: 100%;
-  padding: 12px 14px;
-  margin-bottom: 18px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
+  padding: 14px 16px;
+  border: 2px solid #e8e8e8;
+  border-radius: 12px;
   font-size: 1rem;
-  transition: border 0.2s;
+  background: #fafafa;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
 }
 
 .registration-form input:focus,
 .registration-form select:focus {
   border-color: #7c4dff;
+  background: white;
   outline: none;
+  box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.registration-form input:hover,
+.registration-form select:hover {
+  border-color: #bbb;
+  background: white;
+}
+
+/* Стили для placeholder */
+.registration-form input::placeholder {
+  color: #999;
+  font-style: italic;
 }
 
 .step-buttons {
   display: flex;
   justify-content: space-between;
-  margin-top: 20px;
+  margin-top: 30px;
+  gap: 16px;
 }
 
 .step-buttons button {
-  width: 48%;
-  padding: 12px 20px;
-  background: #7c4dff;
+  flex: 1;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #7c4dff 0%, #6200ea 100%);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 1rem;
-  transition: background 0.2s;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(124, 77, 255, 0.3);
 }
 
 .step-buttons button:hover {
-  background: #6200ea;
+  background: linear-gradient(135deg, #6200ea 0%, #5e35b1 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(124, 77, 255, 0.4);
+}
+
+.step-buttons button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(124, 77, 255, 0.3);
 }
 
 .step-buttons-container {
@@ -212,7 +253,148 @@ body {
 }
 
 .checkbox-wrapper {
-  margin-top: 40px; /* можно изменить на 50px или больше */
+  margin-top: 24px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border-left: 4px solid #7c4dff;
+}
+
+.verification-info {
+  background: #e8f5e8;
+  padding: 16px;
+  border-radius: 8px;
+  color: #2e7d32;
+  margin-bottom: 20px;
+  border-left: 4px solid #4caf50;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* Стили для сообщений об ошибках */
+.error-message {
+  color: #d32f2f;
+  font-size: 0.85rem;
+  margin-top: 5px;
+  padding-left: 4px;
+  font-weight: 500;
+}
+
+/* Улучшенные стили для заголовков */
+.step h2 {
+  color: #333;
+  margin-bottom: 24px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+/* Стили для SMS кода */
+#sms_code {
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 3px;
+  font-family: 'Courier New', monospace;
+}
+
+/* Стили для обязательных полей */
+.field-label:after {
+  content: " *";
+  color: #7c4dff;
+  font-weight: bold;
+}
+
+.field-label.optional:after {
+  content: "";
+}
+
+/* Стили для валидации */
+.registration-form input:invalid {
+  border-color: #f44336;
+}
+
+.registration-form input:valid {
+  border-color: #4caf50;
+}
+
+.registration-form select:required:invalid {
+  border-color: #f44336;
+}
+
+/* Анимация для переходов между шагами */
+.step {
+  opacity: 1;
+  transition: opacity 0.4s ease-in-out;
+}
+
+.step.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Улучшенные стили для кнопки отправки повторного кода */
+#resend-btn {
+  display: none;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 3px 10px rgba(255, 152, 0, 0.3);
+  margin: 0 auto;
+  display: block;
+  width: fit-content;
+}
+
+#resend-btn:hover {
+  background: linear-gradient(135deg, #f57c00 0%, #ef6c00 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(255, 152, 0, 0.4);
+}
+
+#resend-btn-container {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+/* Адаптивные стили */
+@media (max-width: 768px) {
+  .registration-container {
+    margin: 20px;
+    padding: 60px 30px 30px;
+  }
+  
+  .field-label {
+    font-size: 0.9rem;
+  }
+  
+  .registration-form input,
+  .registration-form select {
+    padding: 12px 14px;
+    font-size: 0.95rem;
+  }
+  
+  .step-buttons {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .step-buttons button {
+    width: 100%;
+  }
+  
+  .checkbox-wrapper {
+    padding: 16px;
+  }
+  
+  .checkbox-label {
+    font-size: 0.9rem;
+  }
 }
 /* Добавить эти стили в существующий CSS */
 .registration-container {

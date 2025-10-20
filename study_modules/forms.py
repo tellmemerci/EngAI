@@ -1,5 +1,5 @@
 from django import forms
-from .models import StudyModule, ModuleSection, ModuleSkill, TheoryCard, ModuleAttachment, Unit, Topic, UnitSection, UnitSkill, UnitTheoryCard, UnitAttachment, GrammarTask
+from .models import StudyModule, ModuleSection, ModuleSkill, TheoryCard, ModuleAttachment, Unit, Topic, UnitSection, UnitSkill, UnitTheoryCard, UnitAttachment, GrammarTask, ModuleAccessRequest, UserModuleAccess
 
 class StudyModuleForm(forms.ModelForm):
     class Meta:
@@ -293,3 +293,96 @@ class UnitAttachmentForm(forms.ModelForm):
                 'min': '1'
             })
         } 
+
+
+class ModuleAccessRequestForm(forms.ModelForm):
+    """Форма для подачи заявки на доступ к закрытому модулю"""
+    class Meta:
+        model = ModuleAccessRequest
+        fields = ['message']
+        widgets = {
+            'message': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Опишите, зачем вам нужен доступ к этому модулю...',
+                'rows': 4
+            })
+        }
+        labels = {
+            'message': 'Сообщение для автора'
+        }
+        help_texts = {
+            'message': 'Расскажите автору модуля, почему вам нужен доступ'
+        }
+
+
+class ModulePasswordForm(forms.Form):
+    """Форма для ввода пароля к закрытому модулю"""
+    password = forms.CharField(
+        label='Пароль доступа',
+        max_length=255,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите пароль для доступа к модулю'
+        }),
+        help_text='Введите пароль, который предоставил автор модуля'
+    )
+
+
+class SetModulePasswordForm(forms.Form):
+    """Форма для установки пароля к модулю (для автора)"""
+    password = forms.CharField(
+        label='Новый пароль',
+        max_length=255,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Введите пароль для доступа к модулю'
+        }),
+        help_text='Этот пароль смогут использовать пользователи для получения доступа'
+    )
+    confirm_password = forms.CharField(
+        label='Подтвердите пароль',
+        max_length=255,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Повторите пароль'
+        })
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        confirm_password = cleaned_data.get('confirm_password')
+        
+        if password and confirm_password and password != confirm_password:
+            raise forms.ValidationError('Пароли не совпадают.')
+        
+        return cleaned_data
+
+
+class ReviewAccessRequestForm(forms.ModelForm):
+    """Форма для рассмотрения заявки на доступ (для автора)"""
+    class Meta:
+        model = ModuleAccessRequest
+        fields = ['status', 'reviewer_message']
+        widgets = {
+            'status': forms.Select(attrs={
+                'class': 'form-control'
+            }),
+            'reviewer_message': forms.Textarea(attrs={
+                'class': 'form-control',
+                'placeholder': 'Комментарий для пользователя (необязательно)',
+                'rows': 3
+            })
+        }
+        labels = {
+            'status': 'Решение по заявке',
+            'reviewer_message': 'Комментарий'
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ограничиваем выбор статусов только approved и rejected
+        self.fields['status'].choices = [
+            ('approved', 'Одобрить'),
+            ('rejected', 'Отклонить'),
+        ]

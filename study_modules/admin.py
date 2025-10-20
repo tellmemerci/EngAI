@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from .models import StudyModule, ModuleSection, ModuleSkill, TheoryCard, ModuleAttachment, Unit, Topic, ModuleCardModule, UnitSection, UnitSkill, UnitTheoryCard, UnitAttachment, GrammarTask, UserTaskProgress
+from .models import StudyModule, ModuleSection, ModuleSkill, TheoryCard, ModuleAttachment, Unit, Topic, ModuleCardModule, UnitSection, UnitSkill, UnitTheoryCard, UnitAttachment, GrammarTask, UserTaskProgress, ModuleAccessRequest, UserModuleAccess
 
 @admin.register(StudyModule)
 class StudyModuleAdmin(admin.ModelAdmin):
@@ -17,6 +17,10 @@ class StudyModuleAdmin(admin.ModelAdmin):
         }),
         ('Настройки публикации', {
             'fields': ('author', 'module_type', 'is_published')
+        }),
+        ('Настройки доступа', {
+            'fields': ('access_password',),
+            'description': 'Для закрытых модулей можно установить пароль'
         }),
         ('Дополнительная информация', {
             'fields': ('created_at', 'updated_at', 'saved_count'),
@@ -200,3 +204,36 @@ class UserTaskProgressAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'task__title')
     ordering = ('-last_attempt',)
     readonly_fields = ('last_attempt',)
+
+
+@admin.register(ModuleAccessRequest)
+class ModuleAccessRequestAdmin(admin.ModelAdmin):
+    list_display = ('user', 'module', 'status', 'requested_at', 'reviewed_at', 'reviewer')
+    list_filter = ('status', 'requested_at', 'module__module_type')
+    search_fields = ('user__username', 'module__title', 'message')
+    ordering = ('-requested_at',)
+    readonly_fields = ('requested_at',)
+    
+    fieldsets = (
+        ('Заявка', {
+            'fields': ('user', 'module', 'message', 'requested_at')
+        }),
+        ('Рассмотрение', {
+            'fields': ('status', 'reviewer', 'reviewed_at', 'reviewer_message')
+        }),
+    )
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'module', 'reviewer')
+
+
+@admin.register(UserModuleAccess)
+class UserModuleAccessAdmin(admin.ModelAdmin):
+    list_display = ('user', 'module', 'access_type', 'granted_at')
+    list_filter = ('access_type', 'granted_at', 'module__module_type')
+    search_fields = ('user__username', 'module__title')
+    ordering = ('-granted_at',)
+    readonly_fields = ('granted_at',)
+    
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user', 'module')

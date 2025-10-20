@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block title %}Говорить с ИИ{% endblock %}
-
+{% block head %}
 {% block content %}
 <!-- НОВАЯ ВЕРСИЯ ШАБЛОНА - 2025-10-06 -->
 <div class="talk-ai-container">
@@ -24,7 +24,7 @@
     </button>
     
     <!-- 3D Аватар -->
-    <div class="avatar-container" id="avatarContainer">
+    <div class="ai-avatar-container" id="avatarContainer">
         <div class="model-loader" id="modelLoader">
             <div class="loader-spinner"></div>
             <div>Загрузка 3D модели...</div>
@@ -129,8 +129,8 @@
     display: block;
 }
 
-/* 3D модель контейнер */
-.avatar-container {
+/* 3D модель контейнер - только в полноэкранном режиме */
+.full-screen-container .ai-avatar-container {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -140,7 +140,7 @@
     z-index: 1001;
 }
 
-.avatar-placeholder {
+.full-screen-container .avatar-placeholder {
     width: 100%;
     height: 100%;
     background: rgba(255, 255, 255, 0.1);
@@ -154,12 +154,12 @@
     transition: all 0.3s ease;
 }
 
-.avatar-placeholder:hover {
+.full-screen-container .avatar-placeholder:hover {
     transform: scale(1.05);
     box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
 }
 
-.avatar-placeholder i {
+.full-screen-container .avatar-placeholder i {
     font-size: 8rem;
     color: rgba(255, 255, 255, 0.8);
     text-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
@@ -444,7 +444,7 @@
 
 /* Адаптивность */
 @media (max-width: 768px) {
-    .avatar-container {
+    .ai-avatar-container {
         width: 300px;
         height: 450px;
     }

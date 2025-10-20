@@ -1,0 +1,176 @@
+{% extends 'base_no_sidebar.html' %}
+{% load static %}
+
+{% block title %}Согласие на обработку персональных данных{% endblock %}
+
+{% block extra_css %}
+<style>
+    .privacy-wrapper {
+        max-width: 800px;
+        margin: 50px auto;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(124, 77, 255, 0.15);
+        padding: 40px;
+    }
+    
+    .privacy-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .privacy-title {
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #7c4dff, #9c27b0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 10px;
+    }
+    
+    .privacy-subtitle {
+        color: #666;
+        font-size: 1.1rem;
+    }
+    
+    .privacy-content {
+        line-height: 1.8;
+        font-size: 1rem;
+        color: #444;
+        margin-bottom: 40px;
+    }
+    
+    .privacy-content h3 {
+        color: #7c4dff;
+        margin-top: 30px;
+        margin-bottom: 15px;
+        font-size: 1.3rem;
+    }
+    
+    .privacy-content h3:first-of-type {
+        margin-top: 20px;
+    }
+    
+    .privacy-content p {
+        margin-bottom: 15px;
+    }
+    
+    .privacy-content ul {
+        margin: 15px 0;
+        padding-left: 20px;
+    }
+    
+    .privacy-content li {
+        margin-bottom: 8px;
+    }
+    
+    .back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: linear-gradient(135deg, #7c4dff, #9c27b0);
+        color: white;
+        text-decoration: none;
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 20px rgba(124, 77, 255, 0.3);
+    }
+    
+    .back-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 30px rgba(124, 77, 255, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+    
+    .back-icon {
+        font-size: 1.2rem;
+    }
+    
+    @media (max-width: 768px) {
+        .privacy-wrapper {
+            margin: 20px;
+            padding: 20px;
+        }
+        
+        .privacy-title {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="privacy-wrapper">
+    <div class="privacy-header">
+        <h1 class="privacy-title">Согласие на обработку персональных данных</h1>
+        <p class="privacy-subtitle">Политика конфиденциальности EngAI</p>
+    </div>
+    
+    <div class="privacy-content">
+        <p>Настоящее Согласие на обработку персональных данных (далее – Согласие) дается на осуществление любых действий в отношении персональных данных, которые необходимы или желаемы для достижения указанных ниже целей, включая, без ограничения: сбор, систематизацию, накопление, хранение, уточнение (обновление, изменение), использование, распространение (в том числе передачу), обезличивание, блокирование, уничтожение персональных данных.</p>
+
+        <h3>1. Цели обработки персональных данных</h3>
+        <p>Обработка персональных данных осуществляется в следующих целях:</p>
+        <ul>
+            <li>Регистрация пользователя в системе EngAI</li>
+            <li>Предоставление доступа к образовательным материалам и сервисам</li>
+            <li>Персонализация обучающего контента</li>
+            <li>Отслеживание прогресса обучения</li>
+            <li>Техническая поддержка пользователей</li>
+            <li>Информирование о новых функциях и услугах платформы</li>
+            <li>Проведение исследований для улучшения качества обучения</li>
+        </ul>
+
+        <h3>2. Категории персональных данных</h3>
+        <p>Обработке подлежат следующие категории персональных данных:</p>
+        <ul>
+            <li>Фамилия, имя, отчество</li>
+            <li>Адрес электронной почты</li>
+            <li>Номер телефона</li>
+            <li>Город проживания</li>
+            <li>Уровень владения английским языком</li>
+            <li>Данные об активности в системе</li>
+            <li>Результаты обучения и тестирования</li>
+        </ul>
+
+        <h3>3. Сроки обработки персональных данных</h3>
+        <p>Персональные данные обрабатываются в течение всего периода использования сервиса EngAI и в течение 3 (трех) лет после прекращения использования сервиса, если иное не предусмотрено применимым законодательством.</p>
+
+        <h3>4. Права субъекта персональных данных</h3>
+        <p>Вы имеете право:</p>
+        <ul>
+            <li>Получать информацию о наличии персональных данных, относящихся к Вам</li>
+            <li>Требовать уточнения, блокирования или уничтожения персональных данных</li>
+            <li>Отозвать согласие на обработку персональных данных</li>
+            <li>Обжаловать действия или бездействие Оператора</li>
+        </ul>
+
+        <h3>5. Безопасность персональных данных</h3>
+        <p>EngAI принимает необходимые правовые, организационные и технические меры для защиты персональных данных от неправомерного или случайного доступа к ним, уничтожения, изменения, блокирования, копирования, предоставления, распространения персональных данных, а также от иных неправомерных действий в отношении персональных данных.</p>
+
+        <h3>6. Согласие на обработку</h3>
+        <p>Подтверждая данное согласие, Вы подтверждаете, что:</p>
+        <ul>
+            <li>Ознакомлены с положениями настоящего Согласия</li>
+            <li>Выражаете согласие на обработку персональных данных в указанных целях</li>
+            <li>Понимаете последствия отзыва согласия</li>
+        </ul>
+
+        <p><strong>Настоящее согласие действует до его отзыва.</strong></p>
+        
+        <p>По всем вопросам, касающимся обработки персональных данных, Вы можете обратиться по электронной почте: <a href="mailto:privacy@engai.ru" style="color: #7c4dff;">privacy@engai.ru</a></p>
+    </div>
+    
+    <div style="text-align: center;">
+        <a href="javascript:history.back()" class="back-button">
+            <span class="back-icon">←</span>
+            <span>Назад к регистрации</span>
+        </a>
+    </div>
+</div>
+{% endblock %}

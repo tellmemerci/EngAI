@@ -52,7 +52,7 @@
                 </div>
             </div>
             <div class="profile-info">
-                <h2 class="user-name" onclick="window.location.href='{% url 'profile' %}'" style="cursor: pointer; transition: color 0.2s ease;" onmouseover="this.style.color='#f0f0f0'" onmouseout="this.style.color='white'">{{ user.get_full_name|default:user.username }}</h2>
+                <h2 class="user-name" onclick="window.location.href='{% url 'profile' %}'" style="cursor: pointer; transition: color 0.2s ease;" onmouseover="this.style.color='#f0f0f0'" onmouseout="this.style.color='white'">{{ user.get_display_name }}</h2>
                 <div class="account-dropdown">
                     <button class="account-btn" onclick="toggleDropdown(event)">
                         <span>Аккаунт</span> <i class="bi bi-chevron-down"></i>
@@ -75,13 +75,19 @@
                 </a>
             </li>
             <li>
+                <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <i class="bi bi-calendar-check"></i>
+                    <span>Мой план</span>
+                </a>
+            </li>
+            <li>
                 <a href="{% url 'dictionary' %}" class="nav-link {% if request.resolver_match.url_name == 'dictionary' %}active{% endif %}">
                     <i class="bi bi-book"></i>
                     <span>Словарь</span>
                 </a>
             </li>
             <li>
-                <a href="#" class="nav-link">
+                <a href="{% url 'cards:sidebar_chat' %}" class="nav-link {% if request.resolver_match.url_name == 'sidebar_chat' %}active{% endif %}">
                     <i class="bi bi-chat-dots"></i>
                     <span>Чат</span>
                 </a>

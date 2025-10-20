@@ -158,11 +158,53 @@
         color: #9ca3af;
         margin-top: 5px;
         text-align: right;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 5px;
+        font-weight: 500;
     }
 
     .message.own .message-time {
         color: rgba(255, 255, 255, 0.8);
-        text-align: left;
+        justify-content: flex-start;
+    }
+    
+    .message-time i {
+        font-size: 0.7rem;
+        opacity: 0.7;
+    }
+    
+    .time-tooltip {
+        position: relative;
+        cursor: help;
+    }
+    
+    .time-tooltip:hover::after {
+        content: attr(data-full-time);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #2d3748;
+        color: white;
+        padding: 6px 10px;
+        border-radius: 6px;
+        font-size: 0.7rem;
+        white-space: nowrap;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    
+    .time-tooltip:hover::before {
+        content: '';
+        position: absolute;
+        bottom: calc(100% - 6px);
+        left: 50%;
+        transform: translateX(-50%);
+        border: 6px solid transparent;
+        border-top-color: #2d3748;
+        z-index: 1001;
     }
 
     /* Сообщения с файлами */
@@ -421,6 +463,160 @@
     .chat-messages::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
     }
+    
+    /* Стили для drag & drop */
+    .chat-container.drag-over {
+        background: rgba(102, 126, 234, 0.05);
+        border: 2px dashed #667eea;
+    }
+    
+    /* Модальное окно предпросмотра файла */
+    .file-preview-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        backdrop-filter: blur(5px);
+    }
+    
+    .preview-content {
+        background: white;
+        border-radius: 16px;
+        max-width: 500px;
+        width: 90%;
+        max-height: 80vh;
+        overflow: hidden;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        animation: modalSlideIn 0.3s ease;
+    }
+    
+    @keyframes modalSlideIn {
+        from {
+            opacity: 0;
+            transform: scale(0.9) translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
+    }
+    
+    .preview-header {
+        padding: 20px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8fafc;
+    }
+    
+    .preview-header h4 {
+        margin: 0;
+        color: #2d3748;
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .close-preview {
+        background: none;
+        border: none;
+        color: #6b7280;
+        font-size: 1.2rem;
+        cursor: pointer;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    
+    .close-preview:hover {
+        background: #e2e8f0;
+        color: #374151;
+    }
+    
+    .preview-body {
+        padding: 20px;
+        text-align: center;
+        max-height: 400px;
+        overflow: hidden;
+    }
+    
+    .preview-image {
+        max-width: 100%;
+        max-height: 250px;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        margin-bottom: 15px;
+    }
+    
+    .file-icon-large {
+        font-size: 4rem;
+        color: #667eea;
+        margin-bottom: 15px;
+    }
+    
+    .file-details p {
+        margin: 5px 0;
+        color: #4a5568;
+    }
+    
+    .file-size {
+        font-size: 0.9rem;
+        color: #6b7280 !important;
+    }
+    
+    .preview-footer {
+        padding: 20px;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        background: #f8fafc;
+    }
+    
+    .btn-cancel, .btn-send {
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .btn-cancel {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    
+    .btn-cancel:hover {
+        background: #e5e7eb;
+    }
+    
+    .btn-send {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .btn-send:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
 </style>
 {% endblock %}
 
@@ -475,7 +671,12 @@
                         </div>
                     {% endif %}
                     <div class="message-time">
-                        {{ message.created_at|date:"d.m.Y H:i" }}
+                        <i class="bi bi-clock"></i>
+                        <span class="time-tooltip" 
+                              data-full-time="{{ message.created_at|date:'d.m.Y в H:i' }}"
+                              data-created="{{ message.created_at|date:'c' }}">
+                            <span id="time-{{ message.id }}">{{ message.created_at|timesince }} назад</span>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -588,13 +789,81 @@ document.addEventListener('DOMContentLoaded', function() {
     fileInput.addEventListener('change', function() {
         const file = this.files[0];
         if (file) {
-            uploadFile(file);
+            showFilePreview(file);
+        }
+    });
+    
+    // Drag & Drop для файлов
+    const chatContainer = document.querySelector('.chat-container');
+    
+    chatContainer.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+    });
+    
+    chatContainer.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+    });
+    
+    chatContainer.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            showFilePreview(file);
         }
     });
     
     // Периодическое обновление сообщений
     setInterval(loadNewMessages, 3000);
 });
+
+// Обновление времени сообщений
+function updateMessageTimes() {
+    const timeElements = document.querySelectorAll('[id^="time-"]');
+    timeElements.forEach(element => {
+        const messageId = element.id.replace('time-', '');
+        const tooltip = element.closest('.time-tooltip');
+        const fullTime = tooltip.getAttribute('data-full-time');
+        
+        // Получаем время из атрибута data-created (нужно добавить в HTML)
+        const createdAttr = tooltip.getAttribute('data-created');
+        if (createdAttr) {
+            const createdTime = new Date(createdAttr);
+            const now = new Date();
+            const diffInSeconds = Math.floor((now - createdTime) / 1000);
+            
+            let timeText = '';
+            if (diffInSeconds < 60) {
+                timeText = 'только что';
+            } else if (diffInSeconds < 3600) {
+                const minutes = Math.floor(diffInSeconds / 60);
+                timeText = `${minutes} мин назад`;
+            } else if (diffInSeconds < 86400) {
+                const hours = Math.floor(diffInSeconds / 3600);
+                timeText = `${hours} ч назад`;
+            } else {
+                const days = Math.floor(diffInSeconds / 86400);
+                if (days < 7) {
+                    timeText = `${days} дн назад`;
+                } else {
+                    // Показываем дату
+                    timeText = createdTime.toLocaleDateString('ru-RU', {
+                        day: 'numeric',
+                        month: 'short'
+                    });
+                }
+            }
+            element.textContent = timeText;
+        }
+    });
+}
+
+// Обновление времени каждую минуту
+setInterval(updateMessageTimes, 60000);
 
 // Отправка текстового сообщения
 function sendMessage(content) {
@@ -633,6 +902,115 @@ function sendMessage(content) {
         isLoading = false;
         showLoading(false);
     });
+}
+
+// Предпросмотр файла перед отправкой
+function showFilePreview(file) {
+    // Проверка размера файла (10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        showNotification('Размер файла не должен превышать 10MB', 'error');
+        return;
+    }
+    
+    const fileName = file.name;
+    const fileSize = formatFileSize(file.size);
+    const isImage = file.type.startsWith('image/');
+    
+    let previewHtml = '';
+    if (isImage) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const previewHtml = `
+                <div class="file-preview-modal" id="filePreviewModal">
+                    <div class="preview-content image-preview">
+                        <div class="preview-header">
+                            <h4><i class="bi bi-image"></i> Отправить изображение?</h4>
+                            <button class="close-preview" onclick="closeFilePreview()">
+                                <i class="bi bi-x"></i>
+                            </button>
+                        </div>
+                        <div class="preview-body">
+                            <img src="${e.target.result}" alt="${fileName}" class="preview-image">
+                            <div class="file-details">
+                                <p><strong>${fileName}</strong></p>
+                                <p class="file-size">${fileSize}</p>
+                            </div>
+                        </div>
+                        <div class="preview-footer">
+                            <button class="btn-cancel" onclick="closeFilePreview()">Отмена</button>
+                            <button class="btn-send" onclick="confirmFileUpload()">
+                                <i class="bi bi-send"></i> Отправить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', previewHtml);
+            currentPreviewFile = file;
+        };
+        reader.readAsDataURL(file);
+    } else {
+        const previewHtml = `
+            <div class="file-preview-modal" id="filePreviewModal">
+                <div class="preview-content file-preview">
+                    <div class="preview-header">
+                        <h4><i class="bi bi-file-earmark"></i> Отправить файл?</h4>
+                        <button class="close-preview" onclick="closeFilePreview()">
+                            <i class="bi bi-x"></i>
+                        </button>
+                    </div>
+                    <div class="preview-body">
+                        <div class="file-icon-large">
+                            <i class="bi bi-file-earmark-text"></i>
+                        </div>
+                        <div class="file-details">
+                            <p><strong>${fileName}</strong></p>
+                            <p class="file-size">${fileSize}</p>
+                        </div>
+                    </div>
+                    <div class="preview-footer">
+                        <button class="btn-cancel" onclick="closeFilePreview()">Отмена</button>
+                        <button class="btn-send" onclick="confirmFileUpload()">
+                            <i class="bi bi-send"></i> Отправить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', previewHtml);
+        currentPreviewFile = file;
+    }
+}
+
+let currentPreviewFile = null;
+
+// Подтверждение отправки файла
+function confirmFileUpload() {
+    if (currentPreviewFile) {
+        closeFilePreview();
+        uploadFile(currentPreviewFile);
+        currentPreviewFile = null;
+    }
+}
+
+// Закрытие предпросмотра
+function closeFilePreview() {
+    const modal = document.getElementById('filePreviewModal');
+    if (modal) {
+        modal.remove();
+    }
+    currentPreviewFile = null;
+    // Очищаем input
+    document.getElementById('fileInput').value = '';
+}
+
+// Форматирование размера файла
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 байт';
+    const k = 1024;
+    const sizes = ['байт', 'КБ', 'МБ', 'ГБ'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 // Загрузка файла
@@ -778,6 +1156,115 @@ function showNotification(message, type) {
     setTimeout(() => {
         notification.remove();
     }, 4000);
+}
+// Отображение уведомлений
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-content">
+            <i class="bi ${type === 'error' ? 'bi-exclamation-triangle' : 'bi-info-circle'}"></i>
+            <span>${message}</span>
+        </div>
+        <button class="notification-close" onclick="this.parentElement.remove()">
+            <i class="bi bi-x"></i>
+        </button>
+    `;
+    
+    // Добавляем стили, если их нет
+    if (!document.getElementById('notification-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'notification-styles';
+        styles.textContent = `
+            .notification {
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: white;
+                border-radius: 12px;
+                padding: 16px;
+                box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+                z-index: 10001;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                max-width: 400px;
+                animation: slideInRight 0.3s ease;
+                border-left: 4px solid #667eea;
+            }
+            .notification-error {
+                border-left-color: #ef4444;
+            }
+            .notification-content {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex: 1;
+            }
+            .notification-content i {
+                font-size: 1.1rem;
+                color: #667eea;
+            }
+            .notification-error .notification-content i {
+                color: #ef4444;
+            }
+            .notification-close {
+                background: none;
+                border: none;
+                color: #6b7280;
+                cursor: pointer;
+                padding: 4px;
+                border-radius: 4px;
+                transition: background 0.2s;
+            }
+            .notification-close:hover {
+                background: #f3f4f6;
+            }
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+    
+    document.body.appendChild(notification);
+    
+    // Автоудаление через 5 секунд
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
+
+// Отображение индикатора загрузки
+function showLoading(show) {
+    const indicator = document.getElementById('loadingIndicator');
+    if (show) {
+        indicator.classList.add('show');
+    } else {
+        indicator.classList.remove('show');
+    }
+}
+
+// Прокрутка к низу
+function scrollToBottom() {
+    const chatMessages = document.getElementById('chatMessages');
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Открытие изображения в модальном окне
+function openImageModal(src) {
+    const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+    document.getElementById('modalImage').src = src;
+    modal.show();
 }
 </script>
 {% endblock %}

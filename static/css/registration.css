@@ -239,4 +239,135 @@ body {
 .iti__tel-input:focus {
     border-color: #7c4dff;
     outline: none;
-} 
+}
+
+/* Стили для социальных кнопок */
+.social-section {
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.social-divider {
+    margin: 25px 0;
+    position: relative;
+    text-align: center;
+}
+
+.social-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #e0e0e0;
+    z-index: 1;
+}
+
+.social-divider span {
+    background: white;
+    padding: 0 15px;
+    color: #888;
+    font-size: 0.9rem;
+    position: relative;
+    z-index: 2;
+}
+
+.social-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 25px;
+}
+
+.social-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #333;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.social-btn:hover {
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.social-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.google-btn {
+    border-color: #4285F4;
+    color: #4285F4;
+}
+
+.google-btn:hover {
+    background: #4285F4;
+    color: white;
+    border-color: #4285F4;
+}
+
+.google-btn:hover .social-icon path {
+    fill: white !important;
+}
+
+.github-btn {
+    border-color: #333;
+    color: #333;
+}
+
+.github-btn:hover {
+    background: #333;
+    color: white;
+    border-color: #333;
+}
+
+.github-btn:hover .social-icon path {
+    fill: white !important;
+}
+
+.apple-btn {
+    border-color: #000;
+    color: #000;
+}
+
+.apple-btn:hover {
+    background: #000;
+    color: white;
+    border-color: #000;
+}
+
+.apple-btn:hover .social-icon path {
+    fill: white !important;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 480px) {
+    .registration-container {
+        padding: 60px 20px 40px;
+        margin: 20px;
+    }
+    
+    .social-btn {
+        padding: 14px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .social-icon {
+        width: 18px;
+        height: 18px;
+    }
+}

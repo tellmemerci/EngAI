@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}EngAI{% endblock %}</title>
+    
+    <!-- Базовые стили -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f8f5ff 0%, #e6d9ff 100%);
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        /* Основной контент без отступа для бокового меню */
+        .main-wrapper {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 20px;
+        }
+    </style>
+    
+    <!-- Дополнительные стили -->
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Основная область контента -->
+    <div class="main-wrapper">
+        <main class="content-area">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Дополнительные скрипты -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

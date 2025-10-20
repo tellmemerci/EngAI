@@ -1409,6 +1409,20 @@ def talk_ai(request):
     }
     return render(request, 'cards/talk_ai.html', context)
 
+@login_required
+def sidebar_chat(request):
+    # Получаем последние сообщения активного чата для истории
+    ai_chat = AIChat.objects.filter(user=request.user, is_active=True).first()
+    messages = []
+    if ai_chat:
+        messages = ai_chat.ai_messages.order_by('created_at')[:50]  # последние 50 сообщений
+    
+    context = {
+        'chat_messages': messages,
+        'user': request.user,
+    }
+    return render(request, 'cards/sidebar_chat.html', context)
+
 
 @login_required
 @require_POST
@@ -1445,7 +1459,13 @@ Be encouraging and fun! You can use expressions like "that's fire!", "no cap", "
 Keep it natural and conversational - imagine you're texting with a friend who's learning English. 
 Help them practice English in a chill, supportive way. Don't be too formal or robotic.
 
-Respond in English and keep your messages relatively short and engaging.
+IMPORTANT: Always provide your response in this EXACT format:
+[ENGLISH]
+Your English response here
+[RUSSIAN]
+Русский перевод здесь
+
+Keep your English messages relatively short and engaging. Provide accurate Russian translations.
 """
         
         start_time = time.time()
@@ -1455,8 +1475,29 @@ Respond in English and keep your messages relatively short and engaging.
             ChatMessage(role="user", content=user_message)
         ]
         resp = client.chat(model="mistral-small", messages=chat_messages, temperature=0.8)
-        reply = resp.choices[0].message.content if getattr(resp, 'choices', None) else "Hey! Something went wrong on my end, but let's keep practicing! Try saying something else! 😅"
+        raw_reply = resp.choices[0].message.content if getattr(resp, 'choices', None) else "Hey! Something went wrong on my end, but let's keep practicing! Try saying something else! 😅"
         response_time = int((time.time() - start_time) * 1000)
+        
+        # Парсим ответ на английский и русский
+        def parse_ai_response(text):
+            english_match = re.search(r'\[ENGLISH\]\s*([\s\S]*?)\[RUSSIAN\]', text, re.IGNORECASE)
+            russian_match = re.search(r'\[RUSSIAN\]\s*([\s\S]*?)(?:\[|$)', text, re.IGNORECASE)
+            
+            if english_match and russian_match:
+                return {
+                    'english': english_match.group(1).strip(),
+                    'russian': russian_match.group(1).strip()
+                }
+            else:
+                # Если формат не соблюден, возвращаем весь текст как английский
+                return {
+                    'english': text.strip(),
+                    'russian': None
+                }
+        
+        parsed_response = parse_ai_response(raw_reply)
+        reply = parsed_response['english']
+        russian_translation = parsed_response['russian']
         
         # Сохраняем ответ ИИ
         ai_msg = AIMessage.objects.create(
@@ -1470,6 +1511,7 @@ Respond in English and keep your messages relatively short and engaging.
         
         return JsonResponse({
             'reply': reply,
+            'russian_translation': russian_translation,
             'chat_id': ai_chat.id,
             'message_id': ai_msg.id
         })

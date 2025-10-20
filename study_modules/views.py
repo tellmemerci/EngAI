@@ -3,11 +3,50 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_protect
-from .models import StudyModule, ModuleSection, ModuleSkill, TheoryCard, ModuleAttachment, Unit, Topic, UnitSection, UnitSkill, UnitTheoryCard, UnitAttachment, GrammarTask
-from .forms import StudyModuleForm, ModuleSectionForm, TheoryCardForm, ModuleSkillForm, ModuleAttachmentForm, UnitForm, TopicForm, UnitSectionForm, UnitSkillForm, UnitTheoryCardForm, UnitAttachmentForm
+from .models import StudyModule, ModuleSection, ModuleSkill, TheoryCard, ModuleAttachment, Unit, Topic, UnitSection, UnitSkill, UnitTheoryCard, UnitAttachment, GrammarTask, ModuleAccessRequest, UserModuleAccess
+from .forms import StudyModuleForm, ModuleSectionForm, TheoryCardForm, ModuleSkillForm, ModuleAttachmentForm, UnitForm, TopicForm, UnitSectionForm, UnitSkillForm, UnitTheoryCardForm, UnitAttachmentForm, ModuleAccessRequestForm, ModulePasswordForm, SetModulePasswordForm, ReviewAccessRequestForm
 from .grammar_forms import GrammarTaskForm
+from django.utils import timezone
 
 # Create your views here.
+
+def user_has_module_access(user, module):
+    """Проверяет, есть ли у пользователя доступ к модулю"""
+    # Автор модуля всегда имеет доступ
+    if module.author == user:
+        return True
+    
+    # Открытые модули доступны всем
+    if module.module_type != 'locked':
+        return True
+    
+    # Проверяем, есть ли запись о доступе пользователя
+    return UserModuleAccess.objects.filter(user=user, module=module).exists()
+
+
+def get_user_access_status(user, module):
+    """Возвращает статус доступа пользователя к модулю"""
+    if module.author == user:
+        return {'has_access': True, 'access_type': 'author'}
+    
+    if module.module_type != 'locked':
+        return {'has_access': True, 'access_type': 'public'}
+    
+    # Проверяем наличие доступа
+    access = UserModuleAccess.objects.filter(user=user, module=module).first()
+    if access:
+        return {'has_access': True, 'access_type': access.access_type}
+    
+    # Проверяем наличие поданной заявки
+    request_obj = ModuleAccessRequest.objects.filter(user=user, module=module).first()
+    
+    return {
+        'has_access': False,
+        'has_password': module.has_password(),
+        'pending_request': request_obj.status == 'pending' if request_obj else False,
+        'request_status': request_obj.status if request_obj else None
+    }
+
 
 @login_required
 def index(request):
@@ -101,6 +140,10 @@ def save_module(request, module_id):
 def module_detail(request, module_id):
     """Детальная страница модуля с полной структурой"""
     module = get_object_or_404(StudyModule, pk=module_id)
+    
+    # Проверяем доступ к модулю
+    if not user_has_module_access(request.user, module):
+        return redirect('study_modules:module_access', module_id=module_id)
     
     # Получаем юниты модуля и предварительно загружаем темы для каждого юнита
     units = Unit.objects.filter(module=module).order_by('order', 'title', 'id').prefetch_related('topics')
@@ -355,6 +398,10 @@ def delete_unit(request, module_id, unit_id):
 def unit_detail(request, module_id, unit_id):
     module = get_object_or_404(StudyModule, pk=module_id)
     unit = get_object_or_404(Unit, pk=unit_id, module=module)
+    
+    # Проверяем доступ к модулю
+    if not user_has_module_access(request.user, module):
+        return redirect('study_modules:module_access', module_id=module_id)
 
     # Получаем секции юнита (не модуля!)
     theory_sections = UnitSection.objects.filter(unit=unit, section_type='theory').order_by('order')
@@ -391,6 +438,10 @@ def topic_detail(request, module_id, unit_id, topic_id):
     module = get_object_or_404(StudyModule, pk=module_id)
     unit = get_object_or_404(Unit, pk=unit_id, module=module)
     topic = get_object_or_404(Topic, pk=topic_id, unit=unit)
+    
+    # Проверяем доступ к модулю
+    if not user_has_module_access(request.user, module):
+        return redirect('study_modules:module_access', module_id=module_id)
 
     if request.method == 'POST':
         # Only author can edit
@@ -910,3 +961,177 @@ def delete_grammar_task(request, module_id, unit_id, skill_id, task_id):
         return JsonResponse({'success': True})
     
     return JsonResponse({'success': False, 'error': 'Неверный метод запроса.'})
+
+
+@login_required
+def module_access_view(request, module_id):
+    """Страница для получения доступа к закрытому модулю"""
+    module = get_object_or_404(StudyModule, pk=module_id)
+    
+    # Проверяем статус доступа
+    access_status = get_user_access_status(request.user, module)
+    
+    if access_status['has_access']:
+        return redirect('study_modules:module_detail', module_id=module_id)
+    
+    context = {
+        'module': module,
+        'access_status': access_status,
+        'request_form': ModuleAccessRequestForm(),
+        'password_form': ModulePasswordForm()
+    }
+    return render(request, 'study_modules/module_access.html', context)
+
+
+@login_required
+def request_module_access(request, module_id):
+    """Подача заявки на доступ к модулю"""
+    module = get_object_or_404(StudyModule, pk=module_id)
+    
+    if user_has_module_access(request.user, module):
+        return redirect('study_modules:module_detail', module_id=module_id)
+    
+    # Проверяем, нет ли уже заявки от этого пользователя
+    existing_request = ModuleAccessRequest.objects.filter(user=request.user, module=module).first()
+    if existing_request:
+        messages.info(request, f'У вас уже есть заявка на доступ (статус: {existing_request.get_status_display()})')
+        return redirect('study_modules:module_access', module_id=module_id)
+    
+    if request.method == 'POST':
+        form = ModuleAccessRequestForm(request.POST)
+        if form.is_valid():
+            access_request = form.save(commit=False)
+            access_request.user = request.user
+            access_request.module = module
+            access_request.save()
+            messages.success(request, 'Заявка на доступ отправлена! Автор модуля рассмотрит ее и даст ответ.')
+            return redirect('study_modules:module_access', module_id=module_id)
+    
+    return redirect('study_modules:module_access', module_id=module_id)
+
+
+@login_required
+def enter_module_password(request, module_id):
+    """Ввод пароля для доступа к модулю"""
+    module = get_object_or_404(StudyModule, pk=module_id)
+    
+    if user_has_module_access(request.user, module):
+        return redirect('study_modules:module_detail', module_id=module_id)
+    
+    if not module.has_password():
+        messages.error(request, 'Для этого модуля не установлен пароль доступа.')
+        return redirect('study_modules:module_access', module_id=module_id)
+    
+    if request.method == 'POST':
+        form = ModulePasswordForm(request.POST)
+        if form.is_valid():
+            password = form.cleaned_data['password']
+            if module.check_password(password):
+                # Создаем запись о доступе
+                UserModuleAccess.objects.get_or_create(
+                    user=request.user,
+                    module=module,
+                    defaults={'access_type': 'password'}
+                )
+                messages.success(request, 'Пароль правильный! Теперь у вас есть доступ к модулю.')
+                return redirect('study_modules:module_detail', module_id=module_id)
+            else:
+                messages.error(request, 'Неправильный пароль. Попробуйте еще раз.')
+    
+    return redirect('study_modules:module_access', module_id=module_id)
+
+
+@login_required
+def manage_module_access(request, module_id):
+    """Управление доступом к модулю (для автора)"""
+    module = get_object_or_404(StudyModule, pk=module_id)
+    
+    if module.author != request.user:
+        messages.error(request, 'Только автор модуля может управлять доступом.')
+        return redirect('study_modules:module_detail', module_id=module_id)
+    
+    # Получаем все заявки на доступ к этому модулю
+    access_requests = ModuleAccessRequest.objects.filter(module=module).select_related('user')
+    user_accesses = UserModuleAccess.objects.filter(module=module).select_related('user')
+    
+    # Подсчитываем статистику
+    total_requests = access_requests.count()
+    pending_requests = access_requests.filter(status='pending').count()
+    reviewed_requests = total_requests - pending_requests
+    
+    context = {
+        'module': module,
+        'access_requests': access_requests,
+        'user_accesses': user_accesses,
+        'total_requests': total_requests,
+        'pending_requests': pending_requests,
+        'reviewed_requests': reviewed_requests,
+        'set_password_form': SetModulePasswordForm()
+    }
+    return render(request, 'study_modules/manage_module_access.html', context)
+
+
+@login_required
+def set_module_password(request, module_id):
+    """Установка пароля для модуля (для автора)"""
+    module = get_object_or_404(StudyModule, pk=module_id)
+    
+    if module.author != request.user:
+        messages.error(request, 'Только автор модуля может устанавливать пароль.')
+        return redirect('study_modules:manage_access', module_id=module_id)
+    
+    if request.method == 'POST':
+        form = SetModulePasswordForm(request.POST)
+        if form.is_valid():
+            password = form.cleaned_data['password']
+            if password:
+                module.set_password(password)
+                module.save()
+                messages.success(request, 'Пароль успешно установлен!')
+            else:
+                module.set_password(None)
+                module.save()
+                messages.success(request, 'Пароль удален.')
+    
+    return redirect('study_modules:manage_access', module_id=module_id)
+
+
+@login_required
+def review_access_request(request, module_id, request_id):
+    """Рассмотрение заявки на доступ (для автора)"""
+    module = get_object_or_404(StudyModule, pk=module_id)
+    access_request = get_object_or_404(ModuleAccessRequest, pk=request_id, module=module)
+    
+    if module.author != request.user:
+        messages.error(request, 'Только автор модуля может рассматривать заявки.')
+        return redirect('study_modules:manage_access', module_id=module_id)
+    
+    if request.method == 'POST':
+        form = ReviewAccessRequestForm(request.POST, instance=access_request)
+        if form.is_valid():
+            access_request = form.save(commit=False)
+            access_request.reviewer = request.user
+            access_request.reviewed_at = timezone.now()
+            access_request.save()
+            
+            if access_request.status == 'approved':
+                # Создаем запись о доступе
+                UserModuleAccess.objects.get_or_create(
+                    user=access_request.user,
+                    module=module,
+                    defaults={'access_type': 'request'}
+                )
+                messages.success(request, f'Заявка пользователя {access_request.user.username} одобрена!')
+            else:
+                messages.success(request, f'Заявка пользователя {access_request.user.username} отклонена.')
+            
+            return redirect('study_modules:manage_access', module_id=module_id)
+    else:
+        form = ReviewAccessRequestForm(instance=access_request)
+    
+    context = {
+        'module': module,
+        'access_request': access_request,
+        'form': form
+    }
+    return render(request, 'study_modules/review_access_request.html', context)

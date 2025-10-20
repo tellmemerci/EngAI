@@ -1,0 +1,300 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Управление доступом - {{ module.title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'study_modules/css/manage_access.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="manage-access-container">
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <!-- Хлебные крошки -->
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'study_modules:index' %}">Модули</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'study_modules:module_detail' module.id %}">{{ module.title }}</a></li>
+                        <li class="breadcrumb-item active" aria-current="page">Управление доступом</li>
+                    </ol>
+                </nav>
+
+                <!-- Заголовок -->
+                <div class="page-header">
+                    <h1><i class="fas fa-shield-alt me-2"></i>Управление доступом</h1>
+                    <div class="d-flex justify-content-center mt-3">
+                        <a href="{% url 'study_modules:module_detail' module.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Назад к модулю
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Информация о модуле -->
+                <div class="module-info-card">
+                    <h5 class="module-title">{{ module.title }}</h5>
+                    <p class="module-description">{{ module.description }}</p>
+                    <div class="module-meta">
+                        <div class="meta-item">
+                            <div class="meta-label">Тип модуля</div>
+                            <div class="meta-value">
+                                <span class="badge {% if module.module_type == 'locked' %}badge-author{% else %}badge-approved{% endif %}">
+                                    {% if module.module_type == 'locked' %}
+                                        Закрытый
+                                    {% else %}
+                                        Открытый
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">Пароль</div>
+                            <div class="meta-value">
+                                <span class="badge {% if module.has_password %}badge-password{% else %}bg-secondary{% endif %}">
+                                    {% if module.has_password %}
+                                        Установлен
+                                    {% else %}
+                                        Не задан
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="access-section">
+                    <!-- Управление паролем -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h5>Пароль доступа</h5>
+                        </div>
+                        <div class="section-body">
+                            <p class="mb-4">
+                                {% if module.has_password %}
+                                    Для модуля установлен пароль. Пользователи могут получить доступ, введя этот пароль.
+                                {% else %}
+                                    Пароль не установлен. Установите пароль, чтобы пользователи могли получать мгновенный доступ.
+                                {% endif %}
+                            </p>
+                            
+                            <form method="post" action="{% url 'study_modules:set_password' module.id %}" class="password-form">
+                                {% csrf_token %}
+                                <div class="form-group">
+                                    {{ set_password_form.password.label_tag }}
+                                    {{ set_password_form.password }}
+                                    {% if set_password_form.password.help_text %}
+                                        <div class="form-text">{{ set_password_form.password.help_text }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="form-group">
+                                    {{ set_password_form.confirm_password.label_tag }}
+                                    {{ set_password_form.confirm_password }}
+                                </div>
+                                <div class="d-grid gap-2 d-md-flex">
+                                    <button type="submit" class="btn btn-success flex-fill">
+                                        <i class="fas fa-save me-2"></i>
+                                        {% if module.has_password %}Изменить пароль{% else %}Установить пароль{% endif %}
+                                    </button>
+                                    {% if module.has_password %}
+                                    </form>
+                                    <form method="post" action="{% url 'study_modules:set_password' module.id %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="password" value="">
+                                        <input type="hidden" name="confirm_password" value="">
+                                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Вы уверены, что хотите удалить пароль?')">
+                                            <i class="fas fa-trash me-2"></i>Удалить
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    </form>
+                                    {% endif %}
+                                </div>
+                        </div>
+                    </div>
+
+                    <!-- Статистика -->
+                    <div class="section-card">
+                        <div class="section-header">
+                            <h5>Статистика доступа</h5>
+                        </div>
+                        <div class="section-body">
+                            <div class="stats-grid">
+                                <div class="stat-item">
+                                    <div class="stat-number">{{ total_requests }}</div>
+                                    <div class="stat-label">Всего заявок</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number">{{ reviewed_requests }}</div>
+                                    <div class="stat-label">Рассмотрено</div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-number">{{ user_accesses.count }}</div>
+                                    <div class="stat-label">Есть доступ</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Заявки на доступ -->
+                <div class="table-card">
+                    <div class="section-header">
+                        <h5>Заявки на доступ</h5>
+                    </div>
+                    {% if access_requests %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 25%;">Пользователь</th>
+                                        <th style="width: 30%;">Сообщение</th>
+                                        <th style="width: 15%;">Дата подачи</th>
+                                        <th style="width: 15%;">Статус</th>
+                                        <th style="width: 15%;">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for request in access_requests %}
+                                    <tr>
+                                        <td>
+                                            <div class="user-info">
+                                                <div class="user-details">
+                                                    <h6>{{ request.user.username }}</h6>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if request.message %}
+                                                <div style="max-width: 200px; word-wrap: break-word;">
+                                                    {{ request.message|truncatewords:10 }}
+                                                    {% if request.message|length > 80 %}
+                                                        <a href="#" class="text-primary" data-bs-toggle="tooltip" title="{{ request.message }}">
+                                                            ...читать полностью
+                                                        </a>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                <em class="text-muted">Без сообщения</em>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {{ request.requested_at|date:"d.m.Y H:i" }}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if request.status == 'pending' %}
+                                                <span class="status-badge badge-pending">
+                                                    На рассмотрении
+                                                </span>
+                                            {% elif request.status == 'approved' %}
+                                                <span class="status-badge badge-approved">
+                                                    Одобрена
+                                                </span>
+                                                <div class="small text-muted mt-1">
+                                                    {{ request.reviewed_at|date:"d.m.Y" }}
+                                                </div>
+                                            {% elif request.status == 'rejected' %}
+                                                <span class="status-badge badge-rejected">
+                                                    Отклонена
+                                                </span>
+                                                <div class="small text-muted mt-1">
+                                                    {{ request.reviewed_at|date:"d.m.Y" }}
+                                                </div>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            {% if request.status == 'pending' %}
+                                                <a href="{% url 'study_modules:review_request' module.id request.id %}" 
+                                                   class="btn btn-outline-primary">
+                                                    <i class="fas fa-eye me-1"></i>Рассмотреть
+                                                </a>
+                                            {% else %}
+                                                <span class="status-badge bg-secondary">
+                                                    Готово
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <h5>Заявок пока нет</h5>
+                            <p>Пользователи еще не подавали заявки на доступ к этому модулю.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Пользователи с доступом -->
+                <div class="table-card">
+                    <div class="section-header">
+                        <h5>Пользователи с доступом</h5>
+                    </div>
+                    {% if user_accesses %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%;">Пользователь</th>
+                                        <th style="width: 30%;">Тип доступа</th>
+                                        <th style="width: 30%;">Дата получения</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for access in user_accesses %}
+                                    <tr>
+                                        <td>
+                                            <div class="user-info">
+                                                <div class="user-details">
+                                                    <h6>{{ access.user.username }}</h6>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if access.access_type == 'request' %}
+                                                <span class="status-badge badge-request">
+                                                    По заявке
+                                                </span>
+                                            {% elif access.access_type == 'password' %}
+                                                <span class="status-badge badge-password">
+                                                    По паролю
+                                                </span>
+                                            {% elif access.access_type == 'author' %}
+                                                <span class="status-badge badge-author">
+                                                    Автор
+                                                </span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">{{ access.granted_at|date:"d.m.Y H:i" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="bi bi-people"></i>
+                            <h5>Пользователей с доступом пока нет</h5>
+                            <p>Никто еще не получил доступ к этому модулю.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация всплывающих подсказок
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+
+{% endblock %}

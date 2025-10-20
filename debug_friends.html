@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отладка функций друзей</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .success {
+            color: #28a745;
+        }
+        .info {
+            color: #17a2b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Отладка функций друзей</h1>
+        
+        <div class="test-section">
+            <h3>CSRF Токен</h3>
+            <button onclick="checkCSRF()">Проверить CSRF токен</button>
+            <div id="csrf-result"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>Тестирование запросов</h3>
+            <input type="number" id="testUserId" placeholder="ID пользователя" value="1">
+            <button onclick="testSendRequest()">Отправить заявку</button>
+            <button onclick="testRemoveFriend()">Удалить друга</button>
+            <button onclick="testRespondRequest()">Ответить на заявку</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>Логи</h3>
+            <button onclick="clearLogs()">Очистить логи</button>
+            <div id="logs" class="log"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type;
+            logs.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            logs.scrollTop = logs.scrollHeight;
+            
+            // Также выводим в консоль браузера
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+        
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+        
+        function checkCSRF() {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            const result = document.getElementById('csrf-result');
+            
+            if (csrfToken) {
+                result.innerHTML = `<span class="success">✓ CSRF токен найден: ${csrfToken.value.substring(0, 10)}...</span>`;
+                log('CSRF токен найден', 'success');
+            } else {
+                result.innerHTML = `<span class="error">✗ CSRF токен не найден</span>`;
+                log('CSRF токен не найден', 'error');
+            }
+        }
+        
+        function makeRequest(url, data, action) {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+            
+            if (!csrfToken) {
+                log(`Ошибка ${action}: CSRF токен не найден`, 'error');
+                return;
+            }
+            
+            log(`Начинаем ${action}: ${JSON.stringify(data)}`, 'info');
+            
+            const params = new URLSearchParams(data);
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrfToken.value
+                },
+                body: params
+            })
+            .then(response => {
+                log(`Ответ сервера ${action}: ${response.status} ${response.statusText}`, 'info');
+                return response.json();
+            })
+            .then(data => {
+                log(`Данные от сервера ${action}: ${JSON.stringify(data)}`, data.success ? 'success' : 'error');
+            })
+            .catch(error => {
+                log(`Ошибка ${action}: ${error.message}`, 'error');
+            });
+        }
+        
+        function testSendRequest() {
+            const userId = document.getElementById('testUserId').value;
+            if (!userId) {
+                log('Не указан ID пользователя', 'error');
+                return;
+            }
+            
+            makeRequest('/friends/send-request/', {user_id: userId}, 'отправки заявки');
+        }
+        
+        function testRemoveFriend() {
+            const userId = document.getElementById('testUserId').value;
+            if (!userId) {
+                log('Не указан ID друга', 'error');
+                return;
+            }
+            
+            makeRequest('/friends/remove/', {friend_id: userId}, 'удаления друга');
+        }
+        
+        function testRespondRequest() {
+            const requestId = document.getElementById('testUserId').value;
+            if (!requestId) {
+                log('Не указан ID заявки', 'error');
+                return;
+            }
+            
+            makeRequest('/friends/respond/', {request_id: requestId, action: 'accept'}, 'ответа на заявку');
+        }
+        
+        // Автоматическая проверка CSRF при загрузке
+        document.addEventListener('DOMContentLoaded', function() {
+            log('Страница загружена, проверяем CSRF токен...', 'info');
+            checkCSRF();
+        });
+    </script>
+
+    <!-- CSRF токен для тестирования -->
+    {% csrf_token %}
+</body>
+</html>

@@ -25,7 +25,7 @@
 
     <div class="cards-grid">
         {% for module in modules %}
-        <a href="{% url 'study_modules:detail' module.id %}" class="card-link">
+        <a href="{% if module.module_type == 'locked' and module.author != request.user %}{% url 'study_modules:module_access' module.id %}{% else %}{% url 'study_modules:detail' module.id %}{% endif %}" class="card-link">
             <div class="card {% if module.module_type == 'locked' %}locked{% endif %}">
                 <div class="image-container">
                     {% if module.image %}

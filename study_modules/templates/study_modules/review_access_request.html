@@ -1,0 +1,162 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Рассмотрение заявки - {{ module.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <!-- Хлебные крошки -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'study_modules:index' %}">Модули</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'study_modules:module_detail' module.id %}">{{ module.title }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'study_modules:manage_access' module.id %}">Управление доступом</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Рассмотрение заявки</li>
+                </ol>
+            </nav>
+
+            <!-- Заголовок -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1><i class="fas fa-clipboard-check text-primary me-2"></i>Рассмотрение заявки</h1>
+                <a href="{% url 'study_modules:manage_access' module.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Назад к управлению
+                </a>
+            </div>
+
+            <div class="row">
+                <!-- Информация о заявке -->
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Детали заявки</h5>
+                        </div>
+                        <div class="card-body">
+                            <!-- Информация о пользователе -->
+                            <div class="row mb-4">
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-2">ПОЛЬЗОВАТЕЛЬ</h6>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-user-circle fa-3x text-muted me-3"></i>
+                                        <div>
+                                            <h5 class="mb-1">{{ access_request.user.username }}</h5>
+                                            {% if access_request.user.first_name or access_request.user.last_name %}
+                                                <p class="text-muted mb-1">{{ access_request.user.get_full_name }}</p>
+                                            {% endif %}
+                                            {% if access_request.user.email %}
+                                                <small class="text-muted">{{ access_request.user.email }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6 class="text-muted mb-2">ДАТА ПОДАЧИ</h6>
+                                    <p class="mb-1">{{ access_request.requested_at|date:"d.m.Y" }}</p>
+                                    <small class="text-muted">{{ access_request.requested_at|date:"H:i" }}</small>
+                                </div>
+                            </div>
+
+                            <!-- Модуль -->
+                            <div class="row mb-4">
+                                <div class="col-12">
+                                    <h6 class="text-muted mb-2">МОДУЛЬ</h6>
+                                    <div class="d-flex align-items-center p-3 bg-light rounded">
+                                        {% if module.image %}
+                                            <img src="{{ module.image.url }}" alt="{{ module.title }}" 
+                                                 class="rounded me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                        {% else %}
+                                            <i class="fas fa-book fa-3x text-muted me-3"></i>
+                                        {% endif %}
+                                        <div>
+                                            <h6 class="mb-1">{{ module.title }}</h6>
+                                            <p class="text-muted small mb-0">{{ module.description|truncatewords:20 }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Сообщение пользователя -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="text-muted mb-2">СООБЩЕНИЕ ОТ ПОЛЬЗОВАТЕЛЯ</h6>
+                                    {% if access_request.message %}
+                                        <div class="bg-light p-3 rounded">
+                                            <p class="mb-0">{{ access_request.message|linebreaks }}</p>
+                                        </div>
+                                    {% else %}
+                                        <div class="bg-light p-3 rounded">
+                                            <p class="text-muted mb-0 fst-italic">Пользователь не оставил сообщения</p>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Форма рассмотрения -->
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-gavel me-2"></i>Принять решение
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <div class="mb-4">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label fw-bold">
+                                        {{ form.status.label }}
+                                    </label>
+                                    <select id="{{ form.status.id_for_label }}" name="{{ form.status.name }}" class="form-select" required>
+                                        <option value="">-- Выберите решение --</option>
+                                        {% for choice in form.status.field.choices %}
+                                            <option value="{{ choice.0 }}" {% if form.status.value == choice.0 %}selected{% endif %}>
+                                                {{ choice.1 }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="{{ form.reviewer_message.id_for_label }}" class="form-label">
+                                        {{ form.reviewer_message.label }}
+                                    </label>
+                                    {{ form.reviewer_message }}
+                                    <div class="form-text">
+                                        Дополнительный комментарий для пользователя (необязательно)
+                                    </div>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-check me-2"></i>Принять решение
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Предупреждения -->
+                    <div class="card mt-3">
+                        <div class="card-body">
+                            <div class="alert alert-info mb-0">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-info-circle me-2"></i>Информация
+                                </h6>
+                                <small>
+                                    После одобрения пользователь сразу получит доступ к модулю. 
+                                    При отклонении заявки пользователь может подать новую заявку только через некоторое время.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

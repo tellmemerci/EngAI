@@ -1,0 +1,125 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}{{ module.title }} - Доступ к модулю{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'study_modules/css/module_detail.css' %}?v=3.3">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="module-container">
+    <a href="{% url 'study_modules:index' %}" class="back-button">
+        <i class="bi bi-arrow-left-circle"></i>Вернуться назад
+    </a>
+    
+    <h1 class="module-header">
+        <i class="bi bi-lock-fill" style="color: #ffc107; margin-right: 10px;"></i>
+        {{ module.title }}
+    </h1>
+    
+    {% if module.description %}
+    <div class="module-description">
+        <p>{{ module.description }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Информационный блок -->
+    <div class="info-block">
+        <h4>
+            <i class="bi bi-info-circle-fill"></i>Требуется доступ
+        </h4>
+        <p>
+            Этот модуль является закрытым. Чтобы получить к нему доступ, вы можете:
+        </p>
+    </div>
+
+    <!-- Опции для получения доступа -->
+    <div class="access-options-grid">
+        <!-- Заявка на доступ -->
+        {% if not access_status.pending_request and access_status.request_status != 'rejected' %}
+        <div class="access-option-card">
+            <div class="access-option-header">
+                <h3>
+                    <i class="bi bi-send"></i>Подать заявку
+                </h3>
+                <p>Отправьте заявку автору модуля с описанием почему вам нужен доступ.</p>
+            </div>
+            <form method="post" action="{% url 'study_modules:request_access' module.id %}" class="access-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="{{ request_form.message.id_for_label }}">{{ request_form.message.label }}</label>
+                    {{ request_form.message }}
+                    {% if request_form.message.help_text %}
+                        <small class="form-text text-muted">{{ request_form.message.help_text }}</small>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-send me-2"></i>Отправить заявку
+                </button>
+            </form>
+        </div>
+        {% endif %}
+
+        <!-- Статус заявки -->
+        {% if access_status.pending_request %}
+        <div class="status-card">
+            <div class="access-option-header">
+                <h3>
+                    <i class="bi bi-clock"></i>Заявка на рассмотрении
+                </h3>
+                <p>Ваша заявка отправлена автору модуля и находится на рассмотрении.</p>
+            </div>
+            <div class="status-badge pending">
+                <i class="bi bi-hourglass-split"></i>
+                Ожидайте ответа от автора модуля
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Отклоненная заявка -->
+        {% if access_status.request_status == 'rejected' %}
+        <div class="status-card rejected">
+            <div class="access-option-header">
+                <h3>
+                    <i class="bi bi-x-circle"></i>Заявка отклонена
+                </h3>
+                <p>К сожалению, ваша заявка на доступ к модулю была отклонена автором.</p>
+            </div>
+            {% if access_status.has_password %}
+                <div class="status-badge rejected">
+                    <i class="bi bi-key"></i>
+                    Попробуйте воспользоваться паролем доступа
+                </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Ввод пароля -->
+        {% if access_status.has_password %}
+        <div class="access-option-card">
+            <div class="access-option-header">
+                <h3>
+                    <i class="bi bi-key"></i>Ввести пароль
+                </h3>
+                <p>Если у вас есть пароль от автора модуля, введите его для получения мгновенного доступа.</p>
+            </div>
+            <form method="post" action="{% url 'study_modules:enter_password' module.id %}" class="access-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="{{ password_form.password.id_for_label }}">{{ password_form.password.label }}</label>
+                    {{ password_form.password }}
+                    {% if password_form.password.help_text %}
+                        <small class="form-text text-muted">{{ password_form.password.help_text }}</small>
+                    {% endif %}
+                </div>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-key me-2"></i>Проверить пароль
+                </button>
+            </form>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

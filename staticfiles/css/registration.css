@@ -92,11 +92,6 @@ body {
     outline: none;
 }
 
-.registration-form input.error,
-.registration-form select.error {
-    border-color: #ff5252;
-}
-
 .step-buttons {
     display: flex;
     justify-content: space-between;
@@ -246,105 +241,133 @@ body {
     outline: none;
 }
 
-/* Стили для сообщений об ошибках */
-.error-message {
-    background-color: #ffebee;
-    color: #c62828;
-    padding: 10px;
-    border-radius: 4px;
-    margin-bottom: 20px;
-    border: 1px solid #ffcdd2;
+/* Стили для социальных кнопок */
+.social-section {
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid #e0e0e0;
 }
 
-/* Стили для выпадающих списков уровней */
-.form-control {
-    width: 100%;
-    padding: 12px 14px;
-    margin-bottom: 18px;
+.social-divider {
+    margin: 25px 0;
+    position: relative;
+    text-align: center;
+}
+
+.social-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #e0e0e0;
+    z-index: 1;
+}
+
+.social-divider span {
+    background: white;
+    padding: 0 15px;
+    color: #888;
+    font-size: 0.9rem;
+    position: relative;
+    z-index: 2;
+}
+
+.social-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 25px;
+}
+
+.social-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 12px 16px;
     border: 2px solid #e0e0e0;
     border-radius: 8px;
-    font-size: 1rem;
-    transition: border 0.2s;
-    background-color: white;
-    cursor: pointer;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237c4dff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-    background-repeat: no-repeat;
-    background-position: right 14px center;
-    background-size: 16px;
-    padding-right: 40px;
-}
-
-.form-control:focus {
-    border-color: #7c4dff;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(124, 77, 255, 0.1);
-}
-
-.form-control option {
-    padding: 12px;
-    font-size: 1rem;
-}
-
-.form-control option:first-child {
-    color: #757575;
-}
-
-/* Стили для контейнера с уровнями */
-.level-container {
-    margin-bottom: 20px;
-}
-
-.level-container label {
-    display: block;
-    margin-bottom: 8px;
+    text-decoration: none;
     color: #333;
+    font-size: 0.95rem;
     font-weight: 500;
+    transition: all 0.3s ease;
+    background: white;
 }
 
-.level-description {
-    font-size: 0.85rem;
-    color: #666;
-    margin-top: 4px;
-    margin-bottom: 12px;
+.social-btn:hover {
+    text-decoration: none;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-/* Стили для заголовков */
-h2 {
+.social-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.google-btn {
+    border-color: #4285F4;
+    color: #4285F4;
+}
+
+.google-btn:hover {
+    background: #4285F4;
+    color: white;
+    border-color: #4285F4;
+}
+
+.google-btn:hover .social-icon path {
+    fill: white !important;
+}
+
+.github-btn {
+    border-color: #333;
     color: #333;
-    margin-bottom: 20px;
-    font-size: 1.5rem;
-    font-weight: 600;
 }
 
-.messages {
-    margin-bottom: 20px;
+.github-btn:hover {
+    background: #333;
+    color: white;
+    border-color: #333;
 }
 
-.alert {
-    padding: 12px 15px;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    font-size: 0.9rem;
+.github-btn:hover .social-icon path {
+    fill: white !important;
 }
 
-.alert-error {
-    background-color: #ffebee;
-    color: #c62828;
-    border: 1px solid #ffcdd2;
+.apple-btn {
+    border-color: #000;
+    color: #000;
 }
 
-.alert-success {
-    background-color: #e8f5e9;
-    color: #2e7d32;
-    border: 1px solid #c8e6c9;
+.apple-btn:hover {
+    background: #000;
+    color: white;
+    border-color: #000;
 }
 
-.error-message {
-    color: #c62828;
-    font-size: 0.85rem;
-    margin-top: -15px;
-    margin-bottom: 15px;
-} 
+.apple-btn:hover .social-icon path {
+    fill: white !important;
+}
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 480px) {
+    .registration-container {
+        padding: 60px 20px 40px;
+        margin: 20px;
+    }
+    
+    .social-btn {
+        padding: 14px 16px;
+        font-size: 0.9rem;
+    }
+    
+    .social-icon {
+        width: 18px;
+        height: 18px;
+    }
+}

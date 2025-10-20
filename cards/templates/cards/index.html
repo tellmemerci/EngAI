@@ -28,7 +28,7 @@
             <div class="folder-info">
                 <div class="folder-name">{{ folder.name }}</div>
                 <div class="folder-meta">
-                    <span class="folder-author">{{ folder.user.get_full_name|default:folder.user.email }}</span>
+                    <span class="folder-author">{{ folder.user.get_display_name }}</span>
                     <span class="folder-stats">{{ folder.modules.count }} модулей</span>
                 </div>
             </div>
@@ -46,7 +46,7 @@
                 <div class="module-info">
                     <div class="module-name">{{ module.name }}</div>
                     <div class="module-meta">
-                        <span class="module-author">{{ module.user.get_full_name|default:module.user.email }}</span>
+                        <span class="module-author">{{ module.user.get_display_name }}</span>
                         <span class="module-stats">{{ module.cards.count }} карточек</span>
                     </div>
                 </div>

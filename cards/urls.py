@@ -21,6 +21,7 @@ urlpatterns = [
          name='save_balloon_game_record'),
     path('module/<int:module_id>/ai-training/', views.ai_training, name='ai_training'),
     path('talk-ai/', views.talk_ai, name='talk_ai'),
+    path('sidebar-chat/', views.sidebar_chat, name='sidebar_chat'),
 
     # Маршрут для экспорта модуля в Word
 

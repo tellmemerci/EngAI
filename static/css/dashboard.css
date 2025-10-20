@@ -1,0 +1,1233 @@
+/* ===== DASHBOARD ОСНОВНЫЕ СТИЛИ =====
+.dashboard-container {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 30px;
+    padding: 20px;
+    animation: fadeInUp 0.6s ease-out;
+    min-height: calc(100vh - 40px);
+    background: transparent;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ===== ЛЕВАЯ ЧАСТЬ ===== */
+.dashboard-left {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+/* Секция приветствия */
+.welcome-section {
+    text-align: center;
+    margin-bottom: 10px;
+    animation: slideInLeft 0.8s ease-out;
+}
+
+.welcome-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #7c4dff, #9c27b0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 10px;
+    animation: gradientShift 3s ease-in-out infinite alternate;
+}
+
+.welcome-subtitle {
+    font-size: 1.1rem;
+    color: #666;
+    line-height: 1.5;
+}
+
+@keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+}
+
+/* Секция обучения */
+.learning-section {
+    animation: slideInLeft 0.8s ease-out 0.2s both;
+}
+
+.learning-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #7c4dff 0%, #9c27b0 100%);
+    border: none;
+    border-radius: 20px;
+    padding: 25px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 8px 32px rgba(124, 77, 255, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.learning-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.5s;
+}
+
+.learning-btn:hover::before {
+    left: 100%;
+}
+
+.learning-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(124, 77, 255, 0.4);
+    background: linear-gradient(135deg, #8c5bff 0%, #a535b5 100%);
+}
+
+.learning-btn-icon {
+    font-size: 3rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    padding: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.learning-btn-content {
+    flex: 1;
+    text-align: left;
+}
+
+.learning-btn-content h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 5px 0;
+}
+
+.learning-btn-content p {
+    font-size: 0.95rem;
+    opacity: 0.9;
+    margin: 0;
+}
+
+.learning-btn-arrow {
+    font-size: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+.learning-btn:hover .learning-btn-arrow {
+    transform: translateX(5px);
+}
+
+/* Секция иллюстрации */
+.illustration-section {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    animation: slideInLeft 0.8s ease-out 0.4s both;
+}
+
+.illustration-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(124, 77, 255, 0.1);
+    border: 1px solid rgba(124, 77, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.illustration-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(124, 77, 255, 0.15);
+}
+
+.learning-illustration {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+}
+
+.illustration-image {
+    width: 100%;
+    max-width: 300px;
+    height: auto;
+    border-radius: 15px;
+    transition: transform 0.3s ease;
+}
+
+.illustration-image:hover {
+    transform: scale(1.02);
+}
+
+.illustration-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+.illustration-card h4 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.illustration-card p {
+    color: #666;
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* Статистика */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+}
+
+.stat-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 15px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(124, 77, 255, 0.08);
+    border: 1px solid rgba(124, 77, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(124, 77, 255, 0.15);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #7c4dff, #9c27b0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+/* ===== ПРАВАЯ ЧАСТЬ ===== */
+.dashboard-right {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.section-header h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.coming-soon {
+    font-size: 0.75rem;
+    color: #7c4dff;
+    background: rgba(124, 77, 255, 0.1);
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-weight: 500;
+}
+
+/* Секция учителя */
+.teacher-section {
+    animation: slideInRight 0.8s ease-out;
+}
+
+.teacher-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 8px 32px rgba(124, 77, 255, 0.1);
+    border: 1px solid rgba(124, 77, 255, 0.1);
+    transition: all 0.3s ease;
+}
+
+.teacher-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(124, 77, 255, 0.15);
+}
+
+.teacher-avatar {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2.5rem;
+    margin: 0 auto 20px;
+    box-shadow: 0 8px 25px rgba(124, 77, 255, 0.3);
+    overflow: hidden;
+    background: transparent;
+}
+
+.teacher-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.teacher-avatar:hover .teacher-avatar-image {
+    transform: scale(1.1);
+}
+
+.teacher-info h3 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 10px 0;
+    text-align: center;
+}
+
+.teacher-description {
+    color: #666;
+    text-align: center;
+    line-height: 1.5;
+    margin-bottom: 20px;
+}
+
+.teacher-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.feature-tag {
+    background: rgba(124, 77, 255, 0.1);
+    color: #7c4dff;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+/* Секция календаря */
+.calendar-section {
+    animation: slideInRight 0.8s ease-out 0.2s both;
+}
+
+.calendar-container {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 8px 32px rgba(124, 77, 255, 0.1);
+    border: 1px solid rgba(124, 77, 255, 0.1);
+    min-height: 450px;
+}
+
+.calendar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid rgba(124, 77, 255, 0.1);
+}
+
+.calendar-nav {
+    background: rgba(124, 77, 255, 0.1);
+    border: 2px solid rgba(124, 77, 255, 0.2);
+    font-size: 1.8rem;
+    color: #7c4dff;
+    cursor: pointer;
+    padding: 12px 16px;
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.calendar-nav:hover {
+    background: linear-gradient(135deg, #7c4dff, #9c27b0);
+    color: white;
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(124, 77, 255, 0.3);
+}
+
+.calendar-month-year {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #333;
+    background: linear-gradient(135deg, #7c4dff, #9c27b0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.calendar-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+.weekday {
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #7c4dff;
+    padding: 12px 0;
+    background: rgba(124, 77, 255, 0.1);
+    border-radius: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.calendar-days {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.calendar-day {
+    min-height: 50px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    border-radius: 12px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    padding: 8px 4px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(124, 77, 255, 0.1);
+}
+
+.calendar-day:hover {
+    background: rgba(124, 77, 255, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.2);
+}
+
+.calendar-day.today {
+    background: linear-gradient(135deg, #7c4dff, #9c27b0);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 6px 20px rgba(124, 77, 255, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.calendar-day.selected {
+    background: rgba(124, 77, 255, 0.2);
+    border: 2px solid #7c4dff;
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.3);
+}
+
+.calendar-day.other-month {
+    color: #ccc;
+}
+
+.calendar-day.has-event {
+    position: relative;
+}
+
+/* Стили для дедлайнов */
+.calendar-day.has-deadline {
+    background: linear-gradient(145deg, #fff3e0, #ffe0b2);
+    border: 2px solid #ff9800;
+    position: relative;
+}
+
+.calendar-day.has-deadline:hover {
+    background: linear-gradient(145deg, #ffe0b2, #ffcc80);
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(255, 152, 0, 0.3);
+}
+
+.deadline-indicator {
+    display: none;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.deadline-text {
+    font-size: 0.7rem;
+    color: #e65100;
+    font-weight: 600;
+    text-align: center;
+    margin-top: 2px;
+    line-height: 1.1;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+}
+
+/* Важные дедлайны (экзамены) */
+.calendar-day.has-deadline.important {
+    background: linear-gradient(145deg, #ffebee, #ffcdd2);
+    border: 2px solid #f44336;
+    animation: importantPulse 3s ease-in-out infinite;
+}
+
+@keyframes importantPulse {
+    0%, 100% { box-shadow: 0 6px 16px rgba(244, 67, 54, 0.3); }
+    50% { box-shadow: 0 8px 20px rgba(244, 67, 54, 0.5); }
+}
+
+.calendar-day.has-deadline.important .deadline-indicator {
+    background: #d32f2f;
+    width: 10px;
+    height: 10px;
+}
+
+.calendar-day.has-deadline.important .deadline-text {
+    color: #c62828;
+    font-weight: 700;
+}
+
+/* Обычные события */
+.calendar-day.has-event::after {
+    display: none;
+}
+
+/* ===== ПАНЕЛЬ ДЕДЛАЙНОВ ===== */
+.deadline-panel {
+    margin-top: 25px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 25px;
+    box-shadow: 0 8px 32px rgba(124, 77, 255, 0.1);
+    border: 1px solid rgba(124, 77, 255, 0.1);
+    animation: slideInRight 0.8s ease-out 0.6s both;
+}
+
+.selected-date {
+    text-align: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid rgba(124, 77, 255, 0.1);
+}
+
+.selected-date h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 10px 0;
+}
+
+.date-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.date-info .weekday {
+    font-size: 1rem;
+    color: #7c4dff;
+    font-weight: 500;
+}
+
+.date-info .date-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #7c4dff, #9c27b0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Список дедлайнов */
+.deadlines-list {
+    margin-bottom: 20px;
+    min-height: 60px;
+}
+
+.no-deadlines {
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    margin: 20px 0;
+}
+
+.deadline-item {
+    background: rgba(124, 77, 255, 0.1);
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-left: 4px solid;
+    transition: all 0.3s ease;
+}
+
+.deadline-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.15);
+}
+
+.deadline-item.priority-high {
+    background: rgba(244, 67, 54, 0.1);
+    border-left-color: #f44336;
+}
+
+.deadline-item.priority-medium {
+    background: rgba(255, 152, 0, 0.1);
+    border-left-color: #ff9800;
+}
+
+.deadline-item.priority-low {
+    background: rgba(76, 175, 80, 0.1);
+    border-left-color: #4caf50;
+}
+
+.deadline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+}
+
+.deadline-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.deadline-time {
+    font-size: 0.85rem;
+    color: #666;
+    font-weight: 500;
+}
+
+.deadline-description {
+    font-size: 0.9rem;
+    color: #555;
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* Действия с дедлайнами */
+.deadline-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.deadline-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.deadline-checkbox input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #7c4dff;
+}
+
+.deadline-checkbox label {
+    font-size: 0.85rem;
+    color: #666;
+    cursor: pointer;
+    margin: 0;
+}
+
+.deadline-item.completed {
+    opacity: 0.7;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.deadline-item.completed .deadline-title {
+    text-decoration: line-through;
+    color: #777;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    margin-left: auto;
+}
+
+.action-btn {
+    width: 28px;
+    height: 28px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+}
+
+.edit-btn {
+    background: rgba(33, 150, 243, 0.1);
+    color: #2196f3;
+}
+
+.edit-btn:hover {
+    background: #2196f3;
+    color: white;
+    transform: scale(1.1);
+}
+
+.delete-btn {
+    background: rgba(244, 67, 54, 0.1);
+    color: #f44336;
+}
+
+.delete-btn:hover {
+    background: #f44336;
+    color: white;
+    transform: scale(1.1);
+}
+
+/* Модальное окно удаления */
+.delete-modal {
+    max-width: 400px;
+}
+
+.delete-content {
+    padding: 20px 25px;
+    text-align: center;
+}
+
+.delete-content p {
+    margin: 0 0 15px 0;
+    color: #333;
+    line-height: 1.5;
+}
+
+.delete-deadline-title {
+    font-weight: 600;
+    color: #7c4dff !important;
+    font-size: 1.1rem;
+}
+
+.delete-warning {
+    font-size: 0.9rem;
+    color: #f44336 !important;
+    font-style: italic;
+}
+
+.btn-delete {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    color: white;
+    box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+}
+
+.btn-delete:hover {
+    background: linear-gradient(135deg, #e53935, #c62828);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+}
+
+/* Кнопка создания дедлайна */
+.create-deadline-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #7c4dff, #9c27b0);
+    color: white;
+    border: none;
+    border-radius: 15px;
+    padding: 15px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 4px 15px rgba(124, 77, 255, 0.3);
+}
+
+.create-deadline-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 77, 255, 0.4);
+    background: linear-gradient(135deg, #8c5bff, #a535b5);
+}
+
+.create-deadline-btn .btn-icon {
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+.create-deadline-btn .btn-text {
+    font-size: 1rem;
+}
+
+/* ===== МОДАЛЬНОЕ ОКНО ===== */
+.deadline-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+}
+
+.deadline-modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, 
+        rgba(124, 77, 255, 0.2) 0%, 
+        rgba(156, 39, 176, 0.3) 50%,
+        rgba(0, 0, 0, 0.4) 100%);
+    backdrop-filter: blur(8px);
+    animation: overlayFadeIn 0.3s ease-out;
+}
+
+.modal-content {
+    position: relative;
+    background: linear-gradient(145deg, #ffffff, #fafafa);
+    border-radius: 24px;
+    width: 85%;
+    max-width: 450px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 
+        0 25px 50px rgba(124, 77, 255, 0.15),
+        0 0 0 1px rgba(124, 77, 255, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    animation: modalSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    backdrop-filter: blur(10px);
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes overlayFadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 20px 0;
+    margin-bottom: 15px;
+    border-bottom: 1px solid rgba(124, 77, 255, 0.1);
+    padding-bottom: 15px;
+}
+
+.modal-header h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, #7c4dff, #9c27b0);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.modal-close {
+    background: rgba(124, 77, 255, 0.1);
+    border: none;
+    font-size: 1.5rem;
+    color: #7c4dff;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.modal-close:hover {
+    background: linear-gradient(135deg, #7c4dff, #9c27b0);
+    color: white;
+    transform: scale(1.05) rotate(90deg);
+    box-shadow: 0 4px 12px rgba(124, 77, 255, 0.3);
+}
+
+/* Форма */
+.deadline-form {
+    padding: 0 20px 20px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-row {
+    display: flex;
+    gap: 12px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid rgba(124, 77, 255, 0.15);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(5px);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #7c4dff;
+    background: white;
+    box-shadow: 
+        0 0 0 3px rgba(124, 77, 255, 0.15),
+        0 2px 8px rgba(124, 77, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.form-group textarea {
+    min-height: 70px;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+/* Выбор цвета */
+.color-picker {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px;
+    background: rgba(124, 77, 255, 0.05);
+    border-radius: 12px;
+}
+
+.color-picker input[type="radio"] {
+    display: none;
+}
+
+.color-option {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.color-option:hover {
+    transform: scale(1.08) translateY(-1px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.color-picker input[type="radio"]:checked + .color-option {
+    border-color: #7c4dff;
+    transform: scale(1.15);
+    box-shadow: 
+        0 4px 16px rgba(0, 0, 0, 0.2),
+        0 0 0 2px rgba(124, 77, 255, 0.2);
+}
+
+.color-picker input[type="radio"]:checked + .color-option::after {
+    content: '✓';
+    color: white;
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    line-height: 1;
+}
+
+/* Кнопки действий */
+.form-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 25px;
+    padding-top: 18px;
+    border-top: 1px solid rgba(124, 77, 255, 0.1);
+}
+
+.btn-cancel,
+.btn-save {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 80px;
+}
+
+.btn-cancel {
+    background: rgba(108, 117, 125, 0.08);
+    color: #6c757d;
+    border: 2px solid rgba(108, 117, 125, 0.15);
+    backdrop-filter: blur(5px);
+}
+
+.btn-cancel:hover {
+    background: rgba(108, 117, 125, 0.15);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.2);
+}
+
+.btn-save {
+    background: linear-gradient(135deg, #7c4dff, #9c27b0);
+    color: white;
+    box-shadow: 0 4px 15px rgba(124, 77, 255, 0.3);
+}
+
+.btn-save:hover {
+    background: linear-gradient(135deg, #8c5bff, #a535b5);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(124, 77, 255, 0.4);
+}
+
+
+/* ===== АНИМАЦИИ ===== */
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ===== АДАПТИВНОСТЬ ===== */
+@media (max-width: 1024px) {
+    .dashboard-container {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .dashboard-right {
+        order: -1;
+    }
+}
+
+@media (max-width: 768px) {
+    .dashboard-container {
+        padding: 15px;
+    }
+    
+    .welcome-title {
+        font-size: 2rem;
+    }
+    
+    .learning-btn {
+        padding: 20px;
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .learning-btn-content {
+        text-align: center;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .teacher-card,
+    .calendar-container {
+        padding: 20px;
+    }
+    
+    .quick-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .action-card {
+        flex: 1;
+        min-width: calc(50% - 6px);
+    }
+    
+    /* Модальное окно на мобильных */
+    .modal-content {
+        width: 95%;
+        max-width: 380px;
+        margin: 10px;
+        max-height: 90vh;
+    }
+    
+    .modal-header {
+        padding: 16px 16px 0;
+        margin-bottom: 12px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.2rem;
+    }
+    
+    .deadline-form {
+        padding: 0 16px 16px;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .welcome-title {
+        font-size: 1.7rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .learning-btn-icon {
+        font-size: 2.5rem;
+        padding: 12px;
+    }
+    
+    .action-card {
+        min-width: 100%;
+    }
+    
+    .calendar-days {
+        gap: 3px;
+    }
+    
+    .calendar-day {
+        font-size: 0.8rem;
+    }
+    
+    /* Модальное окно на маленьких экранах */
+    .modal-content {
+        width: 98%;
+        max-width: 320px;
+        border-radius: 20px;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.1rem;
+    }
+    
+    .color-picker {
+        gap: 6px;
+        padding: 6px;
+    }
+    
+    .color-option {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .form-actions {
+        gap: 8px;
+        margin-top: 20px;
+    }
+    
+    .btn-cancel,
+    .btn-save {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        min-width: 70px;
+    }
+}

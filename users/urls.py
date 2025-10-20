@@ -17,13 +17,23 @@ from .views import (
     chat_view,
     send_message,
     upload_file,
-    get_messages
+    get_messages,
+    privacy_policy_view,
+    complete_profile_view,
+    create_group,
+    join_group,
+    respond_group_request,
+    edit_group,
+    delete_group,
+    invite_to_group
 )
 from django.views.generic import TemplateView
 
 urlpatterns = [
     path('', login_view, name='index'),
     path('register/', registration_view, name='register'),
+    path('privacy-policy/', privacy_policy_view, name='privacy_policy'),
+    path('complete-profile/', complete_profile_view, name='complete_profile'),
     path('sms-verification/', sms_verification_view, name='sms_verification'),
     path('login/', login_view, name='login'),
     path('accounts/login/', login_view, name='accounts_login'),
@@ -36,6 +46,14 @@ urlpatterns = [
     path('friends/send-request/', send_friend_request, name='send_friend_request'),
     path('friends/respond/', respond_friend_request, name='respond_friend_request'),
     path('friends/remove/', remove_friend, name='remove_friend'),
+    
+    # Маршруты для учебных групп
+    path('groups/create/', create_group, name='create_group'),
+    path('groups/join/', join_group, name='join_group'),
+    path('groups/respond/', respond_group_request, name='respond_group_request'),
+    path('groups/edit/', edit_group, name='edit_group'),
+    path('groups/delete/', delete_group, name='delete_group'),
+    path('groups/invite/', invite_to_group, name='invite_to_group'),
     
     # Маршруты для системы сообщений
     path('messages/', messages_view, name='messages'),
