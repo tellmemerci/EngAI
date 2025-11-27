@@ -198,6 +198,252 @@ body {
     display: none;
 }
 
+/* Стили для выбора роли */
+.step-description {
+    text-align: center;
+    color: #666;
+    font-size: 1rem;
+    margin-bottom: 30px;
+    line-height: 1.5;
+}
+
+.role-selection {
+    margin: 30px 0;
+}
+
+.role-cards {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.role-card {
+    background: white;
+    border: 3px solid #e8e8e8;
+    border-radius: 25px;
+    padding: 40px 30px;
+    width: 220px;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+}
+
+.role-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(124, 77, 255, 0.1), transparent);
+    transition: left 0.5s;
+}
+
+.role-card:hover::before {
+    left: 100%;
+}
+
+.role-card:hover {
+    border-color: #7c4dff;
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 0 15px 40px rgba(124, 77, 255, 0.2);
+}
+
+.role-card.active {
+    border-color: #7c4dff;
+    background: linear-gradient(135deg, #7c4dff 0%, #6200ea 100%);
+    color: white;
+    transform: translateY(-8px) scale(1.05);
+    box-shadow: 0 20px 50px rgba(124, 77, 255, 0.4);
+}
+
+.role-icon {
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 25px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    transition: all 0.4s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.student-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+}
+
+.teacher-icon {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+    box-shadow: 0 10px 30px rgba(240, 147, 251, 0.4);
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+}
+
+.role-card.active .role-icon {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    transform: scale(1.1) rotateY(10deg);
+    box-shadow: 0 15px 40px rgba(255, 255, 255, 0.3);
+    border: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.role-card h3 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    color: #333;
+    transition: color 0.3s ease;
+}
+
+.role-card.active h3 {
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+
+/* Анимация появления карточек */
+.role-card {
+    animation: slideInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    opacity: 0;
+    transform: translateY(30px);
+}
+
+.role-card:nth-child(1) {
+    animation-delay: 0.1s;
+}
+
+.role-card:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+@keyframes slideInUp {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Мобильная адаптация */
+/* Дополнительные стили для иконок в карточках */
+.role-icon img {
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+    transition: all 0.4s ease;
+    filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+}
+
+.role-card:hover .role-icon img {
+    transform: scale(1.1);
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.2));
+}
+
+.role-card.active .role-icon img {
+    transform: scale(1.2);
+    filter: drop-shadow(0 8px 16px rgba(255, 255, 255, 0.3)) 
+            sepia(0) brightness(1.1) contrast(1.05);
+}
+
+/* Эффект гlow для активной карточки */
+.role-card.active::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, #7c4dff, #6200ea, #7c4dff);
+    border-radius: 27px;
+    z-index: -1;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.02); }
+}
+
+@media (max-width: 768px) {
+    .role-cards {
+        gap: 15px;
+    }
+    
+    .role-card {
+        width: 180px;
+        padding: 30px 20px;
+    }
+    
+    .role-icon {
+        width: 80px;
+        height: 80px;
+        font-size: 2.5rem;
+        margin: 0 auto 20px;
+    }
+    
+    .role-icon img {
+        width: 50px !important;
+        height: 50px !important;
+    }
+    
+    .role-card h3 {
+        font-size: 1.2rem;
+    }
+}
+
+/* Стили для ошибок валидации */
+.role-selection.error {
+    position: relative;
+}
+
+.role-selection.error::before {
+    content: "Пожалуйста, выберите свою роль";
+    position: absolute;
+    bottom: -25px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #d32f2f;
+    font-size: 0.85rem;
+    font-weight: 500;
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    25% { transform: translateX(-48%) translateY(-2px); }
+    75% { transform: translateX(-52%) translateY(2px); }
+}
+
+/* Улучшенные стили для карточек */
+.role-card {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.role-card:focus {
+    outline: 3px solid rgba(124, 77, 255, 0.5);
+    outline-offset: 4px;
+}
+
+.role-card:active {
+    transform: translateY(-4px) scale(0.98);
+}
+
 .checkbox-label input:checked ~ .checkmark:after {
     display: block;
 }

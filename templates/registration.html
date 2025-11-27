@@ -39,6 +39,30 @@
             <!-- Шаг 2 -->
             <div class="step hidden" id="form-step-2">
                 <h2>Шаг 2: Личная информация</h2>
+
+                <!-- Выбор роли -->
+                <div class="role-selection">
+                    <p class="step-description">Выберите свою роль в системе обучения</p>
+
+                    <div class="role-cards">
+                        <div class="role-card" data-role="student" onclick="selectRole('student')">
+                            <div class="role-icon student-icon">
+                                <img src="https://img.icons8.com/external-vitaliy-gorbachev-flat-vitaly-gorbachev/78/external-student-back-to-school-vitaliy-gorbachev-flat-vitaly-gorbachev.png" alt="Студент" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                            </div>
+                            <h3>Студент</h3>
+                        </div>
+
+                        <div class="role-card" data-role="teacher" onclick="selectRole('teacher')">
+                            <div class="role-icon teacher-icon">
+                                <img src="https://img.icons8.com/external-vitaliy-gorbachev-flat-vitaly-gorbachev/78/external-teacher-back-to-school-vitaliy-gorbachev-flat-vitaly-gorbachev.png" alt="Учитель" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+                            </div>
+                            <h3>Учитель</h3>
+                        </div>
+                    </div>
+
+                    <input type="hidden" name="user_role" id="selected_role" required />
+                </div>
+
                 <input type="text" name="last_name" placeholder="Фамилия" required />
                 <input type="text" name="first_name" placeholder="Имя" required />
                 <select name="current_level" required>

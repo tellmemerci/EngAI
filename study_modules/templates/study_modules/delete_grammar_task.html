@@ -1,0 +1,256 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Удаление задания - {{ task.title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.confirmation-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 40px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+    text-align: center;
+}
+
+.confirmation-section h1 {
+    color: #dc3545;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+}
+
+.confirmation-section .warning-icon {
+    font-size: 4rem;
+    color: #dc3545;
+    margin-bottom: 20px;
+}
+
+.task-info {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 25px;
+    margin: 25px 0;
+    border: 2px solid #e9ecef;
+}
+
+.task-info h3 {
+    color: #2d106a;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.task-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.detail-item {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    border: 2px solid #e9ecef;
+}
+
+.detail-item .detail-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.detail-item .detail-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2d106a;
+}
+
+.warning-message {
+    background: #fff3cd;
+    border: 2px solid #ffeaa7;
+    border-radius: 12px;
+    padding: 20px;
+    margin: 25px 0;
+    color: #856404;
+}
+
+.warning-message h4 {
+    color: #dc3545;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.btn {
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 10px;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    color: white;
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+    color: white;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+    color: white;
+}
+
+.btn-outline-primary {
+    border: 2px solid #7c4dff;
+    color: #7c4dff;
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: #7c4dff;
+    color: white;
+    transform: translateY(-2px);
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .confirmation-section h1 {
+        font-size: 2rem;
+    }
+    
+    .task-details {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="confirmation-section">
+        <div class="warning-icon">
+            <i class="bi bi-exclamation-triangle"></i>
+        </div>
+        
+        <h1>
+            <i class="bi bi-trash"></i>
+            Подтверждение удаления
+        </h1>
+        
+        <p style="font-size: 1.2rem; color: #6c757d; margin-bottom: 30px;">
+            Вы собираетесь удалить задание. Это действие нельзя отменить.
+        </p>
+        
+        <div class="task-info">
+            <h3>
+                <i class="bi bi-info-circle"></i>
+                Информация о задании
+            </h3>
+            
+            <div class="task-details">
+                <div class="detail-item">
+                    <div class="detail-label">Название</div>
+                    <div class="detail-value">{{ task.title }}</div>
+                </div>
+                
+                <div class="detail-item">
+                    <div class="detail-label">Тип задания</div>
+                    <div class="detail-value">{{ task.get_task_type_display }}</div>
+                </div>
+                
+                <div class="detail-item">
+                    <div class="detail-label">Статус</div>
+                    <div class="detail-value">{{ task.is_active|yesno:"Активно,Неактивно" }}</div>
+                </div>
+                
+                <div class="detail-item">
+                    <div class="detail-label">Порядок</div>
+                    <div class="detail-value">{{ task.order }}</div>
+                </div>
+            </div>
+            
+            {% if task.description %}
+            <div style="margin-top: 20px; text-align: left;">
+                <h4 style="color: #2d106a; margin-bottom: 10px;">Описание:</h4>
+                <p style="color: #6c757d;">{{ task.description }}</p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="warning-message">
+            <h4>
+                <i class="bi bi-exclamation-triangle"></i>
+                Внимание!
+            </h4>
+            <p>
+                После удаления это задание будет полностью удалено из системы. 
+                Все данные, связанные с этим заданием, включая прогресс студентов, будут потеряны.
+            </p>
+        </div>
+        
+        <div style="margin-top: 40px;">
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Вы уверены, что хотите удалить это задание?')">
+                    <i class="bi bi-trash"></i>
+                    Да, удалить задание
+                </button>
+            </form>
+            
+            <a href="{% url 'study_modules:grammar_practice' module.id unit.id skill.id %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i>
+                Отмена
+            </a>
+            
+            <a href="{% url 'study_modules:edit_grammar_task' module.id unit.id skill.id task.id %}" class="btn btn-outline-primary">
+                <i class="bi bi-pencil"></i>
+                Редактировать вместо удаления
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

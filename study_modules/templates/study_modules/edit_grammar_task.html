@@ -1,0 +1,453 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Редактирование задания - {{ skill.title }}{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.header-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.header-section h1 {
+    color: #2d106a;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.header-section .breadcrumb {
+    background: none;
+    padding: 0;
+    margin: 0;
+    font-size: 1.1rem;
+}
+
+.breadcrumb-item a {
+    color: #7c4dff;
+    text-decoration: none;
+}
+
+.breadcrumb-item.active {
+    color: #6c757d;
+}
+
+.task-info-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.task-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.info-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    border: 2px solid #e9ecef;
+}
+
+.info-card .info-icon {
+    font-size: 2rem;
+    color: #7c4dff;
+    margin-bottom: 10px;
+}
+
+.info-card .info-label {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-bottom: 5px;
+}
+
+.info-card .info-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #2d106a;
+}
+
+.task-form-section {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: #2d106a;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.form-control {
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    padding: 12px 16px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+}
+
+.form-control:focus {
+    border-color: #7c4dff;
+    box-shadow: 0 0 0 0.2rem rgba(124, 77, 255, 0.25);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.help-text {
+    font-size: 0.9rem;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.btn {
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #7c4dff, #9c7bff);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(124, 77, 255, 0.3);
+}
+
+.btn-outline-primary {
+    border: 2px solid #7c4dff;
+    color: #7c4dff;
+    background: transparent;
+}
+
+.btn-outline-primary:hover {
+    background: #7c4dff;
+    color: white;
+    transform: translateY(-2px);
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #34ce57);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-2px);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    color: white;
+}
+
+.btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220, 53, 69, 0.3);
+}
+
+.required {
+    color: #dc3545;
+}
+
+.sample-data-btn {
+    background: linear-gradient(135deg, #17a2b8, #20c997);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.sample-data-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(23, 162, 184, 0.3);
+}
+
+.current-content {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 2px solid #e9ecef;
+}
+
+.current-content h4 {
+    color: #7c4dff;
+    margin-bottom: 15px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .header-section h1 {
+        font-size: 2rem;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .task-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Заголовок -->
+    <div class="header-section">
+        <h1>
+            <i class="bi bi-pencil-square"></i>
+            Редактирование задания
+        </h1>
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'study_modules:module_detail' module.id %}">{{ module.title }}</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'study_modules:unit_detail' module.id unit.id %}">{{ unit.title }}</a></li>
+                <li class="breadcrumb-item active">{{ skill.title }}</li>
+            </ol>
+        </nav>
+    </div>
+
+    <!-- Информация о задании -->
+    <div class="task-info-section">
+        <h2 style="color: #2d106a; margin-bottom: 20px;">
+            <i class="bi bi-info-circle"></i>
+            Информация о задании
+        </h2>
+        <div class="task-info-grid">
+            <div class="info-card">
+                <div class="info-icon">
+                    <i class="bi bi-tag"></i>
+                </div>
+                <div class="info-label">Тип задания</div>
+                <div class="info-value">{{ task.get_task_type_display }}</div>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-icon">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="info-label">Статус</div>
+                <div class="info-value">{{ task.is_active|yesno:"Активно,Неактивно" }}</div>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-icon">
+                    <i class="bi bi-list-ol"></i>
+                </div>
+                <div class="info-label">Порядок</div>
+                <div class="info-value">{{ task.order }}</div>
+            </div>
+            
+            <div class="info-card">
+                <div class="info-icon">
+                    <i class="bi bi-calendar"></i>
+                </div>
+                <div class="info-label">Создано</div>
+                <div class="info-value">{{ task.skill.created_at|date:"d.m.Y" }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Форма редактирования -->
+    <form method="post" id="taskForm">
+        {% csrf_token %}
+        
+        <!-- Основная информация -->
+        <div class="task-form-section">
+            <h2 style="color: #2d106a; margin-bottom: 25px;">
+                <i class="bi bi-info-circle"></i>
+                Основная информация
+            </h2>
+            
+            <div class="form-group">
+                <label for="title">Название задания <span class="required">*</span></label>
+                <input type="text" name="title" id="title" class="form-control" value="{{ task.title }}" required>
+                <div class="help-text">Краткое и понятное название задания</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">Описание задания</label>
+                <textarea name="description" id="description" class="form-control" rows="3">{{ task.description }}</textarea>
+                <div class="help-text">Объясните студентам, что они должны сделать</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="instruction">Инструкция для студентов</label>
+                <textarea name="instruction" id="instruction" class="form-control" rows="3">{{ task.instruction }}</textarea>
+                <div class="help-text">Четкие указания, как выполнить задание</div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="order">Порядок <span class="required">*</span></label>
+                    <input type="number" name="order" id="order" class="form-control" value="{{ task.order }}" min="1" required>
+                    <div class="help-text">Порядок отображения задания</div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="is_active">Активно</label>
+                    <div style="margin-top: 10px;">
+                        <input type="checkbox" name="is_active" id="is_active" class="form-check-input" {% if task.is_active %}checked{% endif %}>
+                        <label for="is_active" style="margin-left: 10px;">Задание активно и доступно студентам</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Текущее содержимое -->
+        <div class="task-form-section">
+            <h2 style="color: #2d106a; margin-bottom: 25px;">
+                <i class="bi bi-eye"></i>
+                Текущее содержимое
+            </h2>
+            
+            <div class="current-content">
+                <h4>Содержимое задания:</h4>
+                <pre style="background: white; padding: 15px; border-radius: 8px; overflow-x: auto;">{{ task.content|pprint }}</pre>
+            </div>
+            
+            <div class="current-content">
+                <h4>Правильный ответ:</h4>
+                <pre style="background: white; padding: 15px; border-radius: 8px; overflow-x: auto;">{{ task.correct_answer|pprint }}</pre>
+            </div>
+        </div>
+
+        <!-- Редактирование содержимого -->
+        <div class="task-form-section">
+            <h2 style="color: #2d106a; margin-bottom: 25px;">
+                <i class="bi bi-pencil"></i>
+                Редактирование содержимого
+            </h2>
+            
+            <div class="form-group">
+                <label for="content_json">JSON содержимое задания</label>
+                <textarea name="content" id="content_json" class="form-control" rows="8" placeholder="JSON содержимое задания">{{ task.content|pprint }}</textarea>
+                <div class="help-text">JSON структура содержимого задания. Будьте осторожны с синтаксисом!</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="correct_answer_json">JSON правильный ответ</label>
+                <textarea name="correct_answer" id="correct_answer_json" class="form-control" rows="4" placeholder="JSON правильный ответ">{{ task.correct_answer|pprint }}</textarea>
+                <div class="help-text">JSON структура правильного ответа</div>
+            </div>
+        </div>
+
+        <!-- Кнопки управления -->
+        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px;">
+            <a href="{% url 'study_modules:grammar_practice' module.id unit.id skill.id %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Назад к заданиям
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-check-circle"></i> Сохранить изменения
+            </button>
+            <a href="{% url 'study_modules:delete_grammar_task' module.id unit.id skill.id task.id %}" 
+               class="btn btn-danger"
+               onclick="return confirm('Вы уверены, что хотите удалить это задание?')">
+                <i class="bi bi-trash"></i> Удалить задание
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Валидация JSON
+    const contentTextarea = document.getElementById('content_json');
+    const answerTextarea = document.getElementById('correct_answer_json');
+    
+    function validateJSON(textarea) {
+        try {
+            const value = textarea.value.trim();
+            if (value) {
+                JSON.parse(value);
+                textarea.style.borderColor = '#28a745';
+            } else {
+                textarea.style.borderColor = '#e9ecef';
+            }
+        } catch (e) {
+            textarea.style.borderColor = '#dc3545';
+        }
+    }
+    
+    contentTextarea.addEventListener('input', function() {
+        validateJSON(this);
+    });
+    
+    answerTextarea.addEventListener('input', function() {
+        validateJSON(this);
+    });
+    
+    // Проверка при загрузке
+    validateJSON(contentTextarea);
+    validateJSON(answerTextarea);
+});
+</script>
+{% endblock %}

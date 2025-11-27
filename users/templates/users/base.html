@@ -93,12 +93,6 @@
                 </a>
             </li>
             <li>
-                <a href="{% url 'cards:talk_ai' %}" class="nav-link {% if request.resolver_match.url_name == 'talk_ai' %}active{% endif %}">
-                    <i class="bi bi-person-video3"></i>
-                    <span>Говорить с ИИ</span>
-                </a>
-            </li>
-            <li>
                 <a href="#" class="nav-link">
                     <i class="bi bi-mic"></i>
                     <span>Аудирование</span>
@@ -120,6 +114,18 @@
                 <a href="/modules/" class="nav-link {% if request.resolver_match.app_name == 'study_modules' %}active{% endif %}">
                     <i class="bi bi-book"></i>
                     <span>Модули</span>
+                </a>
+            </li>
+            <li>
+                <a href="{% url 'cards:ai_speak' %}" class="nav-link {% if request.resolver_match.url_name == 'ai_speak' %}active{% endif %}">
+                    <i class="bi bi-robot"></i>
+                    <span>Говорить с ИИ</span>
+                </a>
+            </li>
+            <li>
+                <a href="/subscription/" class="nav-link {% if request.path == '/subscription/' %}active{% endif %}">
+                    <i class="bi bi-star"></i>
+                    <span>Моя подписка</span>
                 </a>
             </li>
         </ul>

@@ -54,6 +54,10 @@ def _get_whisper_model():
 
 logger = logging.getLogger(__name__)
 
+@login_required
+def ai_speak(request):
+    return render(request, 'cards/ai_speak.html')
+
 load_dotenv()
 
 @login_required
@@ -1400,14 +1404,6 @@ ENG: [естественный перевод на английском]
         })
 
 
-@login_required
-def talk_ai(request):
-    # Новый интерфейс не требует выбора агентов - используется универсальный AI помощник
-    context = {
-        'page_title': 'AI Conversation Practice',
-        'user': request.user,
-    }
-    return render(request, 'cards/talk_ai.html', context)
 
 @login_required
 def sidebar_chat(request):
@@ -1428,6 +1424,7 @@ def sidebar_chat(request):
 @require_POST
 def api_chat_ai(request):
     try:
+        # Обработка текстового сообщения
         data = json.loads(request.body.decode('utf-8'))
         user_message = (data.get('message') or '').strip()
         if not user_message:
@@ -1452,21 +1449,47 @@ def api_chat_ai(request):
         if not api_key:
             return JsonResponse({'error': 'AI не настроен'}, status=500)
 
-        # Обновлённый промпт с современным сленгом
-        modern_prompt = """
-You are a cool, friendly AI English tutor who talks like a real person. Use modern slang, contractions, and casual language. 
-Be encouraging and fun! You can use expressions like "that's fire!", "no cap", "you're killing it", "bet", "lowkey/highkey", "vibe", etc. 
-Keep it natural and conversational - imagine you're texting with a friend who's learning English. 
-Help them practice English in a chill, supportive way. Don't be too formal or robotic.
-
-IMPORTANT: Always provide your response in this EXACT format:
-[ENGLISH]
-Your English response here
-[RUSSIAN]
-Русский перевод здесь
-
-Keep your English messages relatively short and engaging. Provide accurate Russian translations.
-"""
+        # Промпт: человеческий разговор + мнение + вопрос + JSON с анализом ошибок
+        modern_prompt = (
+            "You are a friendly English tutor. You MUST respond with ONLY valid JSON in this exact format:\n"
+            "{\n"
+            "  \"reply\": \"your natural English response with opinion and a follow-up question\",\n"
+            "  \"russian_translation\": \"proper russian translation of your reply\",\n"
+            "  \"analysis\": {\n"
+            "    \"errors\": [\"error description 1\", \"error description 2\"],\n"
+            "    \"suggestion\": \"corrected version of the sentence\",\n"
+            "    \"topics\": [\"Grammar topic 1\", \"Vocabulary topic 2\"]\n"
+            "  }\n"
+            "}\n\n"
+            "CRITICAL RULES:\n"
+            "1. Respond with ONLY the JSON above, no other text, no explanations\n"
+            "2. The 'errors' field must be an array of strings, each error as a separate string\n"
+            "3. Each error should be one string like: \"'I like buy' should be 'I like to buy'\" or \"'He go' should be 'He goes'\"\n"
+            "4. Find ALL grammatical errors including:\n"
+            "   - 'I am went' → 'I went' (wrong auxiliary with past tense)\n"
+            "   - 'I am go' → 'I go' or 'I am going'\n"
+            "   - 'I like buy' → 'I like to buy' (missing infinitive marker)\n"
+            "   - 'He go' → 'He goes' (subject-verb disagreement)\n"
+            "   - Missing articles: 'I have car' → 'I have a car'\n"
+            "   - Wrong prepositions: 'I go in school' → 'I go to school'\n"
+            "   - Double negatives: 'I don't have nothing' → 'I don't have anything'\n"
+            "   - Spelling mistakes: 'scool' → 'school'\n"
+            "   - Wrong word choice: 'prison' → 'example'\n"
+            "   - Word order mistakes\n"
+            "5. If no errors found, use empty array: \"errors\": []\n"
+            "6. Always include a follow-up question in your reply\n"
+            "7. Be thorough - check every word for mistakes\n"
+            "8. NEVER add any text before or after the JSON\n"
+            "9. Make sure russian_translation is proper Russian, not mixed with English\n"
+            "10. Each error in the errors array must be a separate string, not combined\n"
+            "11. Do NOT include explanations or corrections in the reply field - only natural conversation\n"
+            "12. The reply should be conversational, not instructional\n"
+            "13. Example of correct errors array: [\"'I like buy' should be 'I like to buy'\"]\n"
+            "14. The 'topics' field should list grammar/vocabulary topics to review based on errors found\n"
+            "15. Topics examples: 'Infinitives with TO', 'Present Simple (3rd person)', 'Articles (a/an/the)', 'Prepositions', 'Past Tense', 'Word Order', etc.\n"
+            "16. If no errors, use empty topics array: \"topics\": []\n"
+            "17. Topics should be in English, concise (2-4 words), and specific to the errors found"
+        )
         
         start_time = time.time()
         client = MistralClient(api_key=api_key)
@@ -1474,30 +1497,40 @@ Keep your English messages relatively short and engaging. Provide accurate Russi
             ChatMessage(role="system", content=modern_prompt),
             ChatMessage(role="user", content=user_message)
         ]
-        resp = client.chat(model="mistral-small", messages=chat_messages, temperature=0.8)
-        raw_reply = resp.choices[0].message.content if getattr(resp, 'choices', None) else "Hey! Something went wrong on my end, but let's keep practicing! Try saying something else! 😅"
+        resp = client.chat(model="mistral-small", messages=chat_messages, temperature=0.7)
+        raw_reply = resp.choices[0].message.content if getattr(resp, 'choices', None) else '{"reply":"Sorry, a glitch happened.","russian_translation":"Извини, произошел сбой.","analysis":{"errors":[],"suggestion":"","topics":[]}}'
         response_time = int((time.time() - start_time) * 1000)
         
-        # Парсим ответ на английский и русский
-        def parse_ai_response(text):
-            english_match = re.search(r'\[ENGLISH\]\s*([\s\S]*?)\[RUSSIAN\]', text, re.IGNORECASE)
-            russian_match = re.search(r'\[RUSSIAN\]\s*([\s\S]*?)(?:\[|$)', text, re.IGNORECASE)
-            
-            if english_match and russian_match:
-                return {
-                    'english': english_match.group(1).strip(),
-                    'russian': russian_match.group(1).strip()
-                }
-            else:
-                # Если формат не соблюден, возвращаем весь текст как английский
-                return {
-                    'english': text.strip(),
-                    'russian': None
-                }
+        # Очищаем от markdown блоков если они есть (```json ... ```)
+        clean_reply = raw_reply.strip()
+        if clean_reply.startswith('```'):
+            # Удаляем ```json или ``` в начале
+            lines = clean_reply.split('\n')
+            if lines[0].startswith('```'):
+                lines = lines[1:]
+            # Удаляем ``` в конце
+            if lines and lines[-1].strip() == '```':
+                lines = lines[:-1]
+            clean_reply = '\n'.join(lines).strip()
         
-        parsed_response = parse_ai_response(raw_reply)
-        reply = parsed_response['english']
-        russian_translation = parsed_response['russian']
+        # Пытаемся распарсить JSON
+        reply = ""
+        russian_translation = None
+        analysis = {"errors": [], "suggestion": "", "topics": []}
+        try:
+            parsed = json.loads(clean_reply)
+            reply = (parsed.get("reply") or "").strip()
+            russian_translation = (parsed.get("russian_translation") or None)
+            analysis_obj = parsed.get("analysis") or {}
+            errors = analysis_obj.get("errors") or []
+            suggestion = analysis_obj.get("suggestion") or ""
+            topics = analysis_obj.get("topics") or []
+            analysis = {"errors": errors, "suggestion": suggestion, "topics": topics}
+        except Exception as parse_err:
+            logger.warning(f"Failed to parse AI response as JSON: {parse_err}. Raw: {raw_reply[:200]}")
+            reply = clean_reply
+            russian_translation = None
+            analysis = {"errors": [], "suggestion": "", "topics": []}
         
         # Сохраняем ответ ИИ
         ai_msg = AIMessage.objects.create(
@@ -1512,8 +1545,8 @@ Keep your English messages relatively short and engaging. Provide accurate Russi
         return JsonResponse({
             'reply': reply,
             'russian_translation': russian_translation,
-            'chat_id': ai_chat.id,
-            'message_id': ai_msg.id
+            'analysis': analysis,
+            'user_text': user_message  # Включаем распознанный текст для аудио
         })
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Неверный формат JSON'}, status=400)
@@ -1766,4 +1799,103 @@ def api_asr(request):
                 pass
     except Exception as e:
         logger.error(f"Ошибка api_asr: {e}")
+        return JsonResponse({'error': 'Серверная ошибка'}, status=500)
+
+
+@login_required
+@require_POST
+def api_conversation_analytics(request):
+    """
+    API для получения аналитики разговора пользователя
+    """
+    try:
+        # Получаем активный чат пользователя
+        ai_chat = AIChat.objects.filter(user=request.user, is_active=True).first()
+        
+        if not ai_chat:
+            return JsonResponse({'error': 'Нет активного разговора для анализа'}, status=400)
+        
+        # Получаем сообщения пользователя
+        user_messages = ai_chat.ai_messages.filter(sender_type='user').order_by('created_at')
+        
+        if user_messages.count() < 3:
+            return JsonResponse({'error': 'Недостаточно сообщений для анализа (минимум 3)'}, status=400)
+        
+        # Собираем текст сообщений
+        conversation_text = '\n'.join([msg.content for msg in user_messages[:20]])  # Последние 20 сообщений
+        
+        api_key = os.getenv('MISTRAL_API_KEY')
+        if not api_key:
+            return JsonResponse({'error': 'AI не настроен'}, status=500)
+        
+        # Промпт для анализа разговора
+        analytics_prompt = (
+            "You are an English language expert evaluating a student's conversation. "
+            "Analyze the following messages from the student and provide scores from 1 to 10 for each metric.\n\n"
+            "You MUST respond with ONLY valid JSON in this exact format:\n"
+            "{\n"
+            "  \"accuracy\": 8,\n"
+            "  \"grammar\": 7,\n"
+            "  \"vocabulary\": 9,\n"
+            "  \"topic_development\": 6,\n"
+            "  \"feedback\": \"Brief feedback in Russian (2-3 sentences)\"\n"
+            "}\n\n"
+            "SCORING CRITERIA:\n"
+            "1. Accuracy (1-10): Overall correctness of language use, pronunciation patterns visible in text\n"
+            "2. Grammar (1-10): Correct use of tenses, articles, sentence structure, verb forms\n"
+            "3. Vocabulary (1-10): Range and appropriateness of words used, variety of expressions\n"
+            "4. Topic Development (1-10): Ability to develop ideas, provide details, maintain conversation flow\n\n"
+            "SCORING SCALE:\n"
+            "1-3: Poor/Many errors\n"
+            "4-6: Average/Some errors\n"
+            "7-8: Good/Few errors\n"
+            "9-10: Excellent/Almost perfect\n\n"
+            "IMPORTANT:\n"
+            "- Respond ONLY with JSON, no other text\n"
+            "- Feedback must be in Russian, encouraging but honest\n"
+            "- Be fair but motivating in your assessment\n"
+            "- Consider the overall pattern, not just individual mistakes"
+        )
+        
+        client = MistralClient(api_key=api_key)
+        chat_messages = [
+            ChatMessage(role="system", content=analytics_prompt),
+            ChatMessage(role="user", content=f"Student's messages:\n{conversation_text}")
+        ]
+        
+        resp = client.chat(model="mistral-small", messages=chat_messages, temperature=0.3)
+        raw_reply = resp.choices[0].message.content if getattr(resp, 'choices', None) else '{"accuracy":5,"grammar":5,"vocabulary":5,"topic_development":5,"feedback":"Не удалось проанализировать"}'
+        
+        # Очищаем от markdown
+        clean_reply = raw_reply.strip()
+        if clean_reply.startswith('```'):
+            lines = clean_reply.split('\n')
+            if lines[0].startswith('```'):
+                lines = lines[1:]
+            if lines and lines[-1].strip() == '```':
+                lines = lines[:-1]
+            clean_reply = '\n'.join(lines).strip()
+        
+        # Парсим JSON
+        try:
+            analytics_data = json.loads(clean_reply)
+            return JsonResponse({
+                'accuracy': min(max(int(analytics_data.get('accuracy', 5)), 1), 10),
+                'grammar': min(max(int(analytics_data.get('grammar', 5)), 1), 10),
+                'vocabulary': min(max(int(analytics_data.get('vocabulary', 5)), 1), 10),
+                'topic_development': min(max(int(analytics_data.get('topic_development', 5)), 1), 10),
+                'feedback': analytics_data.get('feedback', 'Продолжайте практиковаться!')
+            })
+        except Exception as parse_err:
+            logger.warning(f"Failed to parse analytics: {parse_err}. Raw: {raw_reply[:200]}")
+            return JsonResponse({
+                'accuracy': 5,
+                'grammar': 5,
+                'vocabulary': 5,
+                'topic_development': 5,
+                'feedback': 'Не удалось проанализировать разговор. Попробуйте позже.'
+            })
+        
+    except Exception as e:
+        logger.error(f"Ошибка api_conversation_analytics: {e}")
         return JsonResponse({'error': 'Серверная ошибка'}, status=500)

@@ -1,0 +1,614 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Говорить с ИИ{% endblock %}
+
+{% block extra_css %}
+<style>
+.speak-layout{display:grid;grid-template-columns:1fr 420px;gap:16px;padding:16px}
+.panel{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);border:1px solid #eee}
+.avatar-panel{height: calc(100vh - 110px);position:sticky;top:20px;display:flex;flex-direction:column}
+.avatar-header{padding:14px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center}
+.avatar-canvas{flex:1;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0b0b12,#151729);border-radius:12px;margin:12px;height:100%;overflow:hidden;position:relative}
+.avatar-placeholder{color:#9aa4ff;font-size:64px;opacity:.8}
+.avatar-image{width:100%;height:100%;object-fit:cover;border-radius:12px;transition:opacity 0.3s ease}
+.chat-panel{height: calc(100vh - 110px);display:flex;flex-direction:column}
+.chat-header{padding:14px 16px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.voice-controls{display:flex;align-items:center;gap:8px}
+.voice-toggle{display:flex;gap:4px;background:#f3f4f6;border-radius:12px;padding:4px}
+.voice-toggle input[type="radio"]{display:none}
+.voice-option{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;cursor:pointer;transition:all 0.2s ease;font-size:.9rem;color:#6b7280}
+.voice-option:hover{background:#e5e7eb}
+.voice-option.active{background:#7c4dff;color:#fff;box-shadow:0 2px 4px rgba(124,77,255,.3)}
+.voice-icon{font-size:16px}
+.voice-toggle input:checked + .voice-option{background:#7c4dff;color:#fff;box-shadow:0 2px 4px rgba(124,77,255,.3)}
+.chat-messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;background:#fafbff}
+.msg{max-width:80%;padding:10px 12px;border-radius:12px;box-shadow:0 2px 6px rgba(0,0,0,.04)}
+.msg.me{align-self:flex-end;background:#7c4dff;color:#fff}
+.msg.ai{align-self:flex-start;background:#fff;border:1px solid #eee}
+.msg.error{align-self:flex-start;background:#ffe6e6;color:#b00020;border:1px solid #ffcdd2}
+.msg .time{opacity:.7;font-size:.8rem;margin-top:4px}
+.analysis{margin-top:8px;background:#f3e8ff;border-left:4px solid #7c4dff;padding:10px 12px;border-radius:8px;font-size:.9rem}
+.analysis .no-errors{color:#2e7d32;font-weight:600}
+.analysis .error-item{margin:6px 0;line-height:1.5;color:#374151}
+.analysis .error-highlight{background:#e9d5ff;color:#6b21a8;padding:2px 6px;border-radius:4px;font-weight:600;margin:0 2px}
+.analysis .error-arrow{color:#7c4dff;font-weight:bold;margin:0 4px}
+.analysis strong{color:#7c4dff;display:block;margin-bottom:6px}
+.analysis .topics{margin-top:8px;padding-top:8px;border-top:1px solid #e9d5ff}
+.analysis .topic-tag{display:inline-block;background:#fff;color:#7c4dff;padding:4px 10px;border-radius:12px;font-size:.85rem;margin:4px 4px 4px 0;border:1px solid #e9d5ff;font-weight:500}
+.translation{margin-top:8px;background:#eef2ff;border-left:4px solid #7c4dff;padding:8px;border-radius:8px}
+.analytics-btn{background:#7c4dff;color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:.9rem;display:flex;align-items:center;gap:6px;transition:all 0.2s}
+.analytics-btn:hover{background:#6a3ce8;transform:translateY(-1px)}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center}
+.modal.show{display:flex}
+.modal-content{background:#fff;border-radius:16px;padding:24px;width:90%;max-width:500px;box-shadow:0 20px 60px rgba(0,0,0,0.3);animation:modalSlideIn 0.3s ease}
+@keyframes modalSlideIn{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:2px solid #f3f4f6}
+.modal-header h2{margin:0;color:#1f2937;font-size:1.4rem}
+.close-modal{background:none;border:none;font-size:28px;cursor:pointer;color:#9ca3af;line-height:1;padding:0;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:4px;transition:all 0.2s}
+.close-modal:hover{background:#f3f4f6;color:#374151}
+.metric{margin:16px 0;padding:12px;background:#fafbff;border-radius:10px}
+.metric-label{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.metric-label strong{color:#374151;font-size:.95rem}
+.metric-label .score{font-size:1.2rem;font-weight:bold}
+.metric-bar{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden}
+.metric-fill{height:100%;border-radius:4px;transition:width 0.6s ease}
+.score-1,.score-2,.score-3{background:linear-gradient(90deg,#ef4444,#f87171)}
+.score-4,.score-5,.score-6{background:linear-gradient(90deg,#f59e0b,#fbbf24)}
+.score-7,.score-8{background:linear-gradient(90deg,#3b82f6,#60a5fa)}
+.score-9,.score-10{background:linear-gradient(90deg,#10b981,#34d399)}
+.composer{padding:12px;border-top:1px solid #eee;display:flex;gap:10px;align-items:center}
+.composer input{flex:1;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 12px}
+.composer .btn{border:none;border-radius:10px;padding:10px 14px;cursor:pointer}
+.btn-primary{background:#7c4dff;color:#fff}
+.btn-ghost{background:#eef2ff;color:#374151}
+.mic{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#7c4dff;color:#fff;cursor:pointer;position:relative;font-size:24px;transition:all 0.3s ease}
+.mic:hover{transform:scale(1.05);background:#6a3ce8}
+.mic.recording{background:#ff4444;animation:micpulse 1.5s infinite}
+.mic.recording::before{content:'';position:absolute;top:-8px;left:-8px;right:-8px;bottom:-8px;border:3px solid #ff4444;border-radius:50%;animation:miccircle 90s linear infinite}
+@keyframes micpulse{0%{box-shadow:0 0 0 0 rgba(255,68,68,.7);}70%{box-shadow:0 0 0 20px rgba(255,68,68,0);}100%{box-shadow:0 0 0 0 rgba(255,68,68,0);}}
+@keyframes miccircle{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+.timer{font-size:.9rem;color:#6b7280}
+.limit-note{font-size:.85rem;color:#6b7280}
+.recording-bar{width:100%;height:4px;background:#f3f4f6;border-radius:2px;overflow:hidden;margin-top:8px}
+.recording-progress{height:100%;background:linear-gradient(90deg,#ff4444,#ff6b6b);transition:width 0.5s linear;width:0}
+@media(max-width:1100px){.speak-layout{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="speak-layout">
+  <section class="panel chat-panel">
+    <div class="chat-header">
+      <div>
+        <strong>Диалог с ИИ</strong>
+        <div class="limit-note">Лимит записи: 2 минуты</div>
+      </div>
+      <div class="voice-controls">
+        <div class="voice-toggle">
+          <input type="radio" id="voiceFemale" name="voice" value="female" checked>
+          <label for="voiceFemale" class="voice-option female">
+            <span class="voice-icon">👩</span>
+            <span>Женский</span>
+          </label>
+          <input type="radio" id="voiceMale" name="voice" value="male">
+          <label for="voiceMale" class="voice-option male">
+            <span class="voice-icon">👨</span>
+            <span>Мужской</span>
+          </label>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div>
+          <div class="timer" id="recTimer">00:00</div>
+          <div class="recording-bar" id="recBar" style="display:none">
+            <div class="recording-progress" id="recProgress"></div>
+          </div>
+        </div>
+        <button class="analytics-btn" id="analyticsBtn" title="Аналитика разговора">
+          <i class="bi bi-graph-up"></i>
+          <span>Аналитика</span>
+        </button>
+      </div>
+    </div>
+    <div class="chat-messages" id="chatLog">
+      <div class="msg ai">
+        <div>Привет! Начинай говорить или напиши сообщение — я отвечу и подскажу, как сказать лучше.</div>
+        <div class="time">сейчас</div>
+      </div>
+    </div>
+    <div class="composer">
+      <button class="mic" id="micBtn" title="Записать голос (до 2 минут)"><i class="bi bi-mic-fill"></i></button>
+      <input id="textInput" type="text" placeholder="Введите сообщение..." />
+      <button class="btn btn-ghost" id="clearBtn"><i class="bi bi-trash"></i></button>
+      <button class="btn btn-primary" id="sendBtn"><i class="bi bi-send"></i> Отправить</button>
+    </div>
+  </section>
+  <aside class="panel avatar-panel">
+    <div class="avatar-header">
+      <strong>3D-ассистент</strong>
+      <span class="text-muted">скоро добавим модель</span>
+    </div>
+    <div class="avatar-canvas">
+      <img id="avatarImage" class="avatar-image" src="{% static 'images/avatars/female-assistant.jpg' %}" alt="AI Assistant" />
+    </div>
+  </aside>
+</div>
+
+<!-- Модальное окно аналитики -->
+<div class="modal" id="analyticsModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>📊 Аналитика разговора</h2>
+      <button class="close-modal" id="closeModal">&times;</button>
+    </div>
+    <div id="analyticsContent">
+      <p style="text-align:center;color:#9ca3af;padding:20px">Данные загружаются...</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  const log = document.getElementById('chatLog');
+  const input = document.getElementById('textInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const micBtn = document.getElementById('micBtn');
+  const timerNode = document.getElementById('recTimer');
+  let mediaRecorder = null; let isRec = false; let startedAt = 0; let timerId = null; let stopTimeout = null;
+  let audioChunks = [];
+  let recognition = null;
+  let recognizedText = '';
+
+  const recBar = document.getElementById('recBar');
+  const recProgress = document.getElementById('recProgress');
+  const MAX_RECORDING_TIME = 120000; // 2 минуты в мс
+  
+  function fmt(ms){ const s=Math.floor(ms/1000); const m=Math.floor(s/60); const ss=String(s%60).padStart(2,'0'); return `${String(m).padStart(2,'0')}:${ss}`; }
+  function startTimer(){ 
+    startedAt=Date.now(); 
+    updateTimer(); 
+    timerId=setInterval(updateTimer,200); // Чаще обновляем для плавности прогресс-бара
+    recBar.style.display = 'block';
+  }
+  function updateTimer(){ 
+    const ms=Date.now()-startedAt; 
+    timerNode.textContent = fmt(ms);
+    // Обновляем прогресс-бар
+    const progress = Math.min((ms / MAX_RECORDING_TIME) * 100, 100);
+    recProgress.style.width = `${progress}%`;
+  }
+  function stopTimer(){ 
+    if(timerId){ clearInterval(timerId); timerId=null; } 
+    timerNode.textContent='00:00'; 
+    recBar.style.display = 'none';
+    recProgress.style.width = '0';
+  }
+
+  function append(who, text, analysis){
+    const div = document.createElement('div'); div.className = `msg ${who}`;
+    const p = document.createElement('div'); p.textContent = text; div.appendChild(p);
+    if (who === 'me'){
+      const panel = document.createElement('div');
+      panel.className = 'analysis';
+      panel.style.display = 'none'; // Скрыто по умолчанию, покажем после получения анализа
+      div.appendChild(panel);
+    }
+    const t = document.createElement('div'); t.className='time'; t.textContent = new Date().toLocaleTimeString(); div.appendChild(t);
+    log.appendChild(div); log.scrollTop = log.scrollHeight;
+  }
+  
+  function formatError(errorText) {
+    // Ищем паттерны типа 'wrong' -> 'correct' или "wrong" -> "correct"
+    const pattern = /['"]([^'"]+)['"]\s*(?:should be|->|→)\s*['"]([^'"]+)['"]/gi;
+    return errorText.replace(pattern, (match, wrong, correct) => {
+      return `<span class="error-highlight">${wrong}</span><span class="error-arrow">→</span><span class="error-highlight">${correct}</span>`;
+    });
+  }
+  
+  function updateAnalysisPanel(panel, analysis) {
+    if (!panel || !analysis) return;
+    
+    let errors = [];
+    if (analysis.errors) {
+      if (Array.isArray(analysis.errors)) {
+        errors = analysis.errors;
+      } else {
+        errors = [analysis.errors.toString()];
+      }
+    }
+    
+    let html = '';
+    
+    if (errors.length > 0) {
+      html += '<strong>🔍 Найденные ошибки:</strong>';
+      errors.forEach(err => {
+        html += `<div class="error-item">${formatError(err)}</div>`;
+      });
+    }
+    
+    if (analysis.suggestion) {
+      html += `<div style="margin-top:6px"><strong>✨ Как лучше сказать:</strong><br><span style="color:#374151">${analysis.suggestion}</span></div>`;
+    }
+    
+    // Добавляем темы для повторения
+    if (analysis.topics && analysis.topics.length > 0) {
+      html += '<div class="topics"><strong>📚 Темы для повторения:</strong><br>';
+      analysis.topics.forEach(topic => {
+        html += `<span class="topic-tag">${topic}</span>`;
+      });
+      html += '</div>';
+    }
+    
+    if (!errors.length && !analysis.suggestion) {
+      html = '<span class="no-errors">✅ Отлично! Ошибок не найдено</span>';
+    }
+    
+    panel.innerHTML = html;
+    // Показываем панель если есть что показать
+    if (html) {
+      panel.style.display = 'block';
+    }
+  }
+
+  function appendAI(reply, ru){
+    const div = document.createElement('div'); div.className = 'msg ai';
+    const p = document.createElement('div'); p.textContent = reply || 'Ответ отсутствует'; div.appendChild(p);
+    
+    if (ru){
+      const toggle = document.createElement('button');
+      toggle.className = 'btn btn-ghost';
+      toggle.style.marginTop = '8px';
+      toggle.textContent = 'Показать перевод';
+      const panel = document.createElement('div');
+      panel.className = 'translation';
+      panel.style.display = 'none';
+      toggle.addEventListener('click', ()=>{
+        const opened = panel.style.display === 'block';
+        if(opened){ panel.style.display='none'; toggle.textContent='Показать перевод'; return; }
+        panel.textContent = ru;
+        panel.style.display = 'block';
+        toggle.textContent = 'Скрыть перевод';
+      });
+      div.appendChild(toggle);
+      div.appendChild(panel);
+    }
+    const t = document.createElement('div'); t.className='time'; t.textContent = new Date().toLocaleTimeString(); div.appendChild(t);
+    log.appendChild(div); log.scrollTop = log.scrollHeight;
+    
+    // Автоматическая озвучка ответа ИИ
+    if (reply) {
+      setTimeout(() => playTTS(reply), 500); // Небольшая задержка для лучшего UX
+    }
+  }
+
+  async function sendToAI(text){
+    // добавляем сообщение пользователя сразу, но анализ подгружается из ответа
+    append('me', text);
+    try{
+      const resp = await fetch('{% url "cards:api_chat_ai" %}',{
+        method:'POST', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+        body: JSON.stringify({ message: text })
+      });
+      const data = await resp.json();
+      if(data.error){ append('error', data.error); return; }
+      // ответ ИИ и перевод
+      appendAI(data.reply, data.russian_translation);
+      // Заполняем панель анализа у последнего сообщения пользователя
+      const items = Array.from(log.querySelectorAll('.msg.me'));
+      const last = items[items.length-1];
+      if (last && data.analysis){
+        const panel = last.querySelector('.analysis');
+        if (panel){
+          updateAnalysisPanel(panel, data.analysis);
+        }
+      }
+    }catch(e){ append('error','Ошибка связи с ИИ'); }
+  }
+
+  // Анализ теперь возвращает сам ИИ — дополнительный запрос не нужен
+
+  // Профессиональная озвучка ответов ИИ с выбором голоса
+  function playTTS(text){
+    if (!text) return;
+    try{
+      // Останавливаем предыдущую озвучку
+      speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.85; // Немного медленнее для лучшего понимания
+      utterance.pitch = 1.1; // Чуть выше для более приятного звука
+      utterance.volume = 0.9;
+      
+      // Функция для поиска и установки голоса
+      function setVoice() {
+        const voiceType = document.querySelector('input[name="voice"]:checked').value;
+        const voices = speechSynthesis.getVoices();
+        
+        if (voices.length === 0) {
+          // Если голоса еще не загружены, ждем
+          setTimeout(setVoice, 100);
+          return;
+        }
+        
+        let selectedVoice = null;
+        if (voiceType === 'female') {
+          // Ищем качественный женский голос (расширенный поиск)
+          selectedVoice = voices.find(voice => 
+            voice.lang.startsWith('en') && 
+            (voice.name.toLowerCase().includes('female') || 
+             voice.name.toLowerCase().includes('samantha') || 
+             voice.name.toLowerCase().includes('karen') || 
+             voice.name.toLowerCase().includes('susan') ||
+             voice.name.toLowerCase().includes('victoria') || 
+             voice.name.toLowerCase().includes('zira') ||
+             voice.name.toLowerCase().includes('hazel') ||
+             voice.name.toLowerCase().includes('serena') ||
+             voice.name.toLowerCase().includes('helen') ||
+             voice.name.toLowerCase().includes('sarah') ||
+             voice.name.toLowerCase().includes('emma'))
+          );
+          // Если не нашли, берем любой женский голос
+          if (!selectedVoice) {
+            selectedVoice = voices.find(voice => 
+              voice.lang.startsWith('en') && 
+              (voice.name.toLowerCase().includes('woman') || 
+               voice.name.toLowerCase().includes('girl') ||
+               voice.name.toLowerCase().includes('female'))
+            );
+          }
+        } else {
+          // Ищем качественный мужской голос
+          selectedVoice = voices.find(voice => 
+            voice.lang.startsWith('en') && 
+            (voice.name.toLowerCase().includes('male') || 
+             voice.name.toLowerCase().includes('david') || 
+             voice.name.toLowerCase().includes('mark') || 
+             voice.name.toLowerCase().includes('alex') ||
+             voice.name.toLowerCase().includes('daniel') || 
+             voice.name.toLowerCase().includes('microsoft') ||
+             voice.name.toLowerCase().includes('richard') ||
+             voice.name.toLowerCase().includes('tom') ||
+             voice.name.toLowerCase().includes('john') ||
+             voice.name.toLowerCase().includes('mike'))
+          );
+        }
+        
+        if (selectedVoice) {
+          utterance.voice = selectedVoice;
+          console.log('Using voice:', selectedVoice.name, 'Type:', voiceType);
+        } else {
+          console.log('No specific voice found, using default');
+        }
+        
+        speechSynthesis.speak(utterance);
+      }
+      
+      // Запускаем поиск голоса
+      setVoice();
+      
+    }catch(e){ console.log('TTS error:', e); }
+  }
+
+  // Переключение аватара при выборе голоса
+  const voiceRadios = document.querySelectorAll('input[name="voice"]');
+  const avatarImage = document.getElementById('avatarImage');
+  
+  voiceRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const voiceType = e.target.value;
+      if (voiceType === 'female') {
+        avatarImage.src = "{% static 'images/avatars/female-assistant.jpg' %}";
+        avatarImage.alt = "Female AI Assistant";
+      } else {
+        avatarImage.src = "{% static 'images/avatars/male-assistant.jpg' %}";
+        avatarImage.alt = "Male AI Assistant";
+      }
+    });
+  });
+  
+  // Кнопки
+  sendBtn.addEventListener('click', ()=>{ const t=(input.value||'').trim(); if(!t) return; input.value=''; sendToAI(t); });
+  input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ sendBtn.click(); }});
+  clearBtn.addEventListener('click', async ()=>{ 
+    // Очищаем чат на сервере
+    try {
+      await fetch('{% url "cards:api_clear_ai_chat" %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')}
+      });
+    } catch(e) {
+      console.log('Failed to clear chat on server:', e);
+    }
+    // Очищаем лог на клиенте
+    log.innerHTML='<div class="msg ai"><div>Привет! Начинай говорить или напиши сообщение — я отвечу и подскажу, как сказать лучше.</div><div class="time">сейчас</div></div>';
+  });
+
+  // Микрофон: запись до 2 минут, с ручной остановкой и отправкой
+  micBtn.addEventListener('click', ()=>{ if(isRec) stopRec(); else startRec(); });
+  
+  async function startRec(){
+    // Инициализируем Web Speech API
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      append('error', 'Ваш браузер не поддерживает распознавание речи');
+      return;
+    }
+    
+    try {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = 'en-US';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      
+      recognizedText = '';
+      
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcript = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalTranscript += transcript + ' ';
+          } else {
+            interimTranscript += transcript;
+          }
+        }
+        
+        if (finalTranscript) {
+          recognizedText += finalTranscript;
+        }
+      };
+      
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error !== 'no-speech') {
+          append('error', 'Ошибка распознавания речи');
+          stopRec();
+        }
+      };
+      
+      recognition.onend = () => {
+        if (isRec) {
+          // Если запись еще активна, перезапускаем распознавание
+          try {
+            recognition.start();
+          } catch (e) {
+            console.log('Recognition restart failed:', e);
+          }
+        }
+      };
+      
+      recognition.start();
+      isRec = true;
+      micBtn.classList.add('recording');
+      startTimer();
+      
+      // Автостоп через 2 минуты (120 секунд)
+      stopTimeout = setTimeout(() => {
+        if (isRec) stopRec();
+      }, 120000);
+      
+    } catch (err) {
+      append('error', 'Не удалось запустить распознавание речи');
+      console.error('Recognition start error:', err);
+    }
+  }
+  
+  function stopRec(){
+    if (!isRec) return;
+    isRec = false;
+    micBtn.classList.remove('recording');
+    stopTimer();
+    
+    if (stopTimeout) {
+      clearTimeout(stopTimeout);
+      stopTimeout = null;
+    }
+    
+    if (recognition) {
+      try {
+        recognition.stop();
+      } catch (e) {
+        console.log('Recognition stop error:', e);
+      }
+    }
+    
+    // Отправляем распознанный текст
+    if (recognizedText.trim()) {
+      sendToAI(recognizedText.trim());
+    } else {
+      append('error', 'Не удалось распознать речь');
+    }
+  }
+  
+  function getCookie(name){ let v=null; if(document.cookie && document.cookie!==''){ const a=document.cookie.split(';'); for(let i=0;i<a.length;i++){ const c=a[i].trim(); if(c.substring(0,name.length+1)===(name+'=')){ v=decodeURIComponent(c.substring(name.length+1)); break; } } } return v; }
+  
+  // Аналитика разговора
+  const analyticsBtn = document.getElementById('analyticsBtn');
+  const analyticsModal = document.getElementById('analyticsModal');
+  const closeModal = document.getElementById('closeModal');
+  const analyticsContent = document.getElementById('analyticsContent');
+  
+  analyticsBtn.addEventListener('click', async () => {
+    analyticsModal.classList.add('show');
+    analyticsContent.innerHTML = '<p style="text-align:center;color:#9ca3af;padding:20px">Анализ разговора...</p>';
+    
+    try {
+      const resp = await fetch('{% url "cards:api_conversation_analytics" %}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken')}
+      });
+      const data = await resp.json();
+      
+      if (data.error) {
+        analyticsContent.innerHTML = `<p style="text-align:center;color:#ef4444;padding:20px">${data.error}</p>`;
+        return;
+      }
+      
+      displayAnalytics(data);
+    } catch (e) {
+      analyticsContent.innerHTML = '<p style="text-align:center;color:#ef4444;padding:20px">Ошибка загрузки аналитики</p>';
+    }
+  });
+  
+  function displayAnalytics(data) {
+    const metrics = [
+      { label: 'Точность', value: data.accuracy || 0 },
+      { label: 'Грамматика', value: data.grammar || 0 },
+      { label: 'Словарный запас', value: data.vocabulary || 0 },
+      { label: 'Раскрытие тем', value: data.topic_development || 0 }
+    ];
+    
+    let html = '';
+    metrics.forEach(metric => {
+      const scoreClass = `score-${metric.value}`;
+      const percentage = (metric.value / 10) * 100;
+      html += `
+        <div class="metric">
+          <div class="metric-label">
+            <strong>${metric.label}</strong>
+            <span class="score" style="color:${getScoreColor(metric.value)}">${metric.value}/10</span>
+          </div>
+          <div class="metric-bar">
+            <div class="metric-fill ${scoreClass}" style="width:${percentage}%"></div>
+          </div>
+        </div>
+      `;
+    });
+    
+    if (data.feedback) {
+      html += `<div style="margin-top:16px;padding:12px;background:#f9fafb;border-radius:8px;color:#374151;font-size:.9rem">
+        <strong style="color:#7c4dff">💡 Обратная связь:</strong><br>${data.feedback}
+      </div>`;
+    }
+    
+    analyticsContent.innerHTML = html;
+  }
+  
+  function getScoreColor(score) {
+    if (score >= 9) return '#10b981';
+    if (score >= 7) return '#3b82f6';
+    if (score >= 4) return '#f59e0b';
+    return '#ef4444';
+  }
+  
+  closeModal.addEventListener('click', () => {
+    analyticsModal.classList.remove('show');
+  });
+  
+  analyticsModal.addEventListener('click', (e) => {
+    if (e.target === analyticsModal) {
+      analyticsModal.classList.remove('show');
+    }
+  });
+})();
+</script>
+{% endblock %}
+
+

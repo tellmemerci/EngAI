@@ -2,6 +2,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from datetime import timedelta
 
 
 class UserManager(BaseUserManager):
@@ -44,6 +45,15 @@ class User(AbstractUser):
         choices=[('A1', 'A1'), ('A2', 'A2'), ('B1', 'B1'),
                  ('B2', 'B2'), ('C1', 'C1'), ('C2', 'C2')],
         default='A2'
+    )
+    user_role = models.CharField(
+        'Роль пользователя',
+        max_length=20,
+        choices=[
+            ('student', 'Ученик'),
+            ('teacher', 'Преподаватель'),
+        ],
+        default='student'
     )
     phone_number = models.CharField('Номер телефона', max_length=20, blank=True)
     city = models.CharField('Город проживания', max_length=100, blank=True)
@@ -497,3 +507,124 @@ class AIMessage(models.Model):
         content_preview = (self.content[:100] + '...') if len(self.content) > 100 else self.content
         sender_display = 'ИИ' if self.sender_type == 'ai' else 'Пользователь'
         return f"[{sender_display}]: {content_preview}"
+
+
+class PromoCode(models.Model):
+    """Модель промокодов для скидок на подписку"""
+    code = models.CharField(max_length=50, unique=True, verbose_name='Промокод')
+    discount_percent = models.PositiveIntegerField(verbose_name='Скидка (%)', help_text='Процент скидки от 0 до 100')
+    valid_from = models.DateTimeField(verbose_name='Действует с')
+    valid_until = models.DateTimeField(verbose_name='Действует до')
+    is_active = models.BooleanField(default=True, verbose_name='Активен')
+    usage_limit = models.PositiveIntegerField(null=True, blank=True, verbose_name='Лимит использований', help_text='Оставьте пустым для неограниченного использования')
+    used_count = models.PositiveIntegerField(default=0, verbose_name='Количество использований')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
+    
+    class Meta:
+        verbose_name = 'Промокод'
+        verbose_name_plural = 'Промокоды'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.code} ({self.discount_percent}%)"
+    
+    def is_valid(self):
+        """Проверяет, действителен ли промокод"""
+        now = timezone.now()
+        if not self.is_active:
+            return False
+        if now < self.valid_from or now > self.valid_until:
+            return False
+        if self.usage_limit and self.used_count >= self.usage_limit:
+            return False
+        return True
+    
+    def can_be_used(self):
+        """Проверяет, можно ли использовать промокод"""
+        return self.is_valid()
+
+
+class Subscription(models.Model):
+    """Модель подписок пользователей"""
+    SUBSCRIPTION_TYPES = [
+        ('free', 'Бесплатная'),
+        ('medium', 'Medium'),
+        ('pro', 'Pro'),
+        ('ultra', 'Ultra'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription', verbose_name='Пользователь')
+    subscription_type = models.CharField(max_length=10, choices=SUBSCRIPTION_TYPES, default='free', verbose_name='Тип подписки')
+    start_date = models.DateTimeField(auto_now_add=True, verbose_name='Дата начала')
+    end_date = models.DateTimeField(null=True, blank=True, verbose_name='Дата окончания')
+    is_active = models.BooleanField(default=True, verbose_name='Активна')
+    auto_renewal = models.BooleanField(default=False, verbose_name='Автопродление')
+    promo_code = models.ForeignKey(PromoCode, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Использованный промокод')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создана')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлена')
+    
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.get_subscription_type_display()}"
+    
+    def is_valid(self):
+        """Проверяет, действительна ли подписка"""
+        if not self.is_active:
+            return False
+        if self.end_date and timezone.now() > self.end_date:
+            return False
+        return True
+    
+    def get_remaining_days(self):
+        """Возвращает количество оставшихся дней подписки"""
+        if not self.end_date:
+            return None
+        remaining = self.end_date - timezone.now()
+        return max(0, remaining.days)
+    
+    def extend_subscription(self, months=1):
+        """Продлевает подписку на указанное количество месяцев"""
+        if self.end_date:
+            self.end_date += timedelta(days=30 * months)
+        else:
+            self.end_date = timezone.now() + timedelta(days=30 * months)
+        self.save()
+    
+    @property
+    def is_premium(self):
+        """Проверяет, является ли подписка премиум"""
+        return self.subscription_type in ['medium', 'pro', 'ultra']
+
+
+class Payment(models.Model):
+    """Модель платежей"""
+    STATUS_CHOICES = [
+        ('pending', 'Ожидает оплаты'),
+        ('paid', 'Оплачен'),
+        ('failed', 'Неудачный'),
+        ('cancelled', 'Отменен'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments', verbose_name='Пользователь')
+    subscription = models.ForeignKey(Subscription, on_delete=models.CASCADE, related_name='payments', verbose_name='Подписка')
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Сумма')
+    currency = models.CharField(max_length=3, default='RUB', verbose_name='Валюта')
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', verbose_name='Статус')
+    yookassa_payment_id = models.CharField(max_length=100, null=True, blank=True, verbose_name='ID платежа ЮKassa')
+    payment_url = models.URLField(null=True, blank=True, verbose_name='Ссылка на оплату')
+    promo_code = models.ForeignKey(PromoCode, on_delete=models.SET_NULL, null=True, blank=True, verbose_name='Промокод')
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name='Размер скидки')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Создан')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Обновлен')
+    
+    class Meta:
+        verbose_name = 'Платеж'
+        verbose_name_plural = 'Платежи'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.user.email} - {self.amount} {self.currency} ({self.get_status_display()})"

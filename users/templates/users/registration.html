@@ -4,7 +4,7 @@
 {% block title %}Регистрация{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/registration.css' %}">
+<link rel="stylesheet" href="{% static 'users/css/registration.css' %}?v=2">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@18.1.1/build/css/intlTelInput.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
 {% endblock %}
@@ -22,6 +22,8 @@
             <div class="circle" id="step2">2</div>
             <div class="line"></div>
             <div class="circle" id="step3">3</div>
+            <div class="line"></div>
+            <div class="circle" id="step4">4</div>
         </div>
 
         {% if messages %}
@@ -71,9 +73,49 @@
                 </div>
             </div>
 
-            <!-- Шаг 2 -->
+            <!-- Шаг 2: Выбор роли -->
             <div class="step hidden" id="form-step-2">
-                <h2>Шаг 2: Личная информация</h2>
+                <h2>Шаг 2: Кто вы?</h2>
+                <p class="step-description">Выберите свою роль, чтобы мы могли настроить для вас подходящий опыт обучения</p>
+                
+                <div class="role-selection">
+                    <div class="role-cards">
+                        <div class="role-card" onclick="selectRole('student', this)" data-role="student">
+                            <div class="role-icon student-icon">
+                                <i class="bi bi-mortarboard-fill" aria-hidden="true" style="font-size: 42px; color: #7c4dff;"></i>
+                            </div>
+                            <h3>Я - студент</h3>
+                            <p class="role-description">Изучаю английский и хочу улучшить свои навыки</p>
+                        </div>
+                        
+                        <div class="role-card" onclick="selectRole('teacher', this)" data-role="teacher">
+                            <div class="role-icon teacher-icon">
+                                <i class="bi bi-person-workspace" aria-hidden="true" style="font-size: 42px; color: #7c4dff;"></i>
+                            </div>
+                            <h3>Я - преподаватель</h3>
+                            <p class="role-description">Обучаю английскому языку и помогаю студентам</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Скрытые радио-кнопки для формы -->
+                    <div style="display: none;">
+                        {{ form.user_role }}
+                    </div>
+                    
+                    {% if form.user_role.errors %}
+                    <div class="error-message">{{ form.user_role.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="step-buttons">
+                    <button type="button" onclick="prevStep()">Назад</button>
+                    <button type="button" onclick="nextStep()">Далее</button>
+                </div>
+            </div>
+
+            <!-- Шаг 3 -->
+            <div class="step hidden" id="form-step-3">
+                <h2>Шаг 3: Личная информация</h2>
                 
                 <div class="field-group">
                     <label for="id_last_name" class="field-label">Фамилия</label>
@@ -142,9 +184,9 @@
                 </div>
             </div>
 
-            <!-- Шаг 3 -->
-            <div class="step hidden" id="form-step-3">
-                <h2>Шаг 3: Подтверждение телефона</h2>
+            <!-- Шаг 4 -->
+            <div class="step hidden" id="form-step-4">
+                <h2>Шаг 4: Подтверждение телефона</h2>
                 <p class="verification-info">Мы отправили SMS-код на указанный номер телефона. Введите код для завершения регистрации.</p>
                 
                 <div class="field-group">
@@ -251,14 +293,14 @@ function updateDesiredLevels(currentLevel) {
 }
 
 function nextStep() {
-    if (currentStep < 3) {
+    if (currentStep < 4) {
         document.getElementById(`form-step-${currentStep}`).classList.remove('active');
         document.getElementById(`form-step-${currentStep}`).classList.add('hidden');
         currentStep++;
         document.getElementById(`form-step-${currentStep}`).classList.remove('hidden');
         document.getElementById(`form-step-${currentStep}`).classList.add('active');
         document.getElementById(`step${currentStep}`).classList.add('active');
-        if (currentStep === 3) startTimer();
+        if (currentStep === 4) startTimer();
     }
 }
 
@@ -305,6 +347,26 @@ function resendCode() {
     resendBtn.style.display = 'none';
     timerContainer.style.display = 'flex';
     startTimer();
+}
+
+function selectRole(role, el) {
+    // Убираем активный класс со всех карточек
+    document.querySelectorAll('.role-card').forEach(card => {
+        card.classList.remove('active');
+    });
+    
+    // Добавляем активный класс к выбранной карточке
+    if (el) {
+        el.classList.add('active');
+    }
+    
+    // Устанавливаем значение в скрытое поле формы
+    const roleInputs = document.querySelectorAll('input[name="user_role"]');
+    roleInputs.forEach(input => {
+        if (input.value === role) {
+            input.checked = true;
+        }
+    });
 }
 </script>
 {% endblock %}

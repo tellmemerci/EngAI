@@ -25,7 +25,12 @@ from .views import (
     respond_group_request,
     edit_group,
     delete_group,
-    invite_to_group
+    invite_to_group,
+    subscription_view,
+    validate_promo_code,
+    create_payment,
+    payment_success,
+    payment_cancel
 )
 from django.views.generic import TemplateView
 
@@ -62,4 +67,11 @@ urlpatterns = [
     path('chat/upload-file/', upload_file, name='upload_file'),
     path('chat/<int:chat_id>/get-messages/', get_messages, name='get_messages'),
     path('test/', TemplateView.as_view(template_name='users/test.html'), name='test'),
+    
+    # Подписки
+    path('subscription/', subscription_view, name='subscription'),
+    path('subscription/validate-promo/', validate_promo_code, name='validate_promo_code'),
+    path('subscription/create-payment/', create_payment, name='create_payment'),
+    path('subscription/payment/success/', payment_success, name='payment_success'),
+    path('subscription/payment/cancel/', payment_cancel, name='payment_cancel'),
 ]

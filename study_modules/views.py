@@ -915,7 +915,7 @@ def add_grammar_task(request, module_id, unit_id, skill_id):
         'form': form,
         'form_type': 'grammar_task'
     }
-    return render(request, 'study_modules/add_item.html', context)
+    return render(request, 'study_modules/create_grammar_task.html', context)
 
 
 @login_required
@@ -927,22 +927,47 @@ def edit_grammar_task(request, module_id, unit_id, skill_id, task_id):
     task = get_object_or_404(GrammarTask, pk=task_id, skill=skill)
     
     if module.author != request.user:
-        return JsonResponse({'success': False, 'error': 'У вас нет прав для редактирования этого задания.'})
+        messages.error(request, 'У вас нет прав для редактирования этого задания.')
+        return redirect('study_modules:grammar_practice', module_id=module_id, unit_id=unit_id, skill_id=skill_id)
     
     if request.method == 'POST':
         import json
-        data = json.loads(request.body)
         
-        task.title = data.get('title', task.title)
-        task.description = data.get('description', task.description)
-        task.instruction = data.get('instruction', task.instruction)
-        task.content = data.get('content', task.content)
-        task.correct_answer = data.get('correct_answer', task.correct_answer)
+        # Обновляем основные поля
+        task.title = request.POST.get('title', task.title)
+        task.description = request.POST.get('description', task.description)
+        task.instruction = request.POST.get('instruction', task.instruction)
+        task.order = request.POST.get('order', task.order)
+        task.is_active = 'is_active' in request.POST
+        
+        # Обновляем JSON поля
+        try:
+            content_json = request.POST.get('content', '')
+            if content_json.strip():
+                task.content = json.loads(content_json)
+        except json.JSONDecodeError:
+            messages.error(request, 'Неверный формат JSON для содержимого задания.')
+            return redirect('study_modules:edit_grammar_task', module_id=module_id, unit_id=unit_id, skill_id=skill_id, task_id=task_id)
+        
+        try:
+            answer_json = request.POST.get('correct_answer', '')
+            if answer_json.strip():
+                task.correct_answer = json.loads(answer_json)
+        except json.JSONDecodeError:
+            messages.error(request, 'Неверный формат JSON для правильного ответа.')
+            return redirect('study_modules:edit_grammar_task', module_id=module_id, unit_id=unit_id, skill_id=skill_id, task_id=task_id)
+        
         task.save()
-        
-        return JsonResponse({'success': True})
+        messages.success(request, 'Задание успешно обновлено!')
+        return redirect('study_modules:grammar_practice', module_id=module_id, unit_id=unit_id, skill_id=skill_id)
     
-    return JsonResponse({'success': False, 'error': 'Неверный метод запроса.'})
+    context = {
+        'module': module,
+        'unit': unit,
+        'skill': skill,
+        'task': task
+    }
+    return render(request, 'study_modules/edit_grammar_task.html', context)
 
 
 @login_required
@@ -954,13 +979,22 @@ def delete_grammar_task(request, module_id, unit_id, skill_id, task_id):
     task = get_object_or_404(GrammarTask, pk=task_id, skill=skill)
     
     if module.author != request.user:
-        return JsonResponse({'success': False, 'error': 'У вас нет прав для удаления этого задания.'})
+        messages.error(request, 'У вас нет прав для удаления этого задания.')
+        return redirect('study_modules:grammar_practice', module_id=module_id, unit_id=unit_id, skill_id=skill_id)
     
     if request.method == 'POST':
         task.delete()
-        return JsonResponse({'success': True})
+        messages.success(request, 'Задание успешно удалено!')
+        return redirect('study_modules:grammar_practice', module_id=module_id, unit_id=unit_id, skill_id=skill_id)
     
-    return JsonResponse({'success': False, 'error': 'Неверный метод запроса.'})
+    # Показываем страницу подтверждения удаления
+    context = {
+        'module': module,
+        'unit': unit,
+        'skill': skill,
+        'task': task
+    }
+    return render(request, 'study_modules/delete_grammar_task.html', context)
 
 
 @login_required

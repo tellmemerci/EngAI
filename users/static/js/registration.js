@@ -54,6 +54,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Выбор роли (иконки/карточки)
+    const roleCards = document.querySelectorAll('.role-card');
+    const roleInput = document.getElementById('selected_role');
+
+    function setRoleActive(role) {
+        roleCards.forEach(card => {
+            const isActive = card.getAttribute('data-role') === role;
+            card.classList.toggle('active', isActive);
+        });
+        if (roleInput) roleInput.value = role;
+    }
+
+    window.selectRole = function(role) {
+        setRoleActive(role);
+    }
+
+    roleCards.forEach(card => {
+        card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const role = card.getAttribute('data-role');
+                setRoleActive(role);
+            }
+        });
+        card.setAttribute('tabindex', '0');
+        card.setAttribute('role', 'button');
+        card.setAttribute('aria-pressed', 'false');
+    });
+
     // Функция валидации шага
     function validateStep(stepIndex) {
         const currentStepElement = steps[stepIndex];
@@ -69,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Дополнительная валидация для email
+        // Дополнительная валидация для email и паролей на шаге 1
         if (stepIndex === 0) {
             const emailInput = currentStepElement.querySelector('input[type="email"]');
             if (emailInput && !isValidEmail(emailInput.value)) {
@@ -77,22 +106,51 @@ document.addEventListener('DOMContentLoaded', function() {
                 isValid = false;
             }
 
-            // Проверка совпадения паролей
-            const password1 = currentStepElement.querySelector('input[name="password1"]');
-            const password2 = currentStepElement.querySelector('input[name="password2"]');
+            const password1 = currentStepElement.querySelector('input[name="password1"], input[name="password"]');
+            const password2 = currentStepElement.querySelector('input[name="password2"], input[name="confirm_password"]');
             if (password1 && password2 && password1.value !== password2.value) {
                 password1.classList.add('error');
                 password2.classList.add('error');
                 isValid = false;
             }
+
+            if (password1 && password1.value.length < 8) {
+                password1.classList.add('error');
+                isValid = false;
+            }
         }
 
-        // Валидация пароля
-        if (stepIndex === 0) {
-            const passwordInput = currentStepElement.querySelector('input[type="password"]');
-            if (passwordInput && passwordInput.value.length < 8) {
-                passwordInput.classList.add('error');
+        // Проверка выбора роли на шаге 2
+        if (stepIndex === 1) {
+            const roleSelection = currentStepElement.querySelector('.role-selection');
+            
+            if (roleInput && !roleInput.value) {
                 isValid = false;
+                
+                // Показать ошибку валидации
+                if (roleSelection) {
+                    roleSelection.classList.add('error');
+                    setTimeout(() => {
+                        roleSelection.classList.remove('error');
+                    }, 3000);
+                }
+                
+                // Эффект вибрации карточек
+                roleCards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.style.transform = 'translateY(-8px) scale(1.02)';
+                        card.style.borderColor = '#ff5252';
+                        setTimeout(() => { 
+                            card.style.transform = ''; 
+                            card.style.borderColor = ''; 
+                        }, 300);
+                    }, index * 100);
+                });
+            } else {
+                // Убрать ошибку при валидном выборе
+                if (roleSelection) {
+                    roleSelection.classList.remove('error');
+                }
             }
         }
 
@@ -108,6 +166,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Функция для таймера
     function startTimer(duration) {
         let timer = duration;
+        if (!timerContainer || !resendButton) return;
         timerContainer.style.display = 'flex';
         resendButton.style.display = 'none';
 
@@ -116,8 +175,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const minutes = parseInt(timer / 60, 10);
             const seconds = parseInt(timer % 60, 10);
 
-            timerText.textContent = minutes.toString().padStart(2, '0') + ':' + 
+            if (timerText) {
+                timerText.textContent = minutes.toString().padStart(2, '0') + ':' + 
                                   seconds.toString().padStart(2, '0');
+            }
 
             if (--timer < 0) {
                 clearInterval(timerInterval);
@@ -131,11 +192,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (resendButton) {
         resendButton.addEventListener('click', function(e) {
             e.preventDefault();
-            // Отправляем запрос на повторную отправку кода
             fetch('/users/resend-code/', {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
                 },
             })
             .then(response => response.json())
@@ -143,7 +203,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     startTimer(120);
                 }
-            });
+            })
+            .catch(() => {});
         });
     }
 

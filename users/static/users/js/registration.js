@@ -51,9 +51,23 @@ function resendCode() {
   startTimer();
 }
 
+// Функции для работы с ролями
+function selectRole(role) {
+  const roleCards = document.querySelectorAll('.role-card');
+  const roleInput = document.getElementById('selected_role');
+  
+  roleCards.forEach(card => {
+    const isActive = card.getAttribute('data-role') === role;
+    card.classList.toggle('active', isActive);
+  });
+  
+  if (roleInput) roleInput.value = role;
+}
+
 // Валидация шагов
 function validateStep(step) {
   const inputs = document.querySelectorAll(`#form-step-${step} input:required`);
+  const roleInput = document.getElementById('selected_role');
   let isValid = true;
 
   inputs.forEach(input => {
@@ -64,6 +78,16 @@ function validateStep(step) {
       input.classList.remove('error');
     }
   });
+
+  // Проверка выбора роли на шаге 2
+  if (step === 2 && roleInput && !roleInput.value) {
+    isValid = false;
+    const roleCards = document.querySelectorAll('.role-card');
+    roleCards.forEach(card => {
+      card.style.transform = 'translateY(-8px) scale(1.02)';
+      setTimeout(() => { card.style.transform = ''; }, 150);
+    });
+  }
 
   if (isValid) nextStep();
 }

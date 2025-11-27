@@ -124,11 +124,23 @@ class RegistrationForm(UserCreationForm):
             'required': 'required'
         })
     )
+    user_role = forms.ChoiceField(
+        label='Кто вы?',
+        choices=[
+            ('student', 'Я - ученик'),
+            ('teacher', 'Я - преподаватель'),
+        ],
+        widget=forms.RadioSelect(attrs={
+            'class': 'role-radio',
+            'required': 'required'
+        }),
+        initial='student'
+    )
 
     class Meta:
         model = User
         fields = ('email', 'password1', 'password2', 'first_name', 'last_name', 
-                 'phone_number', 'current_language_level', 'desired_language_level', 'city')
+                 'phone_number', 'current_language_level', 'desired_language_level', 'city', 'user_role')
 
     def clean_email(self):
         email = self.cleaned_data.get('email')

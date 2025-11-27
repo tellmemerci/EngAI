@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from .forms import RegistrationForm, PasswordChangeForm, ProfileEditForm
 from .utils import log_user_action, generate_sms_code, send_sms_code
 from django.core.exceptions import ValidationError
-from .models import User, Friendship, Chat, Message, StudyGroup, StudyGroupMembership, GroupChat, GroupMessage
+from .models import User, Friendship, Chat, Message, StudyGroup, StudyGroupMembership, GroupChat, GroupMessage, PromoCode, Subscription, Payment
 from django.core.mail import send_mail
 import random
 from django.http import JsonResponse
@@ -41,6 +41,7 @@ def registration_view(request):
                 # Создание пользователя
                 user = form.save(commit=False)
                 user.is_active = True  # Пользователь активен сразу
+                # Поле user_role уже установлено через форму
                 user.save()
                 
                 # Авторизуем пользователя с указанием бэкенда
@@ -1239,5 +1240,255 @@ def invite_to_group(request):
             'success': False,
             'message': 'Произошла ошибка при отправке приглашения'
         })
+
+
+# ==============================================
+# ФУНКЦИИ ДЛЯ РАБОТЫ С ПОДПИСКАМИ
+# ==============================================
+
+@login_required
+def subscription_view(request):
+    """Страница подписки пользователя"""
+    # Получаем или создаем подписку пользователя
+    subscription, created = Subscription.objects.get_or_create(
+        user=request.user,
+        defaults={'subscription_type': 'free'}
+    )
+    
+    # Тарифы подписки
+    SUBSCRIPTION_PLANS = {
+        'medium': {
+            'name': 'Medium',
+            'price': 299,
+            'description': 'Базовые возможности для изучения английского',
+            'features': [
+                'Доступ к базовым урокам',
+                'Проверка грамматики',
+                'Словарь с 1000 слов',
+                'Поддержка по email'
+            ]
+        },
+        'pro': {
+            'name': 'Pro',
+            'price': 499,
+            'description': 'Расширенные возможности для серьезного изучения',
+            'features': [
+                'Все возможности Medium',
+                'Персональный план обучения',
+                'Разговорная практика с ИИ',
+                'Анализ прогресса',
+                'Приоритетная поддержка'
+            ]
+        },
+        'ultra': {
+            'name': 'Ultra',
+            'price': 799,
+            'description': 'Максимальные возможности для профессионалов',
+            'features': [
+                'Все возможности Pro',
+                'Индивидуальные уроки с преподавателем',
+                'Сертификаты о прохождении',
+                'Корпоративные возможности',
+                '24/7 поддержка'
+            ]
+        }
+    }
+    
+    # Проверяем, есть ли у пользователя активная подписка
+    has_active_subscription = subscription.is_valid() and subscription.subscription_type != 'free'
+    
+    # Если есть активная подписка, рассчитываем цену апгрейда (50% от стоимости)
+    upgrade_discount = 0.5 if has_active_subscription else 0
+    
+    context = {
+        'subscription': subscription,
+        'subscription_plans': SUBSCRIPTION_PLANS,
+        'has_active_subscription': has_active_subscription,
+        'upgrade_discount': upgrade_discount,
+    }
+    
+    return render(request, 'users/subscription.html', context)
+
+
+@login_required
+@require_POST
+def validate_promo_code(request):
+    """Валидация промокода"""
+    promo_code = request.POST.get('promo_code', '').strip().upper()
+    
+    if not promo_code:
+        return JsonResponse({
+            'success': False,
+            'message': 'Введите промокод'
+        })
+    
+    try:
+        promo = PromoCode.objects.get(code=promo_code)
+        
+        if not promo.can_be_used():
+            return JsonResponse({
+                'success': False,
+                'message': 'Промокод недействителен или истек'
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'discount_percent': promo.discount_percent,
+            'message': f'Промокод действителен! Скидка {promo.discount_percent}%'
+        })
+        
+    except PromoCode.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Промокод не найден'
+        })
+
+
+@login_required
+@require_POST
+def create_payment(request):
+    """Создание покупки без внешней оплаты: сразу активируем подписку"""
+    import os
+    import uuid
+    from decimal import Decimal
+    
+    subscription_type = request.POST.get('subscription_type')
+    promo_code = request.POST.get('promo_code', '').strip().upper()
+    
+    if subscription_type not in ['medium', 'pro', 'ultra']:
+        return JsonResponse({
+            'success': False,
+            'message': 'Неверный тип подписки'
+        })
+    
+    # Получаем или создаем подписку пользователя
+    subscription, created = Subscription.objects.get_or_create(
+        user=request.user,
+        defaults={'subscription_type': 'free'}
+    )
+    
+    # Базовые цены
+    PRICES = {'medium': 299, 'pro': 499, 'ultra': 799}
+    base_price = Decimal(str(PRICES[subscription_type]))
+    
+    # Проверяем, есть ли активная подписка для расчета скидки на апгрейд
+    has_active_subscription = subscription.is_valid() and subscription.subscription_type != 'free'
+    upgrade_discount = Decimal('0.5') if has_active_subscription else Decimal('0')
+    
+    # Применяем скидку на апгрейд
+    if upgrade_discount > 0:
+        final_price = base_price * (Decimal('1') - upgrade_discount)
+        discount_reason = 'Апгрейд подписки (50% скидка)'
+    else:
+        final_price = base_price
+        discount_reason = None
+    
+    # Применяем промокод, если указан
+    promo_discount = Decimal('0')
+    promo_obj = None
+    if promo_code:
+        try:
+            promo_obj = PromoCode.objects.get(code=promo_code)
+            if promo_obj.can_be_used():
+                promo_discount = base_price * (Decimal(str(promo_obj.discount_percent)) / Decimal('100'))
+                final_price = max(Decimal('0'), final_price - promo_discount)
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Промокод недействителен'
+                })
+        except PromoCode.DoesNotExist:
+            return JsonResponse({
+                'success': False,
+                'message': 'Промокод не найден'
+            })
+    
+    # Создаем запись платежа (как успешного)
+    payment = Payment.objects.create(
+        user=request.user,
+        subscription=subscription,
+        amount=final_price,
+        currency='RUB',
+        promo_code=promo_obj,
+        discount_amount=promo_discount,
+        status='paid'
+    )
+
+    # Активируем/обновляем подписку пользователя сразу
+    subscription.subscription_type = subscription_type
+    subscription.end_date = timezone.now() + timedelta(days=30)
+    subscription.is_active = True
+    subscription.promo_code = promo_obj
+    subscription.save()
+
+    # Увеличиваем счетчик использования промокода
+    if promo_obj:
+        promo_obj.used_count += 1
+        promo_obj.save()
+
+    return JsonResponse({
+        'success': True,
+        'payment_id': payment.id,
+        'amount': float(final_price),
+        'subscription_type': subscription_type,
+        'message': 'Подписка активирована! Спасибо за покупку.'
+    })
+
+
+@login_required
+def payment_success(request):
+    """Обработка успешной оплаты"""
+    payment_id = request.GET.get('payment_id')
+    
+    if not payment_id:
+        return redirect('subscription')
+    
+    try:
+        payment = Payment.objects.get(id=payment_id, user=request.user)
+        
+        if payment.status == 'paid':
+            messages.success(request, 'Оплата уже была обработана!')
+            return redirect('subscription')
+        
+        # Обновляем статус платежа
+        payment.status = 'paid'
+        payment.save()
+        
+        # Обновляем подписку пользователя
+        subscription = payment.subscription
+        subscription.subscription_type = payment.subscription.subscription_type
+        subscription.end_date = timezone.now() + timedelta(days=30)  # 30 дней подписки
+        subscription.is_active = True
+        subscription.promo_code = payment.promo_code
+        subscription.save()
+        
+        # Увеличиваем счетчик использования промокода
+        if payment.promo_code:
+            payment.promo_code.used_count += 1
+            payment.promo_code.save()
+        
+        messages.success(request, 'Подписка успешно активирована!')
+        
+    except Payment.DoesNotExist:
+        messages.error(request, 'Платеж не найден')
+    
+    return redirect('subscription')
+
+
+@login_required
+def payment_cancel(request):
+    """Обработка отмены оплаты"""
+    payment_id = request.GET.get('payment_id')
+    
+    if payment_id:
+        try:
+            payment = Payment.objects.get(id=payment_id, user=request.user)
+            payment.status = 'cancelled'
+            payment.save()
+        except Payment.DoesNotExist:
+            pass
+    
+    messages.info(request, 'Оплата отменена')
+    return redirect('subscription')
 
 

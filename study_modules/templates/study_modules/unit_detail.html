@@ -531,9 +531,6 @@
                 <i class="bi bi-journal-bookmark"></i>
             </div>
             <h3>{{ section.title }}</h3>
-            {% if section.description %}
-            <p>{{ section.description|truncatewords:15 }}</p>
-            {% endif %}
             {% if section.theory_cards.all %}
             <div class="theory-cards-grid">
                 {% for card in section.theory_cards.all %}
@@ -558,11 +555,6 @@
                         </div>
                         {% endif %}
                     </div>
-                    {% if card.content %}
-                    <p>{{ card.content|truncatewords:20 }}</p>
-                    {% else %}
-                    <p>Нажмите для редактирования содержимого</p>
-                    {% endif %}
                 </div>
                 {% endfor %}
             </div>

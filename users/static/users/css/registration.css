@@ -14,6 +14,7 @@ body {
   justify-content: center;
   width: 100%;
   max-width: 600px;
+  margin-top: 60px; /* опустить окно регистрации ниже */
 }
 
 .registration-container {
@@ -368,6 +369,9 @@ body {
     margin: 20px;
     padding: 60px 30px 30px;
   }
+  .registration-wrapper {
+    margin-top: 30px;
+  }
   
   .field-label {
     font-size: 0.9rem;
@@ -394,6 +398,76 @@ body {
   
   .checkbox-label {
     font-size: 0.9rem;
+  }
+}
+
+/* Выбор роли: сетка и карточки */
+.role-selection {
+  margin-top: 10px;
+}
+
+.role-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.role-card {
+  border: 2px solid #e8e8e8;
+  border-radius: 16px;
+  padding: 20px 16px;
+  background: #ffffff;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+}
+
+.role-card:hover {
+  transform: translateY(-2px);
+  border-color: #cfc4f6;
+  box-shadow: 0 6px 18px rgba(124, 77, 255, 0.15);
+}
+
+.role-card.active {
+  border-color: #7c4dff;
+  box-shadow: 0 8px 22px rgba(124, 77, 255, 0.25);
+}
+
+.role-card h3 {
+  margin: 10px 0 6px;
+  font-size: 1.05rem;
+  color: #2b2b2b;
+}
+
+.role-description {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.role-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto;
+  border-radius: 50%;
+  background: #f6f2ff;
+  box-shadow: inset 0 0 0 2px rgba(124,77,255,0.12);
+}
+
+.role-card:focus-within,
+.role-card:focus {
+  outline: none;
+  border-color: #7c4dff;
+  box-shadow: 0 0 0 4px rgba(124, 77, 255, 0.15);
+}
+
+@media (max-width: 480px) {
+  .role-cards {
+    grid-template-columns: 1fr;
   }
 }
 /* Добавить эти стили в существующий CSS */
@@ -428,4 +502,84 @@ body {
   0% { transform: rotate(0deg); }
   50% { transform: rotate(180deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Стили для социальных кнопок */
+.social-section {
+  margin-top: 30px;
+  padding-top: 30px;
+  border-top: 1px solid #e8e8e8;
+}
+
+.social-divider {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #666;
+  font-size: 0.9rem;
+  position: relative;
+}
+
+.social-divider span {
+  background: white;
+  padding: 0 15px;
+}
+
+.social-divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: #e8e8e8;
+  z-index: -1;
+}
+
+.social-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border: 2px solid #e8e8e8;
+  border-radius: 12px;
+  text-decoration: none;
+  color: #333;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.social-btn:hover {
+  border-color: #ddd;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.social-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.google-btn:hover {
+  border-color: #4285f4;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
+}
+
+.github-btn:hover {
+  border-color: #333;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.apple-btn:hover {
+  border-color: #000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }

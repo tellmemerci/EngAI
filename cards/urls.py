@@ -20,8 +20,8 @@ urlpatterns = [
     path('module/<int:module_id>/balloon-game/save-record/', views.save_balloon_game_record,
          name='save_balloon_game_record'),
     path('module/<int:module_id>/ai-training/', views.ai_training, name='ai_training'),
-    path('talk-ai/', views.talk_ai, name='talk_ai'),
     path('sidebar-chat/', views.sidebar_chat, name='sidebar_chat'),
+    path('ai-speak/', views.ai_speak, name='ai_speak'),
 
     # Маршрут для экспорта модуля в Word
 
@@ -52,6 +52,7 @@ urlpatterns = [
     path('api/clear-chat/', views.api_clear_ai_chat, name='api_clear_ai_chat'),
     path('api/tts/', views.api_tts, name='api_tts'),
     path('api/asr/', views.api_asr, name='api_asr'),
+    path('api/conversation-analytics/', views.api_conversation_analytics, name='api_conversation_analytics'),
     
     # API endpoint для поиска
     path('api/search/', views.search_content, name='search_content'),

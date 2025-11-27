@@ -135,7 +135,6 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',  # Общие статические файлы
-    BASE_DIR / 'users/static',  # Статические файлы приложения users
 ]
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
