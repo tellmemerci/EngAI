@@ -58,6 +58,10 @@ logger = logging.getLogger(__name__)
 def ai_speak(request):
     return render(request, 'cards/ai_speak.html')
 
+@login_required
+def media_center(request):
+    return render(request, 'cards/media_center.html')
+
 load_dotenv()
 
 @login_required
@@ -1899,3 +1903,79 @@ def api_conversation_analytics(request):
     except Exception as e:
         logger.error(f"Ошибка api_conversation_analytics: {e}")
         return JsonResponse({'error': 'Серверная ошибка'}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def media_feed(request):
+    """
+    Возвращает подборку англоязычного контента (фильмы, сериалы, мультфильмы)
+    с бесплатного API https://www.tvmaze.com/api.
+    """
+    category = (request.GET.get('category') or 'movies').lower()
+    query_map = {
+        'movies': 'movie',
+        'series': 'english series',
+        'cartoons': 'animation'
+    }
+    query = query_map.get(category, 'movie')
+
+    try:
+        response = requests.get(
+            'https://api.tvmaze.com/search/shows',
+            params={'q': query},
+            timeout=10
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        logger.error(f"Media feed request failed ({category}): {exc}")
+        return JsonResponse({'error': 'Не удалось загрузить подборку. Попробуйте позже.'}, status=502)
+
+    items = []
+    seen_ids = set()
+    for entry in response.json():
+        show = entry.get('show') or {}
+        show_id = show.get('id')
+        if not show_id or show_id in seen_ids:
+            continue
+        if show.get('language') and show.get('language') != 'English':
+            continue
+
+        genres = show.get('genres') or []
+        show_type = (show.get('type') or '').lower()
+        runtime = show.get('runtime') or 0
+
+        if category == 'cartoons' and 'Animation' not in genres and show.get('type') != 'Animation':
+            continue
+        if category == 'series' and show_type in ('tv movie',):
+            continue
+        if category == 'movies':
+            if show_type not in ('tv movie', 'animation') and runtime < 70:
+                continue
+
+        seen_ids.add(show_id)
+        summary_html = show.get('summary') or ''
+        summary_text = BeautifulSoup(summary_html, 'html.parser').get_text(' ', strip=True)
+        if len(summary_text) > 220:
+            summary_text = summary_text[:217].rsplit(' ', 1)[0] + '...'
+
+        image = show.get('image') or {}
+        cover = image.get('medium') or image.get('original') or ''
+        rating = (show.get('rating') or {}).get('average')
+
+        items.append({
+            'id': show_id,
+            'title': show.get('name'),
+            'summary': summary_text,
+            'cover': cover,
+            'rating': rating,
+            'genres': genres,
+            'url': show.get('url'),
+            'type': show.get('type'),
+            'premiered': show.get('premiered')
+        })
+
+        if len(items) >= 12:
+            break
+
+    return JsonResponse({'items': items})

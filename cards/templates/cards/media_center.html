@@ -1,0 +1,41 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Просмотр — Англоязычный контент{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/media_center.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="media-page" data-media-endpoint="{% url 'cards:media_feed' %}" data-default-category="movies">
+    <div class="media-page-header">
+        <div>
+            <p class="media-page-eyebrow">английский через кино</p>
+            <h1>Просмотр</h1>
+            <p class="media-page-subtitle">
+                Подборки фильмов, сериалов и мультфильмов на английском языке. 
+                Выбирайте формат, прокачивайте восприятие и пополняйте словарь.
+            </p>
+        </div>
+        <button class="media-page-refresh" type="button" id="mediaPageRefresh">
+            <i class="bi bi-arrow-repeat"></i>
+            Обновить подборку
+        </button>
+    </div>
+
+    <div class="media-filter" role="tablist">
+        <button class="active" data-media-filter="movies" aria-selected="true">Фильмы</button>
+        <button data-media-filter="series" aria-selected="false">Сериалы</button>
+        <button data-media-filter="cartoons" aria-selected="false">Мультфильмы</button>
+    </div>
+
+    <div class="media-page-status" id="mediaPageStatus">Загружаем подборку...</div>
+    <div class="media-card-grid media-page-grid" id="mediaPageGrid" aria-live="polite"></div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/media_center.js' %}"></script>
+{% endblock %}
+

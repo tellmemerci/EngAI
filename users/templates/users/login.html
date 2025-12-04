@@ -19,16 +19,30 @@
 
       {% if messages %}
         {% for message in messages %}
-          <div class="error-message">
-            
+          <div class="error-message {% if message.tags %}{{ message.tags }}{% endif %}">
+            {{ message }}
           </div>
         {% endfor %}
       {% endif %}
 
       <form class="login-form" method="post">
         {% csrf_token %}
-        <input type="email" name="email" placeholder="Электронная почта" required />
-        <input type="password" name="password" placeholder="Пароль" required />
+
+        <div class="input-field">
+          <label for="id_email">Электронная почта</label>
+          <div class="input-wrapper">
+            <i class="bi bi-envelope input-icon"></i>
+            <input id="id_email" type="email" name="email" placeholder="example@mail.com" required />
+          </div>
+        </div>
+
+        <div class="input-field">
+          <label for="id_password">Пароль</label>
+          <div class="input-wrapper">
+            <i class="bi bi-lock input-icon"></i>
+            <input id="id_password" type="password" name="password" placeholder="Введите пароль" required />
+          </div>
+        </div>
 
         <div class="forgot">
           <a href="/password-reset/">Забыли пароль?</a>

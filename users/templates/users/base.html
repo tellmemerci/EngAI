@@ -93,9 +93,9 @@
                 </a>
             </li>
             <li>
-                <a href="#" class="nav-link">
-                    <i class="bi bi-mic"></i>
-                    <span>Аудирование</span>
+                <a href="{% url 'cards:media_center' %}" class="nav-link {% if request.resolver_match.url_name == 'media_center' %}active{% endif %}">
+                    <i class="bi bi-collection-play"></i>
+                    <span>Просмотр</span>
                 </a>
             </li>
             <li>
@@ -231,6 +231,7 @@
             checkNotifications();
             setInterval(checkNotifications, 30000);
         });
+
     </script>
     {% block extra_js %}{% endblock %}
 </body>

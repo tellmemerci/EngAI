@@ -7,11 +7,11 @@
 <style>
 .speak-layout{display:grid;grid-template-columns:1fr 420px;gap:16px;padding:16px}
 .panel{background:#fff;border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.06);border:1px solid #eee}
-.avatar-panel{height: calc(100vh - 110px);position:sticky;top:20px;display:flex;flex-direction:column}
-.avatar-header{padding:14px 16px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center}
-.avatar-canvas{flex:1;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0b0b12,#151729);border-radius:12px;margin:12px;height:100%;overflow:hidden;position:relative}
-.avatar-placeholder{color:#9aa4ff;font-size:64px;opacity:.8}
-.avatar-image{width:100%;height:100%;object-fit:cover;border-radius:12px;transition:opacity 0.3s ease}
+.avatar-panel{height: calc(100vh - 110px);position:sticky;top:20px;display:flex;flex-direction:column;background:#fff;border:1px solid #ebeef5;border-radius:16px;box-shadow:0 12px 35px rgba(15,23,42,0.08)}
+.avatar-header{padding:18px 20px;border-bottom:1px solid #f1f4fa;display:flex;justify-content:space-between;align-items:center}
+.avatar-canvas{flex:1;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#f5f7ff,#e9edff);border-radius:16px;margin:20px;height:100%;overflow:hidden;position:relative;border:1px solid #edf0ff}
+.avatar-placeholder{color:#7c8cec;font-size:64px;opacity:.7}
+.avatar-image{width:100%;height:100%;object-fit:cover;border-radius:16px;transition:opacity 0.3s ease;box-shadow:0 15px 35px rgba(31,41,55,0.18)}
 .chat-panel{height: calc(100vh - 110px);display:flex;flex-direction:column}
 .chat-header{padding:14px 16px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;gap:16px}
 .voice-controls{display:flex;align-items:center;gap:8px}
@@ -158,7 +158,12 @@
   const clearBtn = document.getElementById('clearBtn');
   const micBtn = document.getElementById('micBtn');
   const timerNode = document.getElementById('recTimer');
-  let mediaRecorder = null; let isRec = false; let startedAt = 0; let timerId = null; let stopTimeout = null;
+  let mediaRecorder = null;
+  let mediaStream = null;
+  let isRec = false;
+  let startedAt = 0;
+  let timerId = null;
+  let stopTimeout = null;
   let audioChunks = [];
   let recognition = null;
   let recognizedText = '';
@@ -431,76 +436,97 @@
   // Микрофон: запись до 2 минут, с ручной остановкой и отправкой
   micBtn.addEventListener('click', ()=>{ if(isRec) stopRec(); else startRec(); });
   
+  function initSpeechRecognition(){
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      recognition = null;
+      return;
+    }
+    
+    recognition = new SpeechRecognition();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognizedText = '';
+    
+    recognition.onresult = (event) => {
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        }
+      }
+      if (finalTranscript) {
+        recognizedText += finalTranscript;
+      }
+    };
+    
+    recognition.onerror = (event) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error !== 'no-speech') {
+        append('error', 'Ошибка распознавания речи');
+        stopRec();
+      }
+    };
+    
+    recognition.onend = () => {
+      if (isRec) {
+        try {
+          recognition.start();
+        } catch (e) {
+          console.log('Recognition restart failed:', e);
+        }
+      }
+    };
+    
+    try {
+      recognition.start();
+    } catch (e) {
+      console.log('Recognition start failed:', e);
+    }
+  }
+  
   async function startRec(){
-    // Инициализируем Web Speech API
-    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      append('error', 'Ваш браузер не поддерживает распознавание речи');
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      append('error', 'Ваш браузер не поддерживает запись аудио');
+      return;
+    }
+    if (typeof MediaRecorder === 'undefined') {
+      append('error', 'Ваш браузер не поддерживает запись аудио');
       return;
     }
     
     try {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.continuous = true;
-      recognition.interimResults = true;
+      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'audio/webm' });
+      audioChunks = [];
       
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunks.push(event.data);
+        }
+      };
+      
+      mediaRecorder.start();
+      initSpeechRecognition();
       recognizedText = '';
       
-      recognition.onresult = (event) => {
-        let interimTranscript = '';
-        let finalTranscript = '';
-        
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          const transcript = event.results[i][0].transcript;
-          if (event.results[i].isFinal) {
-            finalTranscript += transcript + ' ';
-          } else {
-            interimTranscript += transcript;
-          }
-        }
-        
-        if (finalTranscript) {
-          recognizedText += finalTranscript;
-        }
-      };
-      
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
-        if (event.error !== 'no-speech') {
-          append('error', 'Ошибка распознавания речи');
-          stopRec();
-        }
-      };
-      
-      recognition.onend = () => {
-        if (isRec) {
-          // Если запись еще активна, перезапускаем распознавание
-          try {
-            recognition.start();
-          } catch (e) {
-            console.log('Recognition restart failed:', e);
-          }
-        }
-      };
-      
-      recognition.start();
       isRec = true;
       micBtn.classList.add('recording');
       startTimer();
       
-      // Автостоп через 2 минуты (120 секунд)
       stopTimeout = setTimeout(() => {
         if (isRec) stopRec();
-      }, 120000);
+      }, MAX_RECORDING_TIME);
       
     } catch (err) {
-      append('error', 'Не удалось запустить распознавание речи');
-      console.error('Recognition start error:', err);
+      append('error', 'Не удалось получить доступ к микрофону');
+      console.error('MediaRecorder start error:', err);
     }
   }
   
-  function stopRec(){
+  async function stopRec(){
     if (!isRec) return;
     isRec = false;
     micBtn.classList.remove('recording');
@@ -513,18 +539,86 @@
     
     if (recognition) {
       try {
+        recognition.onend = null;
         recognition.stop();
       } catch (e) {
         console.log('Recognition stop error:', e);
       }
     }
     
-    // Отправляем распознанный текст
-    if (recognizedText.trim()) {
-      sendToAI(recognizedText.trim());
+    const recordedBlob = await stopMediaRecorder();
+    let finalText = (recognizedText || '').trim();
+    
+    if (!finalText) {
+      finalText = (await transcribeBlob(recordedBlob)).trim();
+    }
+    
+    if (finalText) {
+      sendToAI(finalText);
     } else {
       append('error', 'Не удалось распознать речь');
     }
+  }
+  
+  function stopMediaRecorder(){
+    if (!mediaRecorder) {
+      if (mediaStream) {
+        mediaStream.getTracks().forEach(track => track.stop());
+        mediaStream = null;
+      }
+      return Promise.resolve(null);
+    }
+    
+    const recorder = mediaRecorder;
+    mediaRecorder = null;
+    
+    return new Promise(resolve => {
+      recorder.addEventListener('stop', () => {
+        if (mediaStream) {
+          mediaStream.getTracks().forEach(track => track.stop());
+          mediaStream = null;
+        }
+        if (!audioChunks.length) {
+          resolve(null);
+        } else {
+          const blob = new Blob(audioChunks, { type: recorder.mimeType || 'audio/webm' });
+          audioChunks = [];
+          resolve(blob);
+        }
+      }, { once: true });
+      
+      try {
+        recorder.stop();
+      } catch (e) {
+        console.log('Recorder stop error:', e);
+        resolve(null);
+      }
+    });
+  }
+  
+  async function transcribeBlob(blob){
+    if (!blob) return '';
+    try {
+      const formData = new FormData();
+      formData.append('audio', blob, 'speech.webm');
+      
+      const resp = await fetch('{% url "cards:api_asr" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: formData
+      });
+      const data = await resp.json();
+      if (data.text) {
+        return data.text;
+      }
+      if (data.error) {
+        append('error', data.error);
+      }
+    } catch (err) {
+      console.error('ASR request failed:', err);
+      append('error', 'Ошибка отправки аудио на сервер');
+    }
+    return '';
   }
   
   function getCookie(name){ let v=null; if(document.cookie && document.cookie!==''){ const a=document.cookie.split(';'); for(let i=0;i<a.length;i++){ const c=a[i].trim(); if(c.substring(0,name.length+1)===(name+'=')){ v=decodeURIComponent(c.substring(name.length+1)); break; } } } return v; }
