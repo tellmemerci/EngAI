@@ -176,8 +176,8 @@ SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = [
 ]
 
 # Настройки для GitHub OAuth2
-SOCIAL_AUTH_GITHUB_KEY = 'Ov23liUvozZ5Be8eQGYF'  # GitHub Client ID
-SOCIAL_AUTH_GITHUB_SECRET = 'c4cdd29c73620bbd2b4c96c3e42c111f3eefcb60'  # GitHub Client Secret
+SOCIAL_AUTH_GITHUB_KEY = os.getenv('SOCIAL_AUTH_GITHUB_KEY', '')
+SOCIAL_AUTH_GITHUB_SECRET = os.getenv('SOCIAL_AUTH_GITHUB_SECRET', '')
 SOCIAL_AUTH_GITHUB_SCOPE = ['user:email']
 
 # Настройки для Apple Sign In
