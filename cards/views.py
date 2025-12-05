@@ -67,9 +67,14 @@ def media_detail(request, media_type, media_id):
     """
     Страница просмотра фильма/сериала с детальной информацией
     """
-    tmdb_api_key = os.getenv('TMDB_API_KEY', '')
+    tmdb_api_key = os.getenv('TMDB_API_KEY')
     if not tmdb_api_key:
-        tmdb_api_key = '1f54bd990f1cdfb230adb312546d765d'
+        logger.error("TMDB_API_KEY не установлен в переменных окружения")
+        messages.error(request, 'TMDB API ключ не настроен. Пожалуйста, установите TMDB_API_KEY в переменных окружения.')
+        return render(request, 'cards/media_detail.html', {
+            'media': None,
+            'error': 'TMDB API ключ не настроен'
+        })
     
     base_url = 'https://api.themoviedb.org/3'
     headers = {'accept': 'application/json'}
@@ -2145,11 +2150,12 @@ def media_feed(request):
     с TMDB API (The Movie Database).
     """
     category = (request.GET.get('category') or 'movies').lower()
-    tmdb_api_key = os.getenv('TMDB_API_KEY', '')
-    
-    # Если нет API ключа, используем публичный доступ (ограниченный)
+    tmdb_api_key = os.getenv('TMDB_API_KEY')
     if not tmdb_api_key:
-        tmdb_api_key = '1f54bd990f1cdfb230adb312546d765d'  # Публичный ключ для демо
+        logger.error("TMDB_API_KEY не установлен в переменных окружения")
+        return JsonResponse({
+            'error': 'TMDB API ключ не настроен. Пожалуйста, установите TMDB_API_KEY в переменных окружения.'
+        }, status=500)
     
     base_url = 'https://api.themoviedb.org/3'
     headers = {'accept': 'application/json'}

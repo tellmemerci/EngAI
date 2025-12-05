@@ -239,13 +239,23 @@ function generateLexicon() {
             title: '{% if media.title %}{{ media.title }}{% else %}{{ media.name }}{% endif %}'
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.error) {
             content.innerHTML = `<div class="lexicon-loading"><p style="color: #ff6b6b;">${data.error}</p></div>`;
         } else {
             renderLexicon(data);
         }
+        btn.disabled = false;
+    })
+    .catch(error => {
+        console.error('Error generating lexicon:', error);
+        content.innerHTML = `<div class="lexicon-loading"><p style="color: #ff6b6b;">Ошибка при генерации лексики: ${error.message}</p></div>`;
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-magic"></i> <span>Сгенерировать лексику</span>';
     })

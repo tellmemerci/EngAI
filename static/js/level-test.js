@@ -35,6 +35,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const data = await response.json();
             
             if (data.error) {
@@ -152,6 +156,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     answers: currentTest.answers
                 })
             });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
             const data = await response.json();
             
